@@ -1,0 +1,61 @@
+From 854c4d00420b6a34b884c56635e768df6799fd2d Mon Sep 17 00:00:00 2001
+From: Peter Ross <pross@xvid.org>
+Date: Thu, 7 Apr 2022 17:53:02 +1000
+Subject: [PATCH] locale typo
+
+---
+ locale.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/locale.c b/locale.c
+index 17ccc58..d6dd95a 100644
+--- a/locale.c
++++ b/locale.c
+@@ -91,7 +91,7 @@ set_default_locale ()
+ #if defined (HANDLE_MULTIBYTE)
+   locale_shiftstates = mblen ((char *)NULL, 0);
+ #else
+-  local_shiftstates = 0;
++  locale_shiftstates = 0;
+ #endif
+ }
+ 
+@@ -117,7 +117,7 @@ set_default_locale_vars ()
+ #    if defined (HANDLE_MULTIBYTE)
+       locale_shiftstates = mblen ((char *)NULL, 0);
+ #    else
+-      local_shiftstates = 0;
++      locale_shiftstates = 0;
+ #    endif
+ 
+       u32reset ();
+@@ -226,7 +226,7 @@ set_locale_var (var, value)
+ #  if defined (HANDLE_MULTIBYTE)
+       locale_shiftstates = mblen ((char *)NULL, 0);
+ #  else
+-      local_shiftstates = 0;
++      locale_shiftstates = 0;
+ #  endif
+       u32reset ();
+       return r;
+@@ -250,7 +250,7 @@ set_locale_var (var, value)
+ #if defined (HANDLE_MULTIBYTE)
+ 	  locale_shiftstates = mblen ((char *)NULL, 0);
+ #else
+-	  local_shiftstates = 0;
++	  locale_shiftstates = 0;
+ #endif
+ 	  u32reset ();
+ 	}
+@@ -391,7 +391,7 @@ reset_locale_vars ()
+ #  if defined (HANDLE_MULTIBYTE)
+   locale_shiftstates = mblen ((char *)NULL, 0);
+ #  else
+-  local_shiftstates = 0;
++  locale_shiftstates = 0;
+ #  endif
+   u32reset ();
+ #endif
+-- 
+2.35.1
+

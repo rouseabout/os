@@ -1,0 +1,12 @@
+diff --git a/WWW/Library/Implementation/www_tcp.h b/WWW/Library/Implementation/www_tcp.h
+index 8a081a5..193a3c3 100644
+--- a/WWW/Library/Implementation/www_tcp.h
++++ b/WWW/Library/Implementation/www_tcp.h
+@@ -745,7 +745,6 @@ Regular BSD unix versions
+ #ifndef __MVS__			/* S/390 -- gil -- 1373 */
+ #include <sys/param.h>
+ #endif /* __MVS__ */
+-#include <sys/file.h>		/* For open() etc */
+ 
+ #if defined(NeXT) || defined(sony_news)
+ #ifndef mode_t

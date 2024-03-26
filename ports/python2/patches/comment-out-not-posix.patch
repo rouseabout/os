@@ -1,0 +1,48 @@
+diff --git a/Modules/resource.c b/Modules/resource.c
+index 53a6c3e..ccb4a17 100644
+--- a/Modules/resource.c
++++ b/Modules/resource.c
+@@ -86,6 +86,7 @@ resource_getrusage(PyObject *self, PyObject *args)
+                     PyFloat_FromDouble(doubletime(ru.ru_utime)));
+     PyStructSequence_SET_ITEM(result, 1,
+                     PyFloat_FromDouble(doubletime(ru.ru_stime)));
++#if 0
+     PyStructSequence_SET_ITEM(result, 2, PyInt_FromLong(ru.ru_maxrss));
+     PyStructSequence_SET_ITEM(result, 3, PyInt_FromLong(ru.ru_ixrss));
+     PyStructSequence_SET_ITEM(result, 4, PyInt_FromLong(ru.ru_idrss));
+@@ -100,6 +101,7 @@ resource_getrusage(PyObject *self, PyObject *args)
+     PyStructSequence_SET_ITEM(result, 13, PyInt_FromLong(ru.ru_nsignals));
+     PyStructSequence_SET_ITEM(result, 14, PyInt_FromLong(ru.ru_nvcsw));
+     PyStructSequence_SET_ITEM(result, 15, PyInt_FromLong(ru.ru_nivcsw));
++#endif
+ 
+     if (PyErr_Occurred()) {
+         Py_DECREF(result);
+@@ -119,11 +121,13 @@ resource_getrlimit(PyObject *self, PyObject *args)
+     if (!PyArg_ParseTuple(args, "i:getrlimit", &resource))
+         return NULL;
+ 
++#if 0
+     if (resource < 0 || resource >= RLIM_NLIMITS) {
+         PyErr_SetString(PyExc_ValueError,
+                         "invalid resource specified");
+         return NULL;
+     }
++#endif
+ 
+     if (getrlimit(resource, &rl) == -1) {
+         PyErr_SetFromErrno(ResourceError);
+@@ -150,11 +154,13 @@ resource_setrlimit(PyObject *self, PyObject *args)
+     if (!PyArg_ParseTuple(args, "iO:setrlimit", &resource, &limits))
+         return NULL;
+ 
++#if 0
+     if (resource < 0 || resource >= RLIM_NLIMITS) {
+         PyErr_SetString(PyExc_ValueError,
+                         "invalid resource specified");
+         return NULL;
+     }
++#endif
+ 
+     limits = PySequence_Tuple(limits);
+     if (!limits)

@@ -1,0 +1,26 @@
+From c0ee5f6e05b6e2c850525096ab8a1c894086b3f2 Mon Sep 17 00:00:00 2001
+From: Peter Ross <pross@xvid.org>
+Date: Fri, 8 Apr 2022 19:23:08 +1000
+Subject: [PATCH] getprogname
+
+---
+ lib/getprogname.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/lib/getprogname.c b/lib/getprogname.c
+index 9f69f5a..31ee9d7 100644
+--- a/lib/getprogname.c
++++ b/lib/getprogname.c
+@@ -246,7 +246,8 @@ getprogname (void)
+     }
+   return NULL;
+ # else
+-#  error "getprogname module not ported to this OS"
++  return "?";
++//#  error "getprogname module not ported to this OS"
+ # endif
+ }
+ 
+-- 
+2.35.1
+

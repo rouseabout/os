@@ -1,0 +1,16 @@
+diff --git a/src/auto/osdef.h b/src/auto/osdef.h
+index 15c99b8ec..e9c165062 100644
+--- a/src/auto/osdef.h
++++ b/src/auto/osdef.h
+@@ -119,11 +119,6 @@ extern int	open(const char *, int, ...);
+ #endif
+ 
+ 
+-extern int	tgetent(char *, char *);
+-extern int	tgetnum(char *);
+-extern int	tgetflag(char *);
+-extern char	*tgoto(char *, int, int);
+-extern int	tputs(char *, int, int (*)(int));
+ 
+ #ifdef HAVE_TERMIOS_H
+ #endif

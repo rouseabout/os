@@ -1,0 +1,12 @@
+diff --git a/buffer.c b/buffer.c
+index fbb1cfc..b499d31 100644
+--- a/buffer.c
++++ b/buffer.c
+@@ -23,7 +23,6 @@
+ #include <stdlib.h>
+ #include <string.h>
+ #include <unistd.h>
+-#include <sys/file.h>
+ #include <sys/stat.h>
+ 
+ #include "ed.h"

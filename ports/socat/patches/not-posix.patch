@@ -1,0 +1,65 @@
+diff --git a/fdname.c b/fdname.c
+index e226bda..4c047c5 100644
+--- a/fdname.c
++++ b/fdname.c
+@@ -212,7 +212,9 @@ int sockettype(int socktype, char *typename, size_t typenamemax) {
+    case SOCK_DGRAM:     strncpy(typename,  "dgram",     typenamemax); break;
+    case SOCK_SEQPACKET: strncpy(typename,  "seqpacket", typenamemax); break;
+    case SOCK_RAW:       strncpy(typename,  "raw",       typenamemax); break;
++#ifdef SOCK_RDM
+    case SOCK_RDM:       strncpy(typename,  "rdm",       typenamemax); break;
++#endif
+ #ifdef SOCK_PACKET
+    case SOCK_PACKET:    strncpy(typename,  "packet",    typenamemax); break;
+ #endif
+diff --git a/sycls.c b/sycls.c
+index 900cee3..455fcef 100644
+--- a/sycls.c
++++ b/sycls.c
+@@ -275,6 +275,7 @@ int Setgid(gid_t gid) {
+ }
+ 
+ int Initgroups(const char *user, gid_t group) {
++#if 0
+    int result, _errno;
+    Debug2("initgroups(\"%s\", "F_gid")", user, group);
+    result = initgroups(user, group);
+@@ -282,6 +283,9 @@ int Initgroups(const char *user, gid_t group) {
+    Debug1("initgroups() -> %d", result);
+    errno = _errno;
+    return result;
++#else
++   return 0;
++#endif
+ }
+ 
+ int Getgroups(int size, gid_t list[]) {
+@@ -337,6 +341,7 @@ int Chdir(const char *path) {
+ }
+ 
+ int Chroot(const char *path) {
++#if 0
+    int result, _errno;
+    Debug1("chroot(\"%s\")", path);
+    result = chroot(path);
+@@ -344,6 +349,9 @@ int Chroot(const char *path) {
+    Debug1("chroot() -> %d", result);
+    errno = _errno;
+    return result;
++#else
++   return 0;
++#endif
+ }
+ 
+ int Gettimeofday(struct timeval *tv, struct timezone *tz) {
+@@ -687,6 +695,10 @@ int Flock(int fd, int operation) {
+    errno = _errno;
+    return retval;
+ }
++#else
++int Flock(int fd, int operation) {
++   return 0;
++}
+ #endif /* HAVE_FLOCK */
+ 
+ int Ioctl(int d, int request, void *argp) {

@@ -1,0 +1,12 @@
+diff --git a/gmp-h.in b/gmp-h.in
+index 8598e97..e59cc40 100644
+--- a/gmp-h.in
++++ b/gmp-h.in
+@@ -254,6 +254,7 @@ typedef const __gmp_randstate_struct *gmp_randstate_srcptr;
+    <iostream> defines EOF but not FILE.  */
+ #if defined (FILE)                                              \
+   || defined (H_STDIO)                                          \
++  || defined (STDIO_H)                                          \
+   || defined (_H_STDIO)               /* AIX */                 \
+   || defined (_STDIO_H)               /* glibc, Sun, SCO */     \
+   || defined (_STDIO_H_)              /* BSD, OSF */            \

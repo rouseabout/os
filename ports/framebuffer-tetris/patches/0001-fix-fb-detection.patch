@@ -1,0 +1,25 @@
+From 5300a087b65dcc223a0aea7716e03eb4235be8a9 Mon Sep 17 00:00:00 2001
+From: Peter Ross <pross@xvid.org>
+Date: Fri, 8 Apr 2022 18:17:48 +1000
+Subject: [PATCH] fix fb detection
+
+---
+ fbDrawer.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/fbDrawer.c b/fbDrawer.c
+index d29e428..b6b2f8f 100644
+--- a/fbDrawer.c
++++ b/fbDrawer.c
+@@ -38,7 +38,7 @@ void openfb(char* bfname) {
+ 
+ 	//map the device to memory 
+ 	fbp = (char *)mmap(0,screensize,PROT_READ|PROT_WRITE,MAP_SHARED,fbfd,0); 
+-    if(*(int*)fbp == -1) {
++    if((int)fbp == -1) {
+         printf("Error:failed to map framebuffer device to memory\n"); 
+         exit(4); 
+     }
+-- 
+2.35.1
+

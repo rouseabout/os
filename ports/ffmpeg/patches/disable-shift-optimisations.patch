@@ -1,0 +1,30 @@
+diff --git a/libavcodec/x86/mathops.h b/libavcodec/x86/mathops.h
+index 6298f5ed19..6b9055beb3 100644
+--- a/libavcodec/x86/mathops.h
++++ b/libavcodec/x86/mathops.h
+@@ -110,6 +110,7 @@ __asm__ volatile(\
+              "subl %1, %0            \n\t"      \
+              : "+a"(level), "=&d"(mask))
+ 
++#if 0
+ // avoid +32 for shift optimization (gcc should do that ...)
+ #define NEG_SSR32 NEG_SSR32
+ static inline  int32_t NEG_SSR32( int32_t a, int8_t s){
+@@ -119,7 +120,9 @@ static inline  int32_t NEG_SSR32( int32_t a, int8_t s){
+     );
+     return a;
+ }
++#endif
+ 
++#if 0
+ #define NEG_USR32 NEG_USR32
+ static inline uint32_t NEG_USR32(uint32_t a, int8_t s){
+     __asm__ ("shrl %1, %0\n\t"
+@@ -128,6 +131,7 @@ static inline uint32_t NEG_USR32(uint32_t a, int8_t s){
+     );
+     return a;
+ }
++#endif
+ 
+ #endif /* HAVE_INLINE_ASM */
+ #endif /* AVCODEC_X86_MATHOPS_H */

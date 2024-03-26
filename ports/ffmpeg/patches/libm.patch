@@ -1,0 +1,15 @@
+diff --git a/fftools/ffmpeg_filter.c b/fftools/ffmpeg_filter.c
+index 13c5065191..784abd0b55 100644
+--- a/fftools/ffmpeg_filter.c
++++ b/fftools/ffmpeg_filter.c
+@@ -31,6 +31,7 @@
+ #include "libavutil/bprint.h"
+ #include "libavutil/channel_layout.h"
+ #include "libavutil/display.h"
++#include "libavutil/libm.h"
+ #include "libavutil/opt.h"
+ #include "libavutil/pixdesc.h"
+ #include "libavutil/pixfmt.h"
+-- 
+2.43.0
+

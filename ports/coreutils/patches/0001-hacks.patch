@@ -1,0 +1,137 @@
+From f3edf6281f6037c8e430667bdceb2f882e5d6462 Mon Sep 17 00:00:00 2001
+From: Peter Ross <pross@xvid.org>
+Date: Thu, 7 Apr 2022 19:52:27 +1000
+Subject: [PATCH] hacks
+
+---
+ lib/fpending.c     | 2 +-
+ lib/fpurge.c       | 3 ++-
+ lib/freadahead.c   | 2 +-
+ lib/freading.c     | 2 +-
+ lib/freadptr.c     | 3 ++-
+ lib/freadseek.c    | 2 +-
+ lib/fseterr.c      | 2 +-
+ lib/getprogname.c  | 3 ++-
+ lib/mbrtowc-impl.h | 2 +-
+ 9 files changed, 12 insertions(+), 9 deletions(-)
+
+diff --git a/lib/fpending.c b/lib/fpending.c
+index 7c61f7e..aaaf165 100644
+--- a/lib/fpending.c
++++ b/lib/fpending.c
+@@ -57,7 +57,7 @@ __fpending (FILE *fp)
+ #elif defined EPLAN9                 /* Plan9 */
+   return fp->wp - fp->buf;
+ #else
+-# error "Please port gnulib fpending.c to your platform!"
++//# error "Please port gnulib fpending.c to your platform!"
+   return 1;
+ #endif
+ }
+diff --git a/lib/fpurge.c b/lib/fpurge.c
+index 6b9c17a..3e3339f 100644
+--- a/lib/fpurge.c
++++ b/lib/fpurge.c
+@@ -143,7 +143,8 @@ fpurge (FILE *fp)
+   fp->rp = fp->wp = fp->lp = fp->buf;
+   return 0;
+ # else
+-#  error "Please port gnulib fpurge.c to your platform! Look at the definitions of fflush, setvbuf and ungetc on your system, then report this to bug-gnulib."
++  return 0;
++//#  error "Please port gnulib fpurge.c to your platform! Look at the definitions of fflush, setvbuf and ungetc on your system, then report this to bug-gnulib."
+ # endif
+ 
+ #endif
+diff --git a/lib/freadahead.c b/lib/freadahead.c
+index 2d27fd2..f2ac0cd 100644
+--- a/lib/freadahead.c
++++ b/lib/freadahead.c
+@@ -98,6 +98,6 @@ freadahead (FILE *fp)
+   abort ();
+   return 0;
+ #else
+- #error "Please port gnulib freadahead.c to your platform! Look at the definition of fflush, fread, ungetc on your system, then report this to bug-gnulib."
++ //#error "Please port gnulib freadahead.c to your platform! Look at the definition of fflush, fread, ungetc on your system, then report this to bug-gnulib."
+ #endif
+ }
+diff --git a/lib/freading.c b/lib/freading.c
+index be4f561..9cfb2df 100644
+--- a/lib/freading.c
++++ b/lib/freading.c
+@@ -69,7 +69,7 @@ freading (FILE *fp)
+     return 0;
+   return (fp->state == 3 /* RD */ && (fp->bufl == 0 || fp->rp < fp->wp));
+ # else
+-#  error "Please port gnulib freading.c to your platform!"
++  return 0;
+ # endif
+ }
+ 
+diff --git a/lib/freadptr.c b/lib/freadptr.c
+index f2f1169..b8ad1eb 100644
+--- a/lib/freadptr.c
++++ b/lib/freadptr.c
+@@ -120,6 +120,7 @@ freadptr (FILE *fp, size_t *sizep)
+      awfully slow.  */
+   return NULL;
+ #else
+- #error "Please port gnulib freadptr.c to your platform! Look at the definition of fflush, fread, getc, getc_unlocked on your system, then report this to bug-gnulib."
++  return NULL;
++ //#error "Please port gnulib freadptr.c to your platform! Look at the definition of fflush, fread, getc, getc_unlocked on your system, then report this to bug-gnulib."
+ #endif
+ }
+diff --git a/lib/freadseek.c b/lib/freadseek.c
+index 38c399b..364ce41 100644
+--- a/lib/freadseek.c
++++ b/lib/freadseek.c
+@@ -66,7 +66,7 @@ freadptrinc (FILE *fp, size_t increment)
+   fp->rp += increment;
+ #elif defined SLOW_BUT_NO_HACKS     /* users can define this */
+ #else
+- #error "Please port gnulib freadseek.c to your platform! Look at the definition of getc, getc_unlocked on your system, then report this to bug-gnulib."
++ //#error "Please port gnulib freadseek.c to your platform! Look at the definition of getc, getc_unlocked on your system, then report this to bug-gnulib."
+ #endif
+ }
+ 
+diff --git a/lib/fseterr.c b/lib/fseterr.c
+index ed50100..bb3b8c9 100644
+--- a/lib/fseterr.c
++++ b/lib/fseterr.c
+@@ -79,6 +79,6 @@ fseterr (FILE *fp)
+     }
+   errno = saved_errno;
+ #else
+- #error "Please port gnulib fseterr.c to your platform! Look at the definitions of ferror and clearerr on your system, then report this to bug-gnulib."
++ //#error "Please port gnulib fseterr.c to your platform! Look at the definitions of ferror and clearerr on your system, then report this to bug-gnulib."
+ #endif
+ }
+diff --git a/lib/getprogname.c b/lib/getprogname.c
+index 9a80281..0aa444a 100644
+--- a/lib/getprogname.c
++++ b/lib/getprogname.c
+@@ -288,7 +288,8 @@ getprogname (void)
+     }
+   return "?";
+ # else
+-#  error "getprogname module not ported to this OS"
++  return "?";
++//#  error "getprogname module not ported to this OS"
+ # endif
+ }
+ 
+diff --git a/lib/mbrtowc-impl.h b/lib/mbrtowc-impl.h
+index bc3e688..978b98b 100644
+--- a/lib/mbrtowc-impl.h
++++ b/lib/mbrtowc-impl.h
+@@ -90,7 +90,7 @@
+         /* The hidden internal state of mbtowc would make this function not
+            multi-thread safe.  Achieve multi-thread safety through a lock.  */
+         wchar_t wc;
+-        res = mbtowc_with_lock (&wc, p, m);
++        res = mbtowc (&wc, p, m);
+ 
+         if (res >= 0)
+           {
+-- 
+2.35.1
+

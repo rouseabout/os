@@ -1,0 +1,48 @@
+diff --git a/dotlock.c b/dotlock.c
+index 138d297..ebeee9b 100644
+--- a/dotlock.c
++++ b/dotlock.c
+@@ -34,7 +34,6 @@
+ 
+ #include <unistd.h>
+ #include <dirent.h>
+-#include <sys/file.h>
+ #include <sys/stat.h>
+ #include <sys/utsname.h>
+ #include <errno.h>
+diff --git a/mbox.c b/mbox.c
+index fc36ca2..f924c63 100644
+--- a/mbox.c
++++ b/mbox.c
+@@ -33,7 +33,6 @@
+ #include <dirent.h>
+ #include <string.h>
+ #include <utime.h>
+-#include <sys/file.h>
+ #include <errno.h>
+ #include <unistd.h>
+ #include <fcntl.h>
+diff --git a/mutt_dotlock.c b/mutt_dotlock.c
+index 138d297..ebeee9b 100644
+--- a/mutt_dotlock.c
++++ b/mutt_dotlock.c
+@@ -34,7 +34,6 @@
+ 
+ #include <unistd.h>
+ #include <dirent.h>
+-#include <sys/file.h>
+ #include <sys/stat.h>
+ #include <sys/utsname.h>
+ #include <errno.h>
+diff --git a/mx.c b/mx.c
+index e608fbc..bdd0519 100644
+--- a/mx.c
++++ b/mx.c
+@@ -55,7 +55,6 @@
+ 
+ #include <dirent.h>
+ #include <fcntl.h>
+-#include <sys/file.h>
+ #include <sys/stat.h>
+ #include <errno.h>
+ #include <unistd.h>

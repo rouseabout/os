@@ -1,0 +1,24 @@
+diff --git a/configure b/configure
+index 63d6753..a876c29 100755
+--- a/configure
++++ b/configure
+@@ -3287,6 +3287,9 @@ then
+ 	*-*-cygwin*)
+ 		ac_sys_system=Cygwin
+ 		;;
++	*-pc-elf)
++		ac_sys_system=os
++		;;
+ 	*)
+ 		# for now, limit cross builds to known configurations
+ 		MACHDEP="unknown"
+@@ -3333,6 +3336,9 @@ if test "$cross_compiling" = yes; then
+ 	*-*-cygwin*)
+ 		_host_cpu=
+ 		;;
++	*-pc-elf)
++		_host_cpu=
++		;;
+ 	*)
+ 		# for now, limit cross builds to known configurations
+ 		MACHDEP="unknown"

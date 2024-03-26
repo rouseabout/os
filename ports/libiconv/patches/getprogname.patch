@@ -1,0 +1,14 @@
+diff --git a/srclib/getprogname.c b/srclib/getprogname.c
+index 22d71eb..e3612eb 100644
+--- a/srclib/getprogname.c
++++ b/srclib/getprogname.c
+@@ -245,7 +245,8 @@ getprogname (void)
+     }
+   return NULL;
+ # else
+-#  error "getprogname module not ported to this OS"
++//#  error "getprogname module not ported to this OS"
++  return "?";
+ # endif
+ }
+ 

@@ -1,0 +1,12 @@
+diff --git a/gameConstants.h b/gameConstants.h
+index 2ee0c1b..d675c69 100644
+--- a/gameConstants.h
++++ b/gameConstants.h
+@@ -2,6 +2,6 @@
+ #define FALSE 0
+ 
+ #define W 12             //游戏区域的宽度（W个方块）
+-#define H 20             //游戏区域的高度（H个方块）
++#define H 19             //游戏区域的高度（H个方块）
+ 
+ #define CELL 30          //方块的边长

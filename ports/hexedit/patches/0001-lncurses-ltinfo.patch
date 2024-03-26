@@ -1,0 +1,18 @@
+diff --git a/configure.ac b/configure.ac
+index c5b05f3..e926734 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -35,8 +35,8 @@ AC_PROG_CC
+ AC_PROG_INSTALL
+ 
+ dnl Checks for libraries.
+-AC_CHECK_LIB(curses, initscr, LIBS="$LIBS -lcurses",
+-  [AC_CHECK_LIB(ncurses, initscr, LIBS="$LIBS -lncurses",
++AC_CHECK_LIB(curses, initscr, LIBS="$LIBS -lcurses -ltinfo",
++  [AC_CHECK_LIB(ncurses -ltinfo, initscr, LIBS="$LIBS -lncurses -ltinfo",
+     AC_MSG_ERROR([libcurses/libncurses not found.]))]
+ )
+ AC_CHECK_LIB(tinfo, keypad, LIBS="$LIBS -ltinfo")
+-- 
+2.43.0
+

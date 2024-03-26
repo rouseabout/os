@@ -1,0 +1,29 @@
+From 1c918323a17ef831f09a4543f5a4ea72b939c4fe Mon Sep 17 00:00:00 2001
+From: Peter Ross <pross@xvid.org>
+Date: Fri, 15 Apr 2022 18:30:29 +1000
+Subject: [PATCH 1/4] libstdc++: support *-pc-elf
+
+---
+ libstdc++-v3/crossconfig.m4 | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/libstdc++-v3/crossconfig.m4 b/libstdc++-v3/crossconfig.m4
+index ff44d5ae0..e9e26f369 100644
+--- a/libstdc++-v3/crossconfig.m4
++++ b/libstdc++-v3/crossconfig.m4
+@@ -312,6 +312,12 @@ dnl # functions in the list guarded by
+ dnl # long_double_math_on_this_cpu in configure.ac, right after
+ dnl # the expansion of the present macro.
+     ;;
++  *-pc-elf)
++    GLIBCXX_CHECK_COMPILER_FEATURES
++    GLIBCXX_CHECK_LINKER_FEATURES
++    GLIBCXX_CHECK_MATH_SUPPORT
++    GLIBCXX_CHECK_STDLIB_SUPPORT
++    ;;
+   *)
+     AC_MSG_ERROR([No support for this host/target combination.])
+    ;;
+-- 
+2.35.1
+

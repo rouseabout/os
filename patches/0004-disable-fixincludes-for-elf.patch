@@ -1,0 +1,24 @@
+From bc79b94f4b8c4f3b9e5ffe2766fa145f99f90cd9 Mon Sep 17 00:00:00 2001
+From: Peter Ross <pross@xvid.org>
+Date: Fri, 15 Apr 2022 18:56:51 +1000
+Subject: [PATCH 4/4] disable fixincludes for *-elf
+
+---
+ fixincludes/mkfixinc.sh | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/fixincludes/mkfixinc.sh b/fixincludes/mkfixinc.sh
+index df90720b7..97febeb67 100755
+--- a/fixincludes/mkfixinc.sh
++++ b/fixincludes/mkfixinc.sh
+@@ -11,6 +11,7 @@ target=fixinc.sh
+ 
+ # Check for special fix rules for particular targets
+ case $machine in
++    *-elf | \
+     i?86-*-cygwin* | \
+     i?86-*-mingw32* | \
+     x86_64-*-mingw32* | \
+-- 
+2.35.1
+

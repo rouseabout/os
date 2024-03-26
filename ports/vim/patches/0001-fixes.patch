@@ -1,0 +1,41 @@
+From 4a5f21497a6195078dea2946524d74aeadb917b9 Mon Sep 17 00:00:00 2001
+From: Peter Ross <pross@xvid.org>
+Date: Thu, 7 Apr 2022 17:20:53 +1000
+Subject: [PATCH] fixes
+
+---
+ src/libvterm/include/vterm.h | 4 +---
+ src/pty.c                    | 2 +-
+ 2 files changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/src/libvterm/include/vterm.h b/src/libvterm/include/vterm.h
+index d553fbd51..519b0f445 100644
+--- a/src/libvterm/include/vterm.h
++++ b/src/libvterm/include/vterm.h
+@@ -16,9 +16,7 @@ extern "C" {
+ #define FALSE 0
+ 
+ // from stdint.h
+-typedef unsigned char		uint8_t;
+-typedef unsigned short		uint16_t;
+-typedef unsigned int		uint32_t;
++#include <stdint.h>
+ 
+ #define VTERM_VERSION_MAJOR 0
+ #define VTERM_VERSION_MINOR 2
+diff --git a/src/pty.c b/src/pty.c
+index 4c4e9e2ea..4967284b9 100644
+--- a/src/pty.c
++++ b/src/pty.c
+@@ -382,7 +382,7 @@ mch_openpty(char **ttyn)
+ static char PtyProto[] = "/dev/ptym/ptyXY";
+ static char TtyProto[] = "/dev/pty/ttyXY";
+ # else
+-#  ifdef(__HAIKU__)
++#  ifdef __HAIKU__
+ static char PtyProto[] = "/dev/pt/XY";
+ static char TtyProto[] = "/dev/tt/XY";
+ #  else
+-- 
+2.35.1
+

@@ -1,0 +1,24 @@
+diff --git a/fbdoom/i_input_tty.c b/fbdoom/i_input_tty.c
+index e66e17b..d9c217e 100644
+--- a/fbdoom/i_input_tty.c
++++ b/fbdoom/i_input_tty.c
+@@ -128,15 +128,15 @@ static const char at_to_doom[] =
+     /* 0x45 */ KEY_NUMLOCK,
+     /* 0x46 */ 0x0,
+     /* 0x47 */ 0x0, /* 47 (Keypad-7/Home) */
+-    /* 0x48 */ 0x0, /* 48 (Keypad-8/Up) */
++    /* 0x48 */ KEY_UPARROW, /* 48 (Keypad-8/Up) */
+     /* 0x49 */ 0x0, /* 49 (Keypad-9/PgUp) */
+     /* 0x4a */ 0x0, /* 4a (Keypad--) */
+-    /* 0x4b */ 0x0, /* 4b (Keypad-4/Left) */
++    /* 0x4b */ KEY_LEFTARROW, /* 4b (Keypad-4/Left) */
+     /* 0x4c */ 0x0, /* 4c (Keypad-5) */
+-    /* 0x4d */ 0x0, /* 4d (Keypad-6/Right) */
++    /* 0x4d */ KEY_RIGHTARROW, /* 4d (Keypad-6/Right) */
+     /* 0x4e */ 0x0, /* 4e (Keypad-+) */
+     /* 0x4f */ 0x0, /* 4f (Keypad-1/End) */
+-    /* 0x50 */ 0x0, /* 50 (Keypad-2/Down) */
++    /* 0x50 */ KEY_DOWNARROW, /* 50 (Keypad-2/Down) */
+     /* 0x51 */ 0x0, /* 51 (Keypad-3/PgDn) */
+     /* 0x52 */ 0x0, /* 52 (Keypad-0/Ins) */
+     /* 0x53 */ 0x0, /* 53 (Keypad-./Del) */

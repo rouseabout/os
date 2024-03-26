@@ -1,0 +1,13 @@
+diff --git a/gcc/cppbuiltin.cc b/gcc/cppbuiltin.cc
+index cb170e0..9460129 100644
+--- a/gcc/cppbuiltin.cc
++++ b/gcc/cppbuiltin.cc
+@@ -64,7 +64,7 @@ define__GNUC__ (cpp_reader *pfile)
+   cpp_define_formatted (pfile, "__GNUC__=%d", major);
+   cpp_define_formatted (pfile, "__GNUC_MINOR__=%d", minor);
+   cpp_define_formatted (pfile, "__GNUC_PATCHLEVEL__=%d", patchlevel);
+-  cpp_define_formatted (pfile, "__VERSION__=\"%s\"", version_string);
++  cpp_define_formatted (pfile, "__VERSION__=\"" version_string "\"");
+   cpp_define_formatted (pfile, "__ATOMIC_RELAXED=%d", MEMMODEL_RELAXED);
+   cpp_define_formatted (pfile, "__ATOMIC_SEQ_CST=%d", MEMMODEL_SEQ_CST);
+   cpp_define_formatted (pfile, "__ATOMIC_ACQUIRE=%d", MEMMODEL_ACQUIRE);

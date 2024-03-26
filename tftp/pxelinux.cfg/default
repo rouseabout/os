@@ -1,0 +1,13 @@
+default menu.c32
+prompt 0
+timeout 120
+
+menu title PXE Menu
+
+label Operating system
+  kernel mboot.c32
+  append kernel.bin --- initrd
+
+label Operating system (serial)
+  kernel mboot.c32
+  append kernel.bin console=/dev/serial0 --- initrd

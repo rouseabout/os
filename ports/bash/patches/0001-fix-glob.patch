@@ -1,0 +1,34 @@
+From a9571b81c3a77884cbffc486138ccbd020e08c7a Mon Sep 17 00:00:00 2001
+From: Peter Ross <pross@xvid.org>
+Date: Thu, 7 Apr 2022 18:07:56 +1000
+Subject: [PATCH] fix glob
+
+---
+ lib/glob/glob.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/lib/glob/glob.c b/lib/glob/glob.c
+index eb6277f..25e878c 100644
+--- a/lib/glob/glob.c
++++ b/lib/glob/glob.c
+@@ -122,7 +122,7 @@ static void wdequote_pathname PARAMS((char *));
+ #else
+ #  define dequote_pathname udequote_pathname
+ #endif
+-static void dequote_pathname PARAMS((char *));
++void dequote_pathname PARAMS((char *));
+ static int glob_testdir PARAMS((char *, int));
+ static char **glob_dir_to_array PARAMS((char *, char **, int));
+ 
+@@ -496,7 +496,7 @@ wdequote_pathname (pathname)
+   free (orig_wpathname);
+ }
+ 
+-static void
++void
+ dequote_pathname (pathname)
+      char *pathname;
+ {
+-- 
+2.35.1
+

@@ -1,0 +1,13 @@
+diff --git a/dmidecode.c b/dmidecode.c
+index cd2b5c9..27ed9c2 100644
+--- a/dmidecode.c
++++ b/dmidecode.c
+@@ -5576,8 +5576,6 @@ int main(int argc, char * const argv[])
+ 	 * We don't want stdout and stderr to be mixed up if both are
+ 	 * redirected to the same file.
+ 	 */
+-	setlinebuf(stdout);
+-	setlinebuf(stderr);
+ 
+ 	if (sizeof(u8) != 1 || sizeof(u16) != 2 || sizeof(u32) != 4 || '\0' != 0)
+ 	{

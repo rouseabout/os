@@ -1,0 +1,21 @@
+diff --git a/Makefile b/Makefile
+index f3007b4..43c2f3d 100644
+--- a/Makefile
++++ b/Makefile
+@@ -516,13 +516,15 @@ $(LIBDIR)/tutorial: tutorial.sc $(LIBDIR)
+ 	chmod $(MANMODE) $(LIBDIR)/tutorial.$(name)
+ 
+ $(LIBDIR):
+-	mkdir $(LIBDIR)
++	mkdir -p $(LIBDIR)
+ 
+ $(MANDIR)/$(name).$(MANEXT): $(name).1
++	mkdir -p $(MANDIR)
+ 	cp $(name).1 $(MANDIR)/$(name).$(MANEXT)
+ 	chmod $(MANMODE) $(MANDIR)/$(name).$(MANEXT)
+ 
+ $(MANDIR)/p$(name).$(MANEXT): p$(name).1
++	mkdir -p $(MANDIR)
+ 	cp p$(name).1 $(MANDIR)/p$(name).$(MANEXT)
+ 	chmod $(MANMODE) $(MANDIR)/p$(name).$(MANEXT)
+ 

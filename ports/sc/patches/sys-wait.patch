@@ -1,0 +1,12 @@
+diff --git a/vi.c b/vi.c
+index 7963bcc..1451020 100644
+--- a/vi.c
++++ b/vi.c
+@@ -5,6 +5,7 @@
+  */
+ 
+ #include <sys/types.h>
++#include <sys/wait.h>
+ #ifdef BSD42
+ #include <strings.h>
+ #else

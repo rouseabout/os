@@ -1,0 +1,13 @@
+diff --git a/tccelf.c b/tccelf.c
+index b46ad4ca..4d71ccda 100644
+--- a/tccelf.c
++++ b/tccelf.c
+@@ -3339,6 +3339,8 @@ static int tcc_load_alacarte(TCCState *s1, int fd, int size, int entrysize)
+     ElfW(Sym) *sym;
+     ArchiveHeader hdr;
+ 
++    if (size == 0) return 0;
++
+     data = tcc_malloc(size);
+     if (full_read(fd, data, size) != size)
+         goto the_end;
