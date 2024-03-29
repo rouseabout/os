@@ -16,6 +16,7 @@ typedef struct FILE FILE;
 #define SEEK_END 2
 #define SEEK_SET 0 /* assumed to be zero by libstdc++ */
 
+#define FOPEN_MAX 8
 #define TMP_MAX 64
 
 #define BUFSIZ 512

@@ -4,6 +4,7 @@ Build and working status of ports.
 |---|---|---|---|---|
 |bash |[Bash](https://www.gnu.org/software/bash/) | | ✓ | |
 |binutils |[binutils](https://www.gnu.org/software/binutils/) | | ✓ | |
+|bwbasic |[bwBASIC](https://sourceforge.net/projects/bwbasic/) | | ✓ | |
 |coreutils |[coreutils](https://www.gnu.org/software/coreutils/) | | ✓ | |
 |curl |[curl](https://curl.se/) | | ✗ |no networking |
 |dash |[dash](http://gondor.apana.org.au/~herbert/dash/) | | ✓ | |

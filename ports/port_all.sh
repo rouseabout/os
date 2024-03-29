@@ -16,6 +16,7 @@ g zlib
 
 g bash
 g binutils
+g bwbasic
 g coreutils
 g curl
 g dash
