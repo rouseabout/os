@@ -15,6 +15,8 @@ Features:
 
 It is not robust, secure, or efficient, and should be considered highly experimental.
 
+Live demonstration: <https://pross.sdf.org/sandpit/os/>
+
 *os* has been tested on real x86 hardware (Intel Haswell, Intel Kaby Lake).
 It has also been tested with various x86 emulators including Bochs (<https://bochs.sourceforge.io/>), PCem (<https://pcem-emulator.co.uk/>), QEMU (<https://www.qemu.org/>), TinyEMU (<https://bellard.org/tinyemu/>), v86 (<https://github.com/copy/v86>) and VirtualBox (<https://www.virtualbox.org/>).
 
