@@ -1,5 +1,6 @@
 *.o
 kernel.bin
+kernel.linux*
 initrd
 sysroot
 cdrom.iso

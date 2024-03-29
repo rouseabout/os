@@ -169,6 +169,44 @@ static void parse_multiboot_info(const multiboot_info * info, uint32_t * low_siz
     */
 }
 
+#define read_8(params, offset) params[offset]
+#define read_16(params, offset) *(uint16_t *)(params + offset)
+#define read_32(params, offset) *(uint32_t *)(params + offset)
+static void parse_linux_params(const uint8_t * params, uint32_t * low_size, uint32_t * up_start, uint32_t * up_size, uint32_t * mod_start, uint32_t * mod_end)
+{
+    *low_size = 639*1024;
+    *up_start = (uint32_t)&end;
+
+    kprintf("cmdline: %s\n", read_32(params, 0x228));
+    strlcpy(cmdline, (const char *)read_32(params, 0x228), sizeof(cmdline));
+
+    if (read_8(params, 0xf) == 0x23) {
+        fb_init(/*base*/read_32(params, 0x18), /*stride*/read_16(params,0x24), /*width*/read_16(params, 0x12), /*height*/read_16(params, 0x14), /*depth*/read_16(params, 0x16));
+        tty = &fb_commands;
+    } else
+        textmode_init();
+
+    kb_init();
+    tty_init();
+
+    void * initrd_start = (void *)read_32(params, 0x218);
+    uint32_t initrd_size = read_32(params, 0x21c);
+    /* move initrd to immediately after kernel image */
+    if (initrd_size) {
+        memcpy((void *)*up_start, initrd_start, initrd_size);
+        *mod_start = *up_start;
+        *mod_end = *mod_start + initrd_size;
+
+       *up_start += initrd_size;
+    }
+
+    uint32_t alt_mem_k = read_32(params, 0x1e0);
+    if (alt_mem_k)
+        *up_size = (alt_mem_k * 1024) - (*up_start - (uint32_t)&multiboot);
+    else
+        *up_size = 127 * 1024 * 1024;  /* FIXME: otherwise, guess */
+}
+
 /* cpu */
 
 static word get_cr0()
@@ -3148,16 +3186,17 @@ void jmp_to_userspace(uint32_t eip, uint32_t esp);
 
 static void idle(int param);
 
-void start2(uint32_t magic, multiboot_info * info, uint32_t initial_esp);
-void start2(uint32_t magic, multiboot_info * info, uint32_t initial_esp)
+void start2(uint32_t magic, const void * info, uint32_t initial_esp);
+void start2(uint32_t magic, const void * info, uint32_t initial_esp)
 {
-    kprintf("Hello world, magic=0x%x, esp=0x%x\n", magic, initial_esp);
-    if (magic != 0x2BADB002) {
-        panic("invalid magic number");
-    }
-
     uint32_t low_size, up_start, up_size, mod_start, mod_end;
-    parse_multiboot_info(info, &low_size, &up_start, &up_size, &mod_start, &mod_end);
+    kprintf("Hello world, magic=0x%x, info=%p, esp=0x%x\n", magic, info, initial_esp);
+    if (magic == 0x2BADB002)
+        parse_multiboot_info(info, &low_size, &up_start, &up_size, &mod_start, &mod_end);
+    else if (magic == 0x1337)
+        parse_linux_params(info, &low_size, &up_start, &up_size, &mod_start, &mod_end);
+    else
+        panic("invalid magic number");
 
     cpu_init();
 
