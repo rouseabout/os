@@ -24,6 +24,18 @@ start16:
     db 48 dup (0)
 
 .continue:
+    xor eax, eax
+    xor ebx, ebx
+
+    mov ax, 0xe801
+    int 0x15
+    jc .check_switch ; failed
+
+    shl ebx, 6
+    add eax, ebx
+    mov [0x1e0], eax ; @0x1e0 alt_mem_k
+
+.check_switch:
     mov eax, [0x208] ; @0x208 realmode_swtch
     cmp eax, 0
     jz .switch

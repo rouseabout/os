@@ -201,10 +201,7 @@ static void parse_linux_params(const uint8_t * params, uint32_t * low_size, uint
     }
 
     uint32_t alt_mem_k = read_32(params, 0x1e0);
-    if (alt_mem_k)
-        *up_size = (alt_mem_k * 1024) - (*up_start - (uint32_t)&multiboot);
-    else
-        *up_size = 127 * 1024 * 1024;  /* FIXME: otherwise, guess */
+    *up_size = (alt_mem_k * 1024) - (*up_start - (uint32_t)&multiboot);
 }
 
 /* cpu */
