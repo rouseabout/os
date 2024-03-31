@@ -50,5 +50,5 @@ g tinycc
 g units
 g vim
 g vttest
-g xz
+#g xz
 g yasm
