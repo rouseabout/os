@@ -15,6 +15,8 @@ SECTIONS {
         . = ALIGN(4096);
     }
 
+    bss = .;
+
     .bss : {
         bss = .;
         *(.bss)

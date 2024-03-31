@@ -12,8 +12,8 @@ start: ; linux_params
 start16:
     jmp short .continue ; @0x200: short jump
     dd 0x53726448 ; @0x202: magic
-    dd 0x204 ; @0x204: protocol
-    db 7 dup (0)
+    dw 0x204 ; @0x204: protocol
+    db 9 dup (0)
     db 1 ; @0x211: load high bit
     db 2 dup (0)
     dd 0x100000 ; @0x214: code32_start
@@ -24,6 +24,21 @@ start16:
     db 48 dup (0)
 
 .continue:
+    mov eax, [0x208] ; @0x208 realmode_swtch
+    cmp eax, 0
+    jz .switch
+    call far [0x208]
+    jmp .go_pm
+
+.switch:
+    cli
+    mov al, 0x80
+    out 0x70, al
+
+.go_pm:
+    mov eax, [0x214] ; @0x214 code32_start
+    mov [.jump32 + 2], eax
+
     mov esi, ds
     shl esi, 4 ; linux_params
 
@@ -41,7 +56,9 @@ start16:
     mov ds, ax
     mov ss, ax
     mov es, ax
-    jmp dword 0x8:0x100000
+
+.jump32:
+    jmp dword 0x8:0x0
 
 align 4
 gdt:

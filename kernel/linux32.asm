@@ -2,6 +2,9 @@ bits 32
 section .text
 align 4
 
+extern bss
+extern end
+
 extern start2
 
 global multiboot
@@ -9,6 +12,15 @@ multiboot:
 
 global start
 start:
+    push dword 0x0
+    popf
+
+    mov edi, bss
+    mov ecx, end
+    sub ecx, edi
+    xor eax, eax
+    rep stosb
+
     mov esp, sys_stack_top
     xor ebp, ebp
 
