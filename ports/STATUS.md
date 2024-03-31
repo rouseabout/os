@@ -21,6 +21,7 @@ Build and working status of ports.
 |hexedit |[hexedit](https://github.com/pixel/hexedit) |ncurses | ✓ | |
 |joe |[JOE](https://joe-editor.sourceforge.io/) | | ✗ |keyboard issues |
 |less |[less](https://www.greenwoodsoftware.com/less/) |ncurses | ✓ | |
+|libarchive |[libarchive](https://www.libarchive.org/) | | ✓ | |
 |libffi |[libffi](https://sourceware.org/libffi/) | | ✓ | |
 |libiconv |[libiconv](https://www.gnu.org/software/libiconv/) | | ✓ | |
 |links |[Links](http://links.twibright.com/) | | ✓ | |

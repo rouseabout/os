@@ -32,6 +32,7 @@ g git
 g hexedit
 g joe
 g less
+g libarchive
 g links
 g lua
 g lynx
