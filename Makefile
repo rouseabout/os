@@ -242,7 +242,6 @@ HEADERS=\
 	sys/ucontext.h \
 	sys/uio.h \
 	sys/un.h \
-	sys/utime.h \
 	sys/utsname.h \
 	sys/wait.h \
 	\
