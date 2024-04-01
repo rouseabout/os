@@ -11,6 +11,7 @@
 int main(int argc, char ** argv)
 {
     int interactive = 1;
+    int ret = 0;
 
     if (argc >= 3 && !strcmp(argv[1], "-c"))
         interactive = 0;
@@ -108,7 +109,6 @@ int main(int argc, char ** argv)
                     fprintf(stderr, "too many arguments\n");
                     continue;
                 }
-                int ret;
                 if (newargc == 2) {
                     ret = chdir(newargv[1]);
                 } else {
@@ -137,7 +137,7 @@ int main(int argc, char ** argv)
             if (do_pipe) {
                 if (pipe(pfds) < 0) {
                     perror("pipe");
-                    return -1;
+                    return EXIT_FAILURE;
                 }
             }
 
@@ -152,7 +152,7 @@ int main(int argc, char ** argv)
                     int fd = open(input_path, O_RDONLY);
                     if (fd < 0) {
                         perror(input_path);
-                        return -1;
+                        return EXIT_FAILURE;
                     }
                     dup2(fd, STDIN_FILENO);
                 } else if (pipe0 >= 0) {
@@ -164,7 +164,7 @@ int main(int argc, char ** argv)
                     int fd = open(output_path, O_WRONLY|O_CREAT, 0666);
                     if (fd < 0) {
                         perror(output_path);
-                        return -1;
+                        return EXIT_FAILURE;
                     }
                     dup2(fd, STDOUT_FILENO);
                 } else if (do_pipe) {
@@ -175,7 +175,7 @@ int main(int argc, char ** argv)
                 //printf("(as pid %d) exec: %s\n", getpid(), newargv[0]);
                 execvp(newargv[0], newargv);
                 fprintf(stderr, "%s: %s: command not found\n", argv[0], cmdline);
-                return -1;
+                return EXIT_FAILURE;
             } else if (!background) {
                 setpgid(pid, pid);
                 tcsetpgrp(STDIN_FILENO, pid);
@@ -183,11 +183,11 @@ int main(int argc, char ** argv)
                 if (pipe0 >= 0)
                     close(pipe0);
 
-                int wpid;
+                int wpid, status;
                 do {
-                    int status;
                     wpid = waitpid(pid, &status, 0);
                 } while (wpid >= 0 && wpid != pid);
+                ret = WEXITSTATUS(status);
 
                 signal(SIGTTOU, SIG_IGN);
                 tcsetpgrp(STDIN_FILENO, getpgrp());
@@ -205,5 +205,5 @@ int main(int argc, char ** argv)
             break;
     }
 
-    return EXIT_SUCCESS;
+    return ret;
 }
