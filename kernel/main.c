@@ -2484,23 +2484,23 @@ static pid_t sys_waitpid(registers * reg, pid_t pid, int * stat_loc, int options
     if (!has_child_process(current_task->id))
         return -ECHILD;
 
-        Task * stopped = find_stopped(current_task->id);
-        if (stopped) {
-            if (stat_loc)
-                *stat_loc = MK_WAITPID_STATUS(0, 1);
-            stopped->u.stopped.parent_notified = 1;
-            return stopped->id;
-        }
-        Task ** pp = find_zombie_pp(current_task->id);
-        if (pp) {
-            Task * zombie = *pp;
-            if (stat_loc)
-                *stat_loc = MK_WAITPID_STATUS(zombie->proc->errorlevel, 0);
-            pid_t ret = zombie->id;
-            *pp = zombie->next;
-            kfree(zombie);
-            return ret;
-        }
+    Task * stopped = find_stopped(current_task->id);
+    if (stopped) {
+        if (stat_loc)
+            *stat_loc = MK_WAITPID_STATUS(0, 1);
+        stopped->u.stopped.parent_notified = 1;
+        return stopped->id;
+    }
+    Task ** pp = find_zombie_pp(current_task->id);
+    if (pp) {
+        Task * zombie = *pp;
+        if (stat_loc)
+            *stat_loc = MK_WAITPID_STATUS(zombie->proc->errorlevel, 0);
+        pid_t ret = zombie->id;
+        *pp = zombie->next;
+        kfree(zombie);
+        return ret;
+    }
 
     if (options & WNOHANG)
         return 0;
