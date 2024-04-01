@@ -510,11 +510,11 @@ int vfs_rename(const char * old, const char * new)
 
     ret = oldmount->ops->inode_unpopulate_dir(oldmount->priv_data, olddinode, inode, is_dir, 0);
     if (ret < 0)
-       panic("unpopulate failed\n");
+       return -EIO; //FIXME: no rollback
 
     ret = oldmount->ops->inode_append_dir(oldmount->priv_data, newdinode, inode, newbase, is_dir);
     if (ret < 0)
-       panic("append failed\n");
+       return -EIO; //FIXME: no rollback
 
     return 0;
 }
