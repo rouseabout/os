@@ -15,8 +15,8 @@ int gettimeofday(struct timeval * tp, void * tzp)
 
 MK_SYSCALL3(int, setitimer, OS_SETITIMER, int, const struct itimerval *, struct itimerval *)
 
+#include <utime.h>
 int utimes(const char *path, const struct timeval times[2])
 {
-    return -1;
-    errno = ENOSYS;
+    return utime(path, &(struct utimbuf){.actime=times[0].tv_sec, .modtime=times[1].tv_sec});
 }
