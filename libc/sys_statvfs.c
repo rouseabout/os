@@ -9,8 +9,8 @@ static struct statvfs * mntbuf = NULL;
 int fstatvfs(int fildes, struct statvfs * buf)
 {
     syslog(LOG_DEBUG, "fstatvfs: fd=%d", fildes);
-    errno = ENOSYS;
-    return -1;
+    memset(buf, 0, sizeof(*buf));
+    return 0;
 }
 
 static MK_SYSCALL2(int, sys_getmntinfo, OS_GETMNTINFO, struct statvfs *, int)
