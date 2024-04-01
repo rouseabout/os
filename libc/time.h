@@ -26,10 +26,8 @@ struct tm {
     int tm_isdst;
 };
 
-enum {
-    CLOCK_REALTIME = 0,
-    CLOCK_MONOTONIC,
-};
+#define CLOCK_REALTIME 0
+#define CLOCK_MONOTONIC 1
 
 extern int daylight;
 extern long timezone;
