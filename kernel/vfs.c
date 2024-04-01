@@ -362,8 +362,10 @@ int vfs_mmap(FileDescriptor * fd, struct os_mmap_request * req)
 
 int vfs_fstat(FileDescriptor * fd, struct stat * st)
 {
-    if (!fd->mount || !fd->mount->ops->inode_stat)
-        return -ENOSYS;
+    if (!fd->mount || !fd->mount->ops->inode_stat) {
+        memset(st, 0, sizeof(*st)); /* pipe, socket */
+        return 0;
+    }
 
     return fd->mount->ops->inode_stat(fd->priv_data, fd->inode, st);
 }
