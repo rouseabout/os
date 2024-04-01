@@ -358,6 +358,9 @@ int main(int argc, char **argv, char ** envp)
     TESTCASE(fabs(log2f(1024) - 10.0) < 0.00001);
 }
 
+    TESTCASE(system("true") == 0);
+    TESTCASE(system("false") != 0);
+
     printf("Tests complete\n");
 
     return EXIT_SUCCESS;

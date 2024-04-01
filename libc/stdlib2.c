@@ -329,12 +329,21 @@ void srandom(unsigned seed)
 }
 
 #include <unistd.h>
+#include <sys/wait.h>
 int system(const char * command)
 {
     if (!command)
         return 0;
-    char * argv[] = {"sh", "-c", (char *)command, NULL};
-    return execv(getenv("SHELL") ? getenv("SHELL") : "/bin/sh", argv);
+    pid_t pid = fork();
+    if (pid == -1)
+        return -1;
+    if (!pid) {
+        char * argv[] = {"sh", "-c", (char *)command, NULL};
+        return execv(getenv("SHELL") ? getenv("SHELL") : "/bin/sh", argv);
+    }
+    int status;
+    waitpid(pid, &status, 0);
+    return WEXITSTATUS(status);
 }
 
 int unsetenv(const char *name)
