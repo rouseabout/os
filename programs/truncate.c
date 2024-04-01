@@ -25,9 +25,10 @@ int main(int argc, char ** argv)
         return EXIT_FAILURE;
     }
 
-    int fd = open(argv[optind], O_CREAT|O_APPEND|O_WRONLY, 0666);
-    ftruncate(fd, size);
-    close(fd);
+    if (truncate(argv[optind], size) == -1) {
+        perror(argv[optind]);
+        return EXIT_FAILURE;
+    }
 
-    return 0;
+    return EXIT_SUCCESS;
 }

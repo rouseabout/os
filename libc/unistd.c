@@ -400,9 +400,12 @@ MK_SYSCALL2(int, tcsetpgrp, OS_TCSETPGRP, int, pid_t)
 
 int truncate(const char * path, off_t length)
 {
-    syslog(LOG_DEBUG, "libc: truncate '%s'", path);
-    errno = ENOSYS;
-    return -1; //FIXME:
+    int fd = open(path, O_APPEND|O_WRONLY);
+    if (fd == -1)
+        return -1;
+    int ret = ftruncate(fd, length);
+    close(fd);
+    return ret;
 }
 
 char * ttyname(int fildes)
