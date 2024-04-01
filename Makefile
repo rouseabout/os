@@ -158,7 +158,7 @@ d-%: %
 gdb: kernel.bin
 	gdb $< -ex 'target remote localhost:1234'
 
-PROGRAMS=cat chat clear cmp crash date draw echo env false flash forkbomb getty hello hello++ hexdump hostname init kill ln ls mkdir more mount mv pwd reset rm rmdir sh sleep testcases tolower touch tree true truncate uname unixping unixserver
+PROGRAMS=cat chat clear cmp crash date draw echo env false flash forkbomb getty hello hello++ hexdump hostname init kill ln ls mkdir more mount mv pwd reset rm rmdir sh sleep testcases tolower touch tree true truncate uname unixping unixserver wc
 clean:
 	rm -f kernel.bin kernel.linux* $(KERNEL_OBJS) kernel/multiboot.o kernel/linux32.o cdrom.iso iso/boot/kernel.bin initrd iso/boot/initrd disk_image disk_image.vdi hd/boot/kernel.bin hd/boot/initrd $(TFTP_FILES) programs/*.o libc/*.o libdl/*.o libg/*.o libm/*.o $(PROGRAMS) libc.a libdl.a libg.a libm.a $(TEST_BIN) $(DUMPELF_BIN) $(DUMPEXT2_BIN) $(EXT2TEST_BIN) .sysroot
 	rm -rf sysroot

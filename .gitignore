@@ -53,6 +53,7 @@ truncate
 uname
 unixping
 unixserver
+wc
 dumpelf
 dumpext2
 dumpgpt

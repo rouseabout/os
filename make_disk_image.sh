@@ -35,7 +35,7 @@ mount ${dev}p1 mnt/
 cp -r hd/* mnt/
 
 mkdir mnt/bin
-PROGRAMS="cat chat clear cmp crash date draw echo env false flash forkbomb hello hello++ hexdump hostname init kill ln ls mkdir more mount mv pwd reset rm rmdir sh sleep testcases tolower touch tree true truncate uname"
+PROGRAMS="cat chat clear cmp crash date draw echo env false flash forkbomb hello hello++ hexdump hostname init kill ln ls mkdir more mount mv pwd reset rm rmdir sh sleep testcases tolower touch tree true truncate uname unixping unixserver wc"
 cp $PROGRAMS mnt/bin
 cp README.md mnt/
 mkdir mnt/tmp
