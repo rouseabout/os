@@ -178,7 +178,7 @@ void flockfile(FILE *file)
     //FIXME:
 }
 
-FILE * fopen(const char * pathname, const char * mode)
+static FILE * fopen2(FILE * stream, int free_on_error, const char * pathname, const char * mode)
 {
     int flags = 0;
     while (*mode) {
@@ -188,14 +188,11 @@ FILE * fopen(const char * pathname, const char * mode)
         mode++;
     }
 
-    FILE * stream = malloc(sizeof(FILE));
-    if (!stream)
-        return NULL;
-
     stream->type = TYPE_FD;
     stream->u.fd = open(pathname, flags);
     if (stream->u.fd < 0) {
-        free(stream);
+        if (free_on_error)
+            free(stream);
         return NULL;
     }
 
@@ -203,6 +200,14 @@ FILE * fopen(const char * pathname, const char * mode)
     stream->eof = 0;
     stream->error = 0;
     return stream;
+}
+
+FILE * fopen(const char * pathname, const char * mode)
+{
+    FILE * stream = malloc(sizeof(FILE));
+    if (!stream)
+        return NULL;
+    return fopen2(stream, 1, pathname, mode);
 }
 
 #include "generic_printf.h"
@@ -264,6 +269,16 @@ FILE * freopen(const char * pathname, const char * mode, FILE * stream)
     fclose(stream);
     if (!pathname)
         return NULL; //FIXME:
+    if (stream == &stdin_file || stream == &stdout_file || stream == &stderr_file) {
+        int origfd = stream->u.fd;
+        if (!fopen2(stream, 0, pathname, mode))
+            return NULL;
+        if (dup2(stream->u.fd, origfd) == -1)
+            return NULL;
+        close(stream->u.fd);
+        stream->u.fd = origfd;
+        return stream;
+    }
     return fopen(pathname, mode);
 }
 
