@@ -30,7 +30,7 @@ apt-get install -y git curl build-essential nasm texinfo libgmp-dev libmpfr-dev 
 
 ```
 
-Then type `make qemu`. This will download and build the gcc-based toolchain, build the kernel.bin and file system, and boot into QEMU.
+Then type `make qemu`. This will download and build the gcc-based toolchain, build the `kernel.bin` and file system, and boot into QEMU.
 
 Once booted, *os* runs the `init` process, which then executes `sh` in a forever loop.
 There is no user login.
@@ -41,7 +41,7 @@ See below for a list of included programs.
 
 *os* can be booted many ways.
 First it is important to understand the high-level design of the operating system.
-*os* consists of a kernel file and sysroot directory. The kernel.bin file is compatible with the multiboot specification. The kernel.linux file is compatbile with the linux boot protocol. The sysroot directory is copied to an ext2 file system, either intended to function as a ram disk (`initrd`) or a hard disk (`disk_image`).
+*os* consists of a kernel file and sysroot directory. The `kernel.bin` file is compatible with the multiboot specification. The `kernel.linux` file is compatbile with the Linux boot protocol. The sysroot directory is copied to an ext2 file system, either intended to function as a ram disk (`initrd`) or a hard disk (`disk_image`).
 
 
 ### ISO image boot
@@ -74,7 +74,9 @@ To boot in QEMU use `make qemu-hd`. To boot in Bochs use `make bochs-hd`. To boo
 
 ### Linux boot protocol
 
-To boot using the Linux boot protocol, use `make qemu-linux` or `make temu-linux`.
+`kernel.linux` has been tested with grub, LILO, LINLD, LOADLIN and SYSLINUX.
+
+To boot in QEMU use use `make qemu-linux`. To boot in TinyEMU use `make temu-linux`.
 
 
 ## Installing third-party software
