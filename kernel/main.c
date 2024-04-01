@@ -2484,7 +2484,6 @@ static pid_t sys_waitpid(registers * reg, pid_t pid, int * stat_loc, int options
     if (!has_child_process(current_task->id))
         return -ECHILD;
 
-    if (options & WNOHANG) {
         Task * stopped = find_stopped(current_task->id);
         if (stopped) {
             if (stat_loc)
@@ -2502,8 +2501,10 @@ static pid_t sys_waitpid(registers * reg, pid_t pid, int * stat_loc, int options
             kfree(zombie);
             return ret;
         }
+
+    if (options & WNOHANG)
         return 0;
-    }
+
     current_task->state = STATE_WAITPID;
     current_task->u.waitpid.status = stat_loc;
     move_current_task_to_wait_queue(reg);
