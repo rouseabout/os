@@ -1,5 +1,6 @@
 bits 16
 org 0x0
+%include "kernel/x86inc.asm"
 
 SETUP_SECTS equ 1
 
@@ -74,14 +75,9 @@ start16:
 
 align 4
 gdt:
-    dd 0
-    dd 0
-.code:
-    dw 0xFFFF, 0
-    db 0, 10011010b, 11001111b, 0
-.data:
-    dw 0xFFFF, 0
-    db 0, 10010010b, 11001111b, 0
+    GDT_ENTRY32 0, 0, 0, 0
+    GDT_ENTRY32 0, 0xFFFFFFFF, 0x9A, GRAN_32_BIT_MODE | GRAN_4KIB_BLOCKS
+    GDT_ENTRY32 0, 0xFFFFFFFF, 0x92, GRAN_32_BIT_MODE | GRAN_4KIB_BLOCKS
 .end:
 
 end:
