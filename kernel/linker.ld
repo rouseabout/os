@@ -24,4 +24,8 @@ SECTIONS {
     }
 
     end = .;
+
+    /DISCARD/ : {
+        *(.comment)
+    }
 }
