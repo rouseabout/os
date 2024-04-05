@@ -74,7 +74,7 @@ To boot in QEMU use `make qemu-hd`. To boot in Bochs use `make bochs-hd`. To boo
 
 ### Linux boot protocol
 
-`kernel.linux` has been tested with grub, LILO, LINLD, LOADLIN and SYSLINUX.
+`kernel.linux` has been tested with GRUB, LILO, LINLD, LOADLIN and SYSLINUX.
 
 To boot in QEMU use use `make qemu-linux`. To boot in TinyEMU use `make temu-linux`.
 
