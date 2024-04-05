@@ -6,6 +6,6 @@ set -e
 VERSION=14.4.2
 prep https://downloads.sourceforge.net/project/sox/sox/${VERSION}/sox-${VERSION}.tar.gz sox-${VERSION}.tar.gz sox-${VERSION}
 
-./configure --host=i686-pc-elf
+./configure --host=${ARCH}-pc-elf
 make -j$(nproc)
 make DESTDIR=$SYSROOT install

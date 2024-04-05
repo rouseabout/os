@@ -1,5 +1,6 @@
 OSHOME="$PWD/../.."
-export PATH="$OSHOME/toolchain-i686-pc-elf/bin:$PATH"
+. $OSHOME/.config
+export PATH="$OSHOME/toolchain-${ARCH}-pc-elf/bin:$PATH"
 export SYSROOT="$OSHOME/sysroot"
 export CACHE="$OSHOME/.cache"
 apply_patches(){

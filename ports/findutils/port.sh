@@ -6,6 +6,6 @@ set -e
 VERSION=4.9.0
 prep https://ftp.gnu.org/gnu/findutils/findutils-${VERSION}.tar.xz findutils-${VERSION}.tar.xz findutils-${VERSION}
 
-./configure --host=i686-pc-elf
+./configure --host=${ARCH}-pc-elf
 make -j$(nproc)
 make DESTDIR=$SYSROOT install

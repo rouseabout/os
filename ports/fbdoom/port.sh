@@ -8,6 +8,6 @@ cd fbdoom
 apply_patches
 
 cd fbdoom
-make CROSS_COMPILE=i686-pc-elf- NOSDL=1 -j$(nproc)
+make CROSS_COMPILE=${ARCH}-pc-elf- NOSDL=1 -j$(nproc)
 mkdir -p $SYSROOT/usr/local/bin
 cp fbdoom $SYSROOT/usr/local/bin

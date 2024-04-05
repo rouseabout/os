@@ -14,7 +14,7 @@ export vim_cv_stat_ignores_slash=yes
 export vim_cv_memmove_handles_overlap=yes
 export CFLAGS=-I${SYSROOT}/usr/local/include/ncurses
 rm -f src/auto/osdef.h
-./configure --host=i686-pc-elf --with-tlib=tinfo --with-features=tiny
+./configure --host=${ARCH}-pc-elf --with-tlib=tinfo --with-features=tiny
 make || true
 patch -p1 < ../osdef-remove.patch
 make -j$(nproc)

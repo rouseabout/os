@@ -9,6 +9,6 @@ prep https://mirrors.edge.kernel.org/pub/software/scm/git/git-${VERSION}.tar.xz 
 export ac_cv_iconv_omits_bom=no
 export ac_cv_fread_reads_directories=no
 export ac_cv_snprintf_returns_bogus=no
-./configure --host=i686-pc-elf
+./configure --host=${ARCH}-pc-elf
 make -j$(nproc)
 make DESTDIR=$SYSROOT install

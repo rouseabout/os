@@ -6,6 +6,6 @@ set -e
 VERSION=4.2.1
 prep https://www.mpfr.org/mpfr-current/mpfr-${VERSION}.tar.xz mpfr-${VERSION}.tar.xz mpfr-${VERSION}
 
-./configure CC=i686-pc-elf-gcc --target=i686-pc-elf --host=i686-pc-elf
+./configure CC=${ARCH}-pc-elf-gcc --target=${ARCH}-pc-elf --host=${ARCH}-pc-elf
 make -j$(nproc)
 make DESTDIR=$SYSROOT install

@@ -10,6 +10,6 @@ apply_patches
 ./autogen.sh
 export CFLAGS=-I${SYSROOT}/usr/local/include/ncurses
 export LDFLAGS=-L${SYSROOT}/usr/local/lib
-./configure --host=i686-pc-elf
+./configure --host=${ARCH}-pc-elf
 make -j$(nproc)
 make DESTDIR=$SYSROOT install

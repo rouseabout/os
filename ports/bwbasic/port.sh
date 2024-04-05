@@ -10,7 +10,7 @@ cd bwbasic
 unzip -o $CACHE/bwbasic-${VERSION}.zip
 
 fromdos configure
-export CC=i686-pc-elf-gcc
+export CC=${ARCH}-pc-elf-gcc
 sh ./configure
 make -j$(nproc)
 mkdir -p $SYSROOT/usr/local/bin

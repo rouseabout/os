@@ -8,10 +8,10 @@ cd tinycc
 apply_patches
 
 ./configure \
-	--cross-prefix="i686-pc-elf-" \
+	--cross-prefix="${ARCH}-pc-elf-" \
 	--enable-cross \
-        --cpu=i686 \
-        --triplet="i686-pc-elf" \
+        --cpu=${ARCH} \
+        --triplet="${ARCH}-pc-elf" \
         --crtprefix=/usr/lib \
 	--enable-static \
 	--debug

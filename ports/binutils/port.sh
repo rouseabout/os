@@ -6,6 +6,6 @@ set -e
 VERSION=2.41
 prep https://ftp.gnu.org/gnu/binutils/binutils-${VERSION}.tar.xz binutils-${VERSION}.tar.xz binutils-${VERSION}
 
-./configure --host=i686-pc-elf --target=i686-pc-elf
+./configure --host=${ARCH}-pc-elf --target=${ARCH}-pc-elf
 make -j$(nproc)
 make DESTDIR=$SYSROOT install
