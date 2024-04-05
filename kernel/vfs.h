@@ -127,5 +127,6 @@ void vfs_dump_sockets(void);
 extern const DeviceOperations null_dio;
 extern const DeviceOperations urandom_dio;
 extern const DeviceOperations power_dio;
+extern const DeviceOperations reboot_dio;
 
 #endif /* VFS_H */

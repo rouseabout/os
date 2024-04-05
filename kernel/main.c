@@ -3221,6 +3221,7 @@ void start2(uint32_t magic, const void * info, uint32_t initial_esp)
     dev_register_device("null", &null_dio, 0, NULL, NULL);
     dev_register_device("urandom", &urandom_dio, 0, NULL, NULL);
     dev_register_device("power", &power_dio, 0, NULL, NULL);
+    dev_register_device("reboot", &reboot_dio, 0, NULL, NULL);
 
     if (mod_end - mod_start > 0) {
         void * module = mem_init((void *)mod_start, mod_end - mod_start);

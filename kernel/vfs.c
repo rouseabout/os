@@ -778,3 +778,15 @@ static int power_write(__attribute((unused)) FileDescriptor * fd, const void * b
 }
 
 const DeviceOperations power_dio = {.write = power_write};
+
+static int reboot_write(__attribute((unused)) FileDescriptor * fd, const void * buf_, int size)
+{
+    int status;
+    do {
+       status = inb(0x64);
+    } while(status & 2);
+    outb(0x64, 0xfe);
+    return 0;
+}
+
+const DeviceOperations reboot_dio = {.write = reboot_write};
