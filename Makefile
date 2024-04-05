@@ -9,6 +9,8 @@ CC=$(TOOLCHAIN)/bin/$(ARCH)-pc-elf-gcc
 CXX=$(TOOLCHAIN)/bin/$(ARCH)-pc-elf-g++
 AR=$(TOOLCHAIN)/bin/$(ARCH)-pc-elf-ar
 STRIP=$(TOOLCHAIN)/bin/$(ARCH)-pc-elf-strip
+READELF=$(TOOLCHAIN)/bin/$(ARCH)-pc-elf-readelf
+OBJDUMP=$(TOOLCHAIN)/bin/$(ARCH)-pc-elf-objdump
 CFLAGS=-ffreestanding -Wall -pedantic -Wshadow -Wextra -Werror=format-security -Werror=implicit-function-declaration -Werror=missing-prototypes -Werror=pointer-arith -Werror=return-type -Werror=vla -Werror=logical-op -g -Ilibc -Ilibdl -Ilibm -Wno-unused-parameter -Wno-sign-compare
 CXXFLAGS=
 LD=$(CC)
@@ -153,7 +155,7 @@ hello: programs/hello.o .toolchain-$(ARCH)-stage2 .sysroot
 	$(CC) -o $@ -c $< $(CFLAGS)
 
 d-%: %
-	objdump -d -l $< | less
+	($(READELF) -h $<; $(OBJDUMP) -d -l $<) | less
 
 gdb: kernel.bin
 	gdb $< -ex 'target remote localhost:1234'
