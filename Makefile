@@ -59,7 +59,7 @@ temu-hd: disk_image
 	temu -m 128 temu-hd.cfg
 
 cdrom.iso: iso/boot/grub/grub.cfg iso/boot/kernel.bin iso/boot/initrd
-	grub-mkrescue -o $@ iso --compress=xz --fonts="" --locales="" iso
+	grub-mkrescue -o $@ --compress=xz --fonts="" --locales="" iso
 
 TFTP_FILES=$(addprefix tftp/,pxelinux.0 ldlinux.c32 libcom32.c32 libutil.c32 menu.c32 mboot.c32 kernel.bin initrd)
 qemu-pxe: $(TFTP_FILES)
