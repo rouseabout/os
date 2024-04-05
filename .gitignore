@@ -6,6 +6,7 @@ initrd
 sysroot
 cdrom.iso
 disk_image
+boot.bin
 iso/boot/initrd
 iso/boot/kernel.bin
 tftp/*.c32

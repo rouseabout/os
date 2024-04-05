@@ -386,3 +386,18 @@ $(HEAPTEST_BIN): libc/heap.c libc/bsd_string.c
 
 clean-tests:
 	rf -f $(EXT2TEST_BIN) $(DUMPELF_BIN) $(DUMPEXT2_BIN) $(DUMPGPT_BIN) $(HEAPTEST_BIN)
+
+qemu-boot: boot.bin
+	$(QEMU) $(QEMUFLAGS) -drive if=ide,file=$^,format=raw,index=0,media=disk
+
+qemu-usb-boot: boot.bin
+	$(QEMU) $(QEMUFLAGS) -drive id=pendrive,file=$^,format=raw,if=none -device usb-storage,drive=pendrive -usb
+
+bochs-boot: boot.bin
+	bochs -f bochsrc-boot -q
+
+temu-boot: boot.bin
+	temu -m 128 temu-boot.cfg
+
+boot.bin: loader/loader.asm kernel.linux16 kernel.linux32 initrd
+	./make_boot.sh

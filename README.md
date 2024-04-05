@@ -87,6 +87,14 @@ To boot in QEMU use `make qemu-hd`. To boot in Bochs use `make bochs-hd`. To boo
 To boot in QEMU use use `make qemu-linux`. To boot in TinyEMU use `make temu-linux`.
 
 
+### os boot loader
+
+No operating system is complete without its own boot loader!
+`make boot.bin` will produce a custom boot image that can be written to a hard disk or USB drive.
+The image contains no files, just the boot loader, kernel and initrd stored in contiguous sectors.
+
+To boot in QEMU use use `make qemu-boot` or `make qemu-usb-boot`.To boot into Bochs use `make bochs-boot`. To boot in TinyEMU use `make temu-boot`.
+
 ## Installing third-party software
 
 `disk_image` is populated from the sysroot directory.
