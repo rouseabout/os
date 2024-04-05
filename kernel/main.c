@@ -217,6 +217,8 @@ static void parse_linux_params(const uint8_t * params, uintptr_t * mod_start, ui
     tty_init();
 
     uint32_t alt_mem_k = read_32(params, 0x1e0);
+    if (!alt_mem_k)
+        panic("!alt_mem_k"); /* limine does not set alt_mem_k */
     up_size = (alt_mem_k * 1024) - (up_start - (uintptr_t)&multiboot);
 
     uint32_t initrd_start = read_32(params, 0x218);
