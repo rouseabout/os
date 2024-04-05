@@ -37,7 +37,7 @@ typedef struct {
     unsigned int bar4;
     PRDT * prdt;
     uint8_t * block;
-    uint32_t prdt_phy;
+    uintptr_t prdt_phy;
 } ATAContext;
 
 static int wait_timeout(int timeout)
@@ -212,7 +212,10 @@ void * ata_init()
         cntx->bar4 = pci_read(cntx->bus, cntx->slot, cntx->func, PCI_BAR4, 4) & ~0x3;
 
         cntx->prdt = (PRDT *)kmalloc_ap(sizeof(PRDT), &cntx->prdt_phy, "ata-prdt");
-        cntx->block = (uint8_t *)kmalloc_ap(512, &cntx->prdt->address, "ata-block");
+
+        uintptr_t phy;
+        cntx->block = (uint8_t *)kmalloc_ap(512, &phy, "ata-block");
+        cntx->prdt->address = phy;
         cntx->prdt->size = 512;
         cntx->prdt->eot = 0x80;
 

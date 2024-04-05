@@ -1,4 +1,9 @@
+%ifdef ARCH_i686
 bits 32
+%elifdef ARCH_x86_64
+bits 64
+%endif
+
 section .text
 
 extern _libc_main
@@ -6,6 +11,13 @@ extern main
 
 global _start
 _start:
+
+%ifdef ARCH_x86_64
+    pop rdi
+    pop rsi
+    pop rdx
+%endif
+
     mov ebp, 0
     call _libc_main
 

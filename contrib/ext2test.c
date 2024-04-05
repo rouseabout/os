@@ -43,7 +43,7 @@ void panic(const char * reason)
     exit(1);
 }
 
-void * kmalloc(uint32_t size, const char * tag)
+void * kmalloc(uintptr_t size, const char * tag)
 {
     return malloc(size);
 }

@@ -83,8 +83,8 @@ void khexdump(const void * ptr, unsigned int size)
      }
 }
 
-extern uint32_t multiboot;
-extern uint32_t end;
+extern uintptr_t multiboot;
+extern uintptr_t end;
 char cmdline[64];
 
 static const char * get_cmdline_token(const char * token, const char * def, char * out, size_t out_size)
@@ -102,13 +102,33 @@ static const char * get_cmdline_token(const char * token, const char * def, char
     return out;
 }
 
-static void parse_multiboot_info(const multiboot_info * info, uint32_t * low_size, uint32_t * up_start, uint32_t * up_size, uint32_t * mod_start, uint32_t * mod_end)
+static void init_paging(uintptr_t low_size, uintptr_t up_start, uintptr_t up_size);
+static void init_paging2(void);
+static void set_frame(uintptr_t frame_address);
+static void set_frame_identity(page_entry * page, int addr, int is_kernel, int is_writeable, int pat);
+
+static void mem_set_frames(uintptr_t phy_addr, int size)
 {
-    *up_start = (uint32_t)&end;
+    KASSERT(!(phy_addr & 0xFFF));
+    for (unsigned int i = phy_addr; i < phy_addr + size; i += 0x1000)
+        set_frame(i);
+}
+
+static void map_address(uintptr_t phy_addr, uintptr_t virt_addr, uintptr_t size)
+{
+    KASSERT(!(phy_addr & 0xFFF));
+    for (unsigned int i = 0; i < size; i += 0x1000)
+        set_frame_identity(get_page_entry(virt_addr + i, 1, kernel_directory), phy_addr + i, 1, 0, 0);
+}
+
+static void parse_multiboot_info(const multiboot_info * info, uintptr_t * mod_start, uintptr_t * mod_end)
+{
+    uintptr_t low_size, up_start, up_size;
+    up_start = (uintptr_t)&end;
 
     if (info->flags & MULTIBOOT_INFO_CMDLINE) {
-        kprintf("cmdline: %s\n", (const char *)info->cmdline);
-        strlcpy(cmdline, (const char *)info->cmdline, sizeof(cmdline));
+        kprintf("cmdline: %s\n", (const char *)(uintptr_t)info->cmdline);
+        strlcpy(cmdline, (const char *)(uintptr_t)info->cmdline, sizeof(cmdline));
     }
 
     /* do this first */
@@ -130,31 +150,31 @@ static void parse_multiboot_info(const multiboot_info * info, uint32_t * low_siz
     }
     if (info->flags & MULTIBOOT_INFO_MODS) {
         kprintf("mods_count: %d\n", info->mods_count);
-        const multiboot_mod * mod = (const multiboot_mod *)info->mods_addr;
+        const multiboot_mod * mod = (const multiboot_mod *)(uintptr_t)info->mods_addr;
         for (unsigned int i = 0; i < info->mods_count; i++) {
             kprintf("mod[%d] mod_start 0x%x, mod_end 0x%x, mod_name '%s'\n", i, mod[i].mod_start, mod[i].mod_end, mod[i].name);
-            khexdump((void *)mod[i].mod_start, MIN(mod[i].mod_end - mod[i].mod_start, 32));
+            khexdump((void *)(uintptr_t)mod[i].mod_start, MIN(mod[i].mod_end - mod[i].mod_start, 32));
 
             *mod_start = mod[i].mod_start;
             *mod_end = mod[i].mod_end;
-            *up_start = MAX(*up_start, mod[i].mod_end);
+            up_start = MAX(up_start, mod[i].mod_end);
         }
     }
 
     if (info->flags & MULTIBOOT_INFO_MEMORY) { /* do this after finding greatest module */
         kprintf("mem_lower 0x%x, mem_higher 0x%x\n", info->mem_lower, info->mem_higher);
-        *low_size = info->mem_lower * 1024;
-        *up_size = info->mem_higher * 1024 - (*up_start - (uint32_t)&multiboot);
+        low_size = info->mem_lower * 1024;
+        up_size = info->mem_higher * 1024 - (up_start - (uintptr_t)&multiboot);
     } else {
         panic("no memory information\n");
-        *low_size = 0;
-        *up_size = 0;
+        low_size = 0;
+        up_size = 0;
     }
 
     if (info->flags & MULTIBOOT_INFO_MMAP) {
         //kprintf("mmap: length:0x%x, addr:0x%x\n", info->mmap_length, info->mmap_addr);
         for (unsigned int i = 0; i < info->mmap_length; ) {
-            const multiboot_memory_map * mmap = (void*)(info->mmap_addr + i);
+            const multiboot_memory_map * mmap = (void*)(uintptr_t)(info->mmap_addr + i);
             //FIXME: assert mmap->size >= 0x14
             kprintf("mmap: size:0x%x, base_addr:0x%llx, length:0x%llx, type:%s\n", mmap->size, mmap->base_addr, mmap->length, mmap->type == 1 ? "available" : "reserved");
             i += mmap->size + 4;
@@ -167,18 +187,25 @@ static void parse_multiboot_info(const multiboot_info * info, uint32_t * low_siz
         kprintf("VBE interface seg:0x%x, off:0x%x, len:0x%x\n", info->vbe_interface_seg, info->vbe_interface_off, info->vbe_interface_len);
     }
     */
+
+    init_paging(low_size, up_start, up_size);
+    init_paging2();
+
+    if (tty == &fb_commands)
+        fb_init2();
 }
 
 #define read_8(params, offset) params[offset]
 #define read_16(params, offset) *(uint16_t *)(params + offset)
 #define read_32(params, offset) *(uint32_t *)(params + offset)
-static void parse_linux_params(const uint8_t * params, uint32_t * low_size, uint32_t * up_start, uint32_t * up_size, uint32_t * mod_start, uint32_t * mod_end)
+static void parse_linux_params(const uint8_t * params, uintptr_t * mod_start, uintptr_t * mod_end)
 {
-    *low_size = 639*1024;
-    *up_start = (uint32_t)&end;
+    uintptr_t low_size, up_start, up_size;
+    low_size = 639*1024;
+    up_start = (uintptr_t)&end;
 
     kprintf("cmdline: %s\n", read_32(params, 0x228));
-    strlcpy(cmdline, (const char *)read_32(params, 0x228), sizeof(cmdline));
+    strlcpy(cmdline, (const char *)(uintptr_t)read_32(params, 0x228), sizeof(cmdline));
 
     if (read_8(params, 0xf) == 0x23) {
         fb_init(/*base*/read_32(params, 0x18), /*stride*/read_16(params,0x24), /*width*/read_16(params, 0x12), /*height*/read_16(params, 0x14), /*depth*/read_16(params, 0x16));
@@ -189,31 +216,39 @@ static void parse_linux_params(const uint8_t * params, uint32_t * low_size, uint
     kb_init();
     tty_init();
 
-    void * initrd_start = (void *)read_32(params, 0x218);
-    uint32_t initrd_size = read_32(params, 0x21c);
-    /* move initrd to immediately after kernel image */
-    if (initrd_size) {
-        memcpy((void *)*up_start, initrd_start, initrd_size);
-        *mod_start = *up_start;
-        *mod_end = *mod_start + initrd_size;
+    uint32_t alt_mem_k = read_32(params, 0x1e0);
+    up_size = (alt_mem_k * 1024) - (up_start - (uintptr_t)&multiboot);
 
-       *up_start += initrd_size;
+    uint32_t initrd_start = read_32(params, 0x218);
+    uint32_t initrd_size = read_32(params, 0x21c);
+
+    init_paging(low_size, up_start, up_size);
+
+    if (initrd_size) {
+        uintptr_t addr = 0xB0000000;
+        mem_set_frames(initrd_start, initrd_size);
+        map_address(initrd_start, addr, initrd_size);
+
+        *mod_start = addr;
+        *mod_end = addr + initrd_size;
     }
 
-    uint32_t alt_mem_k = read_32(params, 0x1e0);
-    *up_size = (alt_mem_k * 1024) - (*up_start - (uint32_t)&multiboot);
+    init_paging2();
+
+    if (tty == &fb_commands)
+        fb_init2();
 }
 
 /* cpu */
 
-static word get_cr0()
+static uintptr_t get_cr0()
 {
-    word cr0;
+    uintptr_t cr0;
     asm volatile("mov %%cr0, %0" : "=r"(cr0));
     return cr0;
 }
 
-static void set_cr0(word cr0)
+static void set_cr0(uintptr_t cr0)
 {
     asm volatile("mov %0, %%cr0" : : "r"(cr0));
 }
@@ -225,14 +260,14 @@ static void * get_cr2()
     return cr2;
 }
 
-static word get_cr4()
+static uintptr_t get_cr4()
 {
-    word cr4;
+    uintptr_t cr4;
     asm volatile("mov %%cr4, %0" : "=r"(cr4));
     return cr4;
 }
 
-static void set_cr4(word cr4)
+static void set_cr4(uintptr_t cr4)
 {
     asm volatile("mov %0, %%cr4" : : "r"(cr4));
 }
@@ -278,67 +313,16 @@ static void cpu_init()
     }
 }
 
-/* user space */
-
-typedef struct {
-    uint32_t prev_tss;
-    uint32_t esp0;
-    uint32_t ss0;
-    uint32_t esp1;
-    uint32_t ss1;
-    uint32_t esp2;
-    uint32_t ss2;
-    uint32_t cr3;
-    uint32_t eip;
-    uint32_t eflags;
-    uint32_t eax;
-    uint32_t ecx;
-    uint32_t edx;
-    uint32_t ebx;
-    uint32_t esp;
-    uint32_t ebp;
-    uint32_t esi;
-    uint32_t edi;
-    uint32_t es;
-    uint32_t cs;
-    uint32_t ss;
-    uint32_t ds;
-    uint32_t fs;
-    uint32_t gs;
-    uint32_t ldt;
-    uint16_t trap;
-    uint16_t iomap_base;
-} tss_entry_struct;
-
-static tss_entry_struct tss_entry;
-
-static void set_kernel_stack(uint32_t stack)
-{
-    tss_entry.esp0 = stack;
-}
-
-/* gdt */
-
-typedef struct {
-    uint16_t limit_low;
-    uint16_t base_low;
-    uint8_t base_middle;
-    uint8_t flags;
-    uint8_t granularity;
-    uint8_t base_high;
-} __attribute((packed)) gdt_entry;
-
-typedef struct {
-    uint16_t limit;
-    uint32_t base;
-} __attribute((packed)) gdt_pointer;
-
 typedef struct {
    uint16_t base_low;
    uint16_t selector;
    uint8_t zero;
    uint8_t flags;
    uint16_t base_high;
+#if defined(ARCH_x86_64)
+    uint32_t base_high2;
+    uint32_t reserved;
+#endif
 } __attribute((packed)) idt_entry;
 
 typedef struct {
@@ -346,79 +330,38 @@ typedef struct {
     uint32_t base;
 } __attribute((packed)) idt_pointer;
 
-static gdt_entry gdt[6];
-static gdt_pointer gdt_ptr;
 static idt_entry idt[256];
 static idt_pointer idt_ptr;
 
-void gdt_flush(gdt_pointer *);
-void idt_flush(idt_pointer *);
-void tss_flush(void);
-
-static void gdt_set(int idx, uint32_t base, uint32_t limit, uint8_t flags, uint8_t granularity)
-{
-    gdt[idx].base_low    = base & 0xFFFF;
-    gdt[idx].base_middle = (base >> 16) & 0xFF;
-    gdt[idx].base_high   = base >> 24;
-
-    gdt[idx].limit_low   = limit & 0xFFFF;
-    gdt[idx].granularity = ((limit >> 16) & 0xF) | granularity;
-
-    gdt[idx].flags       = flags;
-}
-
-static void idt_set(int idx, uint32_t base, uint16_t selector, uint8_t flags)
+static void idt_set(int idx, uintptr_t base, uint16_t selector, uint8_t flags)
 {
     idt[idx].base_low  = base & 0xFFFF;
-    idt[idx].base_high = base >> 16;
+    idt[idx].base_high = (base >> 16) & 0xFFFF;
     idt[idx].selector  = selector;
     idt[idx].zero      = 0;
     idt[idx].flags     = flags;
-}
-
-static void tss_set(int idx, uint16_t ss0, uint32_t esp0)
-{
-    uint32_t base = (uint32_t)&tss_entry;
-    uint32_t limit = base + sizeof(tss_entry);
-
-    gdt_set(idx, base, limit, 0xE9, 0x00);
-
-    memset(&tss_entry, 0, sizeof(tss_entry));
-
-    tss_entry.ss0 = ss0; // kernel stack segment
-    tss_entry.esp0 = esp0; // kernel stack pointer
-
-    tss_entry.cs = 0x0b; // kernel code segment (0x08) + 'requested privellege level' (3)
-    tss_entry.ss = tss_entry.ds = tss_entry.es = tss_entry.fs = tss_entry.gs = 0x13;  //kernel data segment (0x10) + requested privilege level (3)
-}
-
-static void init_gdt()
-{
-#define G_4096 (1<<7)
-#define G_32BIT (1<<6)
-#define G_64BIT (1<<5)
-           /* base  limit       flags granularity */
-    gdt_set(0, 0x0, 0x0,        0x0,  0x00);
-    gdt_set(1, 0x0, 0xFFFFFFFF, 0x9A, G_4096 | G_32BIT); /* 0x8 kernel code */
-    gdt_set(2, 0x0, 0xFFFFFFFF, 0x92, G_4096 | G_32BIT); /* 0x10 kernel data */
-    gdt_set(3, 0x0, 0xFFFFFFFF, 0xFA, G_4096 | G_32BIT); /* 0x18 user code */
-    gdt_set(4, 0x0, 0xFFFFFFFF, 0xF2, G_4096 | G_32BIT); /* 0x20 user data */
-    tss_set(5, 0x10, 0x0);
-
-    gdt_ptr.limit = sizeof(gdt) - 1;
-    gdt_ptr.base  = (uint32_t)&gdt;
-
-    gdt_flush(&gdt_ptr);
-    tss_flush();
+#if defined(ARCH_x86_64)
+    idt[idx].base_high2 = base >> 32;
+    idt[idx].reserved = 0;
+#endif
 }
 
 typedef struct
 {
+#if defined(ARCH_i686)
     uint32_t ds;
     uint32_t edi, esi, ebp, ebx, edx, ecx, eax;
     uint32_t number;
     uint32_t error_code;
     uint32_t eip, cs, eflags, esp, ss;
+#elif defined(ARCH_x86_64)
+    uint64_t ds;
+    uint64_t edi, esi, ebp, ebx, edx, ecx, eax;
+    uint64_t r8, r9, r10, r11, r12, r13, r14, r15;
+    uint64_t number;
+    uint64_t error_code;
+    uint64_t eip, cs, eflags, esp, ss;
+#endif
 } registers;
 
 typedef struct StackFrame StackFrame;
@@ -483,9 +426,9 @@ typedef struct {
     int pgrp; /* process group number */
     page_directory * page_directory;
     FileDescriptor * fd[OPEN_MAX];
-    uint32_t brk;
+    uintptr_t brk;
     char cwd[255];
-    uint32_t stack_next;
+    uintptr_t stack_next;
     struct itimerval timer;
     int alarm_armed;
     struct timespec alarm;
@@ -507,7 +450,7 @@ struct Task {
     int state;
 
     registers reg;
-    uint32_t stack_top;
+    uintptr_t stack_top;
 
     union {
         struct {
@@ -586,7 +529,7 @@ static int sys_dup2(int fd, int fd2);
 static int sys_unlink(const char *path);
 static int sys_rmdir(const char *path);
 static int sys_mkdir(const char *path, mode_t mode);
-static int sys_brk(uint32_t addr, uint32_t * current_brk);
+static int sys_brk(uintptr_t addr, uintptr_t * current_brk);
 static int sys_execve(registers * regs, const char * pathname, char * const argv[], char * const envp[]);
 static pid_t sys_waitpid(registers * reg, pid_t pid, int * stat_loc, int options);
 static int sys_getcwd(char * buf, size_t size);
@@ -741,7 +684,7 @@ void interrupt_handler(registers * regs)
             kprintf(" E=%d, Tbl=%d, index=0x%x\n", !!(regs->error_code & 1), (regs->error_code >> 1) & 3, regs->error_code >> 4);
         } else if (regs->number == 14) {
             void * cr2 = get_cr2();
-            if (cr2 == (void *)(uint32_t)sys_pthread_join && current_task->thread_parent) {
+            if (cr2 == (void *)(uintptr_t)sys_pthread_join && current_task->thread_parent) {
                 if (current_task->proc->thread_signal) {
                     Task * parent = current_task->thread_parent;
                     exit2(1, 1);
@@ -850,7 +793,7 @@ void interrupt_handler(registers * regs)
         SYSCALL3 (OS_GETDENTS, sys_getdents, int, struct dirent *, size_t)
         SYSCALL1 (OS_DUP, sys_dup, int)
         SYSCALL2 (OS_DUP2, sys_dup2, int, int)
-        SYSCALL2 (OS_BRK, sys_brk, uint32_t, uint32_t *)
+        SYSCALL2 (OS_BRK, sys_brk, uintptr_t, uintptr_t *)
         SYSCALL1 (OS_UNLINK, sys_unlink, const char *)
         SYSCALL1 (OS_RMDIR, sys_rmdir, const char *)
         SYSCALL2 (OS_MKDIR, sys_mkdir, const char *, mode_t)
@@ -948,70 +891,74 @@ static void init_idt()
 
     memset(idt, 0, sizeof(idt));
 
-#define _(x) idt_set(x, (uint32_t)isr##x, 0x08, 0x8E);
+#define _(x) idt_set(x, (uintptr_t)isr##x, 0x08, 0x8E);
 #include "isr_numbers.h"
 #undef _
-#define _(x) idt_set(x+32, (uint32_t)irq##x, 0x08, 0x8E);
+#define _(x) idt_set(x+32, (uintptr_t)irq##x, 0x08, 0x8E);
 #include "irq_numbers.h"
 #undef _
-    idt_set(128, (uint32_t)isr128, 0x08, 0x8E | 0x60); /* syscall */
+    idt_set(128, (uintptr_t)isr128, 0x08, 0x8E | 0x60); /* syscall */
 
     idt_ptr.limit = sizeof(idt) - 1;
-    idt_ptr.base  = (uint32_t)&idt;
-
-    idt_flush(&idt_ptr);
+    idt_ptr.base  = (uintptr_t)&idt;
+    asm volatile("lidt (%0)" : : "r" (&idt_ptr));
 }
 
 /* kernel alloc */
 
 #include "heap.h"
 
-static uint32_t placement_address;
+static uintptr_t placement_address;
 static int use_halloc = 0;
 static Halloc kheap = {0};
 
-static uint32_t kmalloc_core(uint32_t size, int align, uint32_t * phys, const char * tag)
+static uintptr_t allocate_kernel_address(uintptr_t size, int align)
+{
+    if (align && (placement_address & 0xFFF)) {
+        placement_address &= 0xFFFFF000;
+        placement_address +=     0x1000;
+    }
+
+    uintptr_t tmp = placement_address;
+    placement_address += size;
+    return tmp;
+}
+
+static uintptr_t kmalloc_core(uintptr_t size, int align, uintptr_t * phys, const char * tag)
 {
     if (use_halloc) {
-        uint32_t addr = (uint32_t)halloc(&kheap, size, align ? 4096 : 0, tag);
+        uintptr_t addr = (uintptr_t)halloc(&kheap, size, align ? 4096 : 0, tag);
         if (phys) {
             page_entry *page = get_page_entry(addr, 0, current_directory);
             *phys = page->frame*0x1000 + (addr & 0xFFF);
         }
         return addr;
     } else {
-        if (align && (placement_address & 0xFFF)) {
-            placement_address &= 0xFFFFF000;
-            placement_address +=     0x1000;
-        }
-
+        uintptr_t addr = allocate_kernel_address(size, align);
         if (phys)
-            *phys = placement_address;
-
-        uint32_t tmp = placement_address;
-        placement_address += size;
-        return tmp;
+            *phys = addr;
+        return addr;
     }
 }
 
-void * kmalloc(uint32_t size, const char * tag)
+void * kmalloc(uintptr_t size, const char * tag)
 {
     return (void *)kmalloc_core(size, 0, 0, tag);
 }
 
-static uint32_t kmalloc_a(uint32_t size, const char * tag)
+static uintptr_t kmalloc_a(uintptr_t size, const char * tag)
 {
     return kmalloc_core(size, 1, 0, tag);
 }
 
 #if 0
-static uint32_t kmalloc_p(uint32_t size, uint32_t * phys)
+static uintptr_t kmalloc_p(uintptr_t size, uintptr_t * phys)
 {
     return kmalloc_core(size, 0, phys);
 }
 #endif
 
-uint32_t kmalloc_ap(uint32_t size, uint32_t * phys, const char * tag)
+uintptr_t kmalloc_ap(uintptr_t size, uintptr_t * phys, const char * tag)
 {
     return kmalloc_core(size, 1, phys, tag);
 }
@@ -1033,29 +980,39 @@ void kfree(void * ptr)
 page_directory *kernel_directory;
 page_directory *current_directory;
 
+static void indent(int level)
+{
+    level = PAGE_LEVELS - level;
+    while(level--) kprintf("  ");
+}
+
+static void dump_directory_r(const page_directory * dir, const page_directory * kd, const char * name, int hexdump, int level, uintptr_t base)
+{
+    indent(level); kprintf("DIRECTORY level %d '%s' virtual-addr=%p", level, name, dir);
+    if (level >= 2)
+        kprintf(", physical-addr=0x%x", dir->physical_address);
+    kprintf("\n");
+    for (unsigned int i = 0; i < ENTRIES_PER_TABLE; i++) {
+        //KASSERT(dir->tables_physical[i].present ^ !dir->tables[i]);
+        uintptr_t base2 = base | i << (12 + (level-1)*BITS_PER_TABLE);
+
+        if (dir->tables_physical[i].present) {
+            indent(level); kprintf("tables_physical[%d] = 0x%x phy (<- 0x%x virt)\n", i, dir->tables_physical[i], base2);
+        }
+        if (level >= 2 && dir->tables[i]) {
+            indent(level); kprintf("tables[%d] = 0x%x (<- 0x%x virt) %s\n", i, dir->tables[i], base2, kd && (dir->tables[i] == kd->tables[i]) ? "*" : "");
+            dump_directory_r(dir->tables[i], kd ? kd->tables[i] : NULL, name, hexdump, level - 1, base2);
+        }
+    }
+}
+
 static void dump_directory(const page_directory * dir, const char * name, int hexdump)
 {
-    kprintf("DUMP DIRECTORY %p '%s' 0x%x\n", dir, name, dir->tables_physical);
-    for (unsigned int i = 0; i < 1024; i++) {
-        if (dir->tables[i]) {
-            kprintf(" tables[%d]= (virt 0x%x) &0x%x\n", i, i*1024*4096, dir->tables[i]);
-            for (unsigned int j = 0; j < 1024; j++) {
-                if (dir->tables[i]->pages[j].present) {
-                    kprintf("  [0x%x] (virt 0x%x) frame=0x%x, present:%d, rw:%d, user:%d\n", j, (i*1024+j)*4096, dir->tables[i]->pages[j].frame, dir->tables[i]->pages[j].present, dir->tables[i]->pages[j].rw, dir->tables[i]->pages[j].user);
-                    if (dir->tables[i]->pages[j].user && hexdump)
-                        khexdump((void *)((i*1024+j)*4096), 0x1000);
-                }
-            }
-        }
-        if (dir->tables_physical[i])
-            kprintf(" tables_physical[%d] = &0x%x\n", i, dir->tables_physical[i]);
-    }
-    kprintf(" physical_address: &0x%x\n", dir->physical_address);
+    dump_directory_r(dir, kernel_directory, name, hexdump, PAGE_LEVELS, 0);
     kprintf("\n");
 }
 
-
-/* bitset implementation */
+/* bitset implementation FIXME: convert to 64-bit */
 
 static uint32_t *frames;
 static uint32_t nframes;
@@ -1063,11 +1020,11 @@ static uint32_t nframes;
 #define INDEX_FROM_BIT(a)  ((a) / 32)
 #define OFFSET_FROM_BIT(a) ((a) % 32)
 
-static void modify_frame(uint32_t frame_address, int set)
+static void modify_frame(uintptr_t frame_address, int set)
 {
-    uint32_t frame = frame_address / 0x1000;
-    uint32_t idx = INDEX_FROM_BIT(frame);
-    uint32_t off = OFFSET_FROM_BIT(frame);
+    uintptr_t frame = frame_address / 0x1000;
+    uintptr_t idx = INDEX_FROM_BIT(frame);
+    int off = OFFSET_FROM_BIT(frame);
 
     if (set)
         frames[idx] |=   1 << off;
@@ -1075,12 +1032,12 @@ static void modify_frame(uint32_t frame_address, int set)
         frames[idx] &= ~(1 << off);
 }
 
-static void set_frame(uint32_t frame_address)
+static void set_frame(uintptr_t frame_address)
 {
     modify_frame(frame_address, 1);
 }
 
-static void clear_frame(uint32_t frame_address)
+static void clear_frame(uintptr_t frame_address)
 {
     modify_frame(frame_address, 0);
 }
@@ -1102,7 +1059,7 @@ static unsigned int count_used_frames()
 }
 
 /* find the first empty slot in the bit frame */
-static uint32_t first_frame()
+static uintptr_t first_frame()
 {
     for (unsigned int i = 0; i < INDEX_FROM_BIT(nframes); i++) {
         if (frames[i] != 0xFFFFFFFF) {
@@ -1140,6 +1097,9 @@ static void free_frame(page_entry *page)
 
 static void set_frame_identity(page_entry * page, int addr, int is_kernel, int is_writeable, int pat)
 {
+    if (page->present)
+        panic("set_frame_identity: page already present\n");
+
     page->present = 1;
     page->rw      = !!is_writeable;
     page->user    = !is_kernel;
@@ -1151,22 +1111,52 @@ static void set_frame_identity(page_entry * page, int addr, int is_kernel, int i
     page->frame   = addr / 0x1000;
 }
 
-page_entry * get_page_entry(uint32_t address, int make, page_directory * dir)
+static page_directory * alloc_new_page_directory()
+{
+    uintptr_t phy;
+    page_directory * dir = (page_directory *)kmalloc_ap(sizeof(page_directory), &phy, "pg-dir");
+    memset(dir->tables_physical, 0, sizeof(dir->tables_physical));
+    memset(dir->tables, 0, sizeof(dir->tables));
+    dir->physical_address = phy;
+    return dir;
+}
+
+static void * alloc_new_page_table(uintptr_t * phy)
+{
+    page_table * pt = (page_table *)kmalloc_ap(sizeof(page_table), phy, "pg-table");
+    memset(pt, 0, sizeof(page_table));
+    return pt;
+}
+
+page_entry * get_page_entry(uintptr_t address, int make, page_directory * dir)
 {
     address /= 0x1000;
-    uint32_t table_idx = address / 1024;
+    for (int level = PAGE_LEVELS - 1 ; level > 0; level--) {
+        int idx = (address >> (level * BITS_PER_TABLE)) % ENTRIES_PER_TABLE;
+        if (!dir->tables[idx]) {
+            //kprintf(" -> (get_page_entry physical 0x%x) level %d, idx %d missing\n", address * 0x1000, level + 1, idx);
+            if (!make)
+                return NULL;
 
-    if (dir->tables[table_idx])
-        return &dir->tables[table_idx]->pages[address % 1024];
+            uintptr_t phy;
+            if (level + 1 == 2) {
+                dir->tables[idx] = alloc_new_page_table(&phy);
+            } else {
+                dir->tables[idx] = alloc_new_page_directory();
+                phy = dir->tables[idx]->physical_address;
+            }
+            //kprintf(" -> new table 0x%x virt (0x%x phy)\n", dir->tables[idx], phy);
+            dir->tables_physical[idx].present = 1;
+            dir->tables_physical[idx].rw = 1;
+            dir->tables_physical[idx].user = 1; //FIXME:
+            dir->tables_physical[idx].frame = phy / 0x1000;
+        }
+        dir = dir->tables[idx];
+    }
 
-    if (!make)
-        return 0;
-
-    uint32_t tmp;
-    dir->tables[table_idx] = (page_table *)kmalloc_ap(sizeof(page_table), &tmp, "pg-table");
-    memset(dir->tables[table_idx], 0, sizeof(page_table));
-    dir->tables_physical[table_idx] = tmp | 0x7; //FIXME: PRESENT, RW, US
-    return &dir->tables[table_idx]->pages[address % 1024];
+    /* level 1: only contains table_physical[] */
+    int idx = address % ENTRIES_PER_TABLE;
+    return &dir->tables_physical[idx];
 }
 
 static void switch_page_directory(page_directory * dir)
@@ -1175,9 +1165,10 @@ static void switch_page_directory(page_directory * dir)
     asm volatile("mov %0, %%cr3" : : "r" (dir->physical_address));
 }
 
+#if defined(ARCH_i686)
 static void enable_paging(int enable)
 {
-    word cr0;
+    uintptr_t cr0;
     asm volatile("mov %%cr0, %0" : "=r" (cr0));
     if (enable)
         cr0 |= 0x80000000;
@@ -1185,10 +1176,9 @@ static void enable_paging(int enable)
         cr0 &= ~0x80000000;
     asm volatile("mov %0, %%cr0" : : "r" (cr0));
 }
+#endif
 
-void copy_page_physical(uint32_t src, uint32_t dst);
-
-static page_table * clone_table(const page_table * src, uint32_t * physical_address)
+static page_table * clone_table(const page_table * src, uintptr_t * physical_address, uintptr_t base)
 {
     page_table * table = (page_table *)kmalloc_ap(sizeof(page_table), physical_address, "pg-table-clone");
     //kprintf("page_table %p (%d bytes)\n", table, sizeof(page_table));
@@ -1198,7 +1188,7 @@ static page_table * clone_table(const page_table * src, uint32_t * physical_addr
 
     // calculate memory required to clone page table
     int npages = 0;
-    for (unsigned int i = 0; i < 1024; i++)
+    for (unsigned int i = 0; i < ENTRIES_PER_TABLE; i++)
         if (src->pages[i].present)
             npages++;
 
@@ -1207,8 +1197,14 @@ static page_table * clone_table(const page_table * src, uint32_t * physical_addr
         return NULL;
     }
 
+    uintptr_t pdst = 0;
+    page_entry * pe0 = get_page_entry(pdst, 1, current_directory);
+    pe0->present = 1;
+    pe0->user = 0;
+    pe0->rw = 1;
+
     //copy each entry
-    for (unsigned int i = 0; i < 1024; i++) {
+    for (unsigned int i = 0; i < ENTRIES_PER_TABLE; i++) {
 
         if (!src->pages[i].present)
             continue;
@@ -1223,83 +1219,96 @@ _(accessed)
 _(dirty)
 #undef _
 
-        //kprintf("copy page 0x%x -> 0x%x\n", src->pages[i].frame * 0x1000, table->pages[i].frame * 0x1000);
-
-#if 1
-        /* assembly is neccessary to prevent corruption (because tables->pages[i] may be a virtual address, and compiler doesn't know that */
-        copy_page_physical(src->pages[i].frame * 0x1000, table->pages[i].frame * 0x1000);
-#else
-        enable_paging(0); // neccessary because we are building the new directory with these frames, and haven't updated tlb yet
-        memcpy((void*)(table->pages[i].frame * 0x1000), (void *)(src->pages[i].frame * 0x1000), 0x1000);
-        enable_paging(1);
+        /* copy page content */
+        uintptr_t psrc = base | (i << 12);
+#if 0
+        const page_entry * pe_src = get_page_entry(psrc, 0, current_directory);
+        KASSERT(pe_src && src->pages[i].frame == pe_src->frame);
 #endif
+        pe0->frame = table->pages[i].frame; /* temporarily map destination physical frame to virtual address 0x0 */
+        switch_page_directory(current_directory); /* reload */
+        memcpy((void *)(uintptr_t)pdst, (void *)(uintptr_t)psrc, 0x1000);
     }
 
     return table;
 }
 
-static page_directory * clone_directory(const page_directory * src)
+static page_directory * clone_directory_r(const page_directory * src, const page_directory * kd, uintptr_t * pphys, int level, uintptr_t base)
 {
-    uint32_t phys;
-
-    page_directory * dir = (page_directory *)kmalloc_ap(sizeof(page_directory), &phys, "pg-dir-clone");
+    page_directory * dir = (page_directory *)kmalloc_ap(sizeof(page_directory), pphys, "pg-dir-clone");
     if (!dir)
         return NULL;
     memset(dir, 0, sizeof(page_directory));
-
-#if 0
-    uint32_t offset = (uint32_t)dir->tables_physical - (uint32_t)dir;
-    dir->physical_address = phys + offset;
-#else
-    dir->physical_address = phys + offsetof(page_directory, tables_physical);
-#endif
+    dir->physical_address = *pphys;
 
     //copy each page
-    for (unsigned int i = 0; i < 1024; i++) {
+    for (unsigned int i = 0; i < ENTRIES_PER_TABLE; i++) {
+        uintptr_t base2 = base | i << (12 + (level-1)*BITS_PER_TABLE);
+
         if (!src->tables[i])
             continue;
-        if (src->tables[i] == kernel_directory->tables[i]) {
+        if (level == 2 && kd && src->tables[i] == kd->tables[i]) {
             dir->tables[i] = src->tables[i];
             dir->tables_physical[i] = src->tables_physical[i];
         } else {
-            dir->tables[i] = clone_table(src->tables[i], &phys);
+            uintptr_t phys;
+            dir->tables[i] = level > 2 ? clone_directory_r(src->tables[i], kd ? kd->tables[i] : NULL, &phys, level - 1, base2) : (page_directory *)clone_table((const page_table *)src->tables[i], &phys, base2) ;
             if (!dir->tables[i])
                 return NULL; //FIXME: memory leak
-            dir->tables_physical[i] = phys | 0x7;
+            dir->tables_physical[i].present = 1;
+            dir->tables_physical[i].rw = 1;
+            dir->tables_physical[i].user = 1; //FIXME:
+            dir->tables_physical[i].frame = phys / 0x1000;
         }
     }
 
     return dir;
 }
 
+static page_directory * clone_directory(const page_directory * src)
+{
+    uintptr_t phys;
+    return clone_directory_r(src, kernel_directory, &phys, PAGE_LEVELS, 0);
+}
+
 /* remove all non-kernel pages from the directory */
+
+static void clean_table(page_table * table)
+{
+    for (unsigned int i = 0; i < ENTRIES_PER_TABLE; i++) {
+        if (table->pages[i].present)
+            free_frame(&table->pages[i]);
+    }
+}
+
+static void clean_directory_r(page_directory * dir, const page_directory * kd, int level)
+{
+    for (unsigned int i = 0; i < ENTRIES_PER_TABLE; i++) {
+        if (!dir->tables[i] || (kd && dir->tables[i] == kd->tables[i]))
+            continue;
+        if (level > 2) {
+            clean_directory_r(dir->tables[i], kd->tables[i], level - 1);
+        } else {
+            clean_table((page_table *)dir->tables[i]);
+            kfree(dir->tables[i]);
+            dir->tables[i] = NULL;
+            dir->tables_physical[i].present = 0;
+        }
+    }
+}
 
 static void clean_directory(page_directory * dir)
 {
-    for (unsigned int i = 0; i < 1024; i++) {
-        if (!dir->tables[i] || dir->tables[i] == kernel_directory->tables[i])
-            continue;
-        for (unsigned int j = 0; j < 1024; j++) {
-            if (dir->tables[i]->pages[j].present) {
-                free_frame(&dir->tables[i]->pages[j]);
-            }
-        }
-
-        kfree(dir->tables[i]);
-
-        dir->tables[i] = NULL;
-        dir->tables_physical[i] = 0;
-    }
-
+    clean_directory_r(dir, kernel_directory, PAGE_LEVELS);
     switch_page_directory(current_directory);
 }
 
-static int alloc_frames(unsigned int start, int size, page_directory * directory, int is_kernel, int is_writable)
+static int alloc_frames(uintptr_t start, uintptr_t size, page_directory * directory, int is_kernel, int is_writable)
 {
       if (nframes - count_used_frames() < (size + 0xFFF) / 0x1000)
           return -ENOMEM;
 
-      for (unsigned int i = (unsigned int)start; i < (unsigned int)start + size; i += 0x1000)
+      for (uintptr_t i = start; i < start + size; i += 0x1000)
           alloc_frame(get_page_entry(i, 1, directory), is_kernel, is_writable);
 
       return 0;
@@ -1307,7 +1316,7 @@ static int alloc_frames(unsigned int start, int size, page_directory * directory
 
 static int grow_cb(Halloc * cntx, unsigned int extra)
 {
-    if (alloc_frames((unsigned int)cntx->end, extra, cntx->directory, cntx->is_kernel, cntx->is_writable) < 0)
+    if (alloc_frames((uintptr_t)cntx->end, extra, cntx->directory, cntx->is_kernel, cntx->is_writable) < 0)
         return -ENOMEM;
 
     switch_page_directory(current_directory);
@@ -1317,7 +1326,7 @@ static int grow_cb(Halloc * cntx, unsigned int extra)
 
 static void shrink_cb(Halloc * cntx, unsigned int boundary_addr)
 {
-    for (unsigned int i = boundary_addr; i < (unsigned int)cntx->end; i += 0x1000) {
+    for (uintptr_t i = boundary_addr; i < (uintptr_t)cntx->end; i += 0x1000) {
         free_frame(get_page_entry(i, 0, cntx->directory));
     }
     switch_page_directory(current_directory);
@@ -1333,9 +1342,9 @@ static void kheap_panic()
     panic("kheap");
 }
 
-static void init_paging(uint32_t low_size, uint32_t up_start, uint32_t up_size)
+static void init_paging(uintptr_t low_size, uintptr_t up_start, uintptr_t up_size)
 {
-    uint32_t mem_end_page = up_start + up_size;
+    uintptr_t mem_end_page = up_start + up_size;
 
     placement_address = up_start;
 
@@ -1348,17 +1357,19 @@ static void init_paging(uint32_t low_size, uint32_t up_start, uint32_t up_size)
     // kernel page directory
     kernel_directory = (page_directory *)kmalloc_a(sizeof(page_directory), "pg-dir-kernel");
     memset(kernel_directory, 0, sizeof(page_directory));
-    kernel_directory->physical_address = (uint32_t)kernel_directory->tables_physical;
+    kernel_directory->physical_address = (uintptr_t)kernel_directory->tables_physical;
 
-    // mark all the frames [0x0) and [0x80000 ... 0x100000) as in use
+    // mark all the frames [0x0, 1) and [0x80000 ... 0x100000) as in use
     set_frame(0);
+    set_frame(1);
+
     for (unsigned int i = low_size; i < 0x100000; i += 0x1000)
         set_frame(i);
 
     // identity map the kernel and initial heap, mark these frames as in use
     {
-        unsigned int i = (uint32_t)&multiboot;
-        while (i < placement_address + 0x1000) {  //FIXME: need extra placement address space for initial heap page
+        uintptr_t i = (uintptr_t)&multiboot;
+        while (i < placement_address + 0x1000*4) {  //FIXME: need extra placement address space for initial heap page(s)
             set_frame(i);
             set_frame_identity(get_page_entry(i, 1, kernel_directory), i, 1, 0, 0);
             i += 0x1000;
@@ -1366,15 +1377,15 @@ static void init_paging(uint32_t low_size, uint32_t up_start, uint32_t up_size)
     }
 
     switch_page_directory(kernel_directory);
+#if defined(ARCH_i686)
     enable_paging(1);
+#endif
 
     /* create kernel heap */
 
     int initial_size = 4096;
     for (unsigned int i = 0xC0000000; i < 0xC0000000 + initial_size; i += 0x1000)
         alloc_frame(get_page_entry(i, 1, kernel_directory), 1, 0);
-
-    //dump_directory(kernel_directory, "kernel");
 
     halloc_init(&kheap, (void *)0xC0000000, initial_size);
     kheap.directory   = kernel_directory;
@@ -1413,7 +1424,10 @@ static void init_paging(uint32_t low_size, uint32_t up_start, uint32_t up_size)
         set_frame_identity(get_page_entry(i, 1, kernel_directory), i, 1, 0, 1);
 
     /* clone kernel directory, and switch to that */
+}
 
+static void init_paging2()
+{
     current_directory = clone_directory(kernel_directory);
     switch_page_directory(current_directory);
 }
@@ -1438,16 +1452,15 @@ static void init_timer(int freq)
 
 /* tasking */
 
-#define KERNEL_STACK_SIZE 4096
 #define USER_STACK_SIZE 0x30000 /* 192k */
 
-#define USER_STACK_TOP 0xDFFFFFFC
+#define USER_STACK_TOP (0xF0000000 - sizeof(uintptr_t))
 
 static void move_stack(void * new_stack_start, unsigned int size, int spray)
 {
     // allocate new stack pages...
-    for (unsigned int i = (uint32_t)new_stack_start;
-         i > (uint32_t)new_stack_start - size;
+    for (uintptr_t i = (uintptr_t)new_stack_start;
+         i > (uintptr_t)new_stack_start - size;
          i -= 0x1000) {
         alloc_frame(get_page_entry(i, 1, current_directory), 0 /*user mode */, 1 /* writable */ );
     }
@@ -1456,8 +1469,8 @@ static void move_stack(void * new_stack_start, unsigned int size, int spray)
     switch_page_directory(current_directory);
 
 #if SPRAY_MEMORY
-    for (unsigned int i = (uint32_t)new_stack_start;
-         i > (uint32_t)new_stack_start - size;
+    for (uintptr_t i = (uintptr_t)new_stack_start;
+         i > (uintptr_t)new_stack_start - size;
          i -= 0x1000) {
         memset((void*)(i & ~0xfff), spray, 0x1000);
     }
@@ -1781,7 +1794,7 @@ static int process_signal(Task * t)
         //  create thread with handler
         pthread_t thread;
         kprintf("invoking handler\n");
-        sys_pthread_create(&thread, NULL, (void *)(intptr_t)handler, (void *)i);
+        sys_pthread_create(&thread, NULL, (void *)(uintptr_t)handler, (void *)(uintptr_t)i);
         current_task->proc->thread_signal = i;
         sigdelset(&current_task->proc->signal, i);
         current_task = NULL;
@@ -1983,9 +1996,9 @@ static Task ** find_pp(Task *t)
     return NULL;
 }
 
-static void free_stack(uint32_t stack_top, uint32_t size)
+static void free_stack(uintptr_t stack_top, uintptr_t size)
 {
-    for (unsigned int i = stack_top; i > stack_top - size; i -= 0x1000)
+    for (uintptr_t i = stack_top; i > stack_top - size; i -= 0x1000)
         free_frame(get_page_entry(i, 0, current_directory));
 
     switch_page_directory(current_directory);
@@ -2199,7 +2212,7 @@ static int sys_mkdir(const char *path, mode_t mode)
     return vfs_mkdir(path, mode);
 }
 
-static int sys_brk(uint32_t addr, uint32_t * current_brk)
+static int sys_brk(uintptr_t addr, uintptr_t * current_brk)
 {
     if (addr) {
         if (addr > current_task->proc->brk) {
@@ -2209,7 +2222,7 @@ static int sys_brk(uint32_t addr, uint32_t * current_brk)
         } else {
             addr += 0xfff;
             addr &= ~0xfff;
-            for (unsigned int i = addr; i < current_task->proc->brk; i += 0x1000) {
+            for (uintptr_t i = addr; i < current_task->proc->brk; i += 0x1000) {
                 free_frame(get_page_entry(i, 0, current_directory));
             }
             current_task->proc->brk = addr;
@@ -2228,15 +2241,15 @@ static void kthread_exit(int value)
     while(1);
 }
 
-static Task * create_task(void (*eip)(int ), unsigned int stack_size)
+static Task * create_task(void (*eip)(int ), unsigned int stack_size, uintptr_t arg)
 {
     uint8_t *  stack = (void *) kmalloc_a(stack_size, "kernel-task-stack");
-    uint32_t * stack_values = (uint32_t *)(stack + stack_size);
+    uintptr_t * stack_values = (uintptr_t *)(stack + stack_size);
 
     stack_values[-1] =  0; /* eip */
     stack_values[-2] =  0; /* ebp */
-    stack_values[-3] =  0xbeef; /* param */
-    stack_values[-4] =  (uint32_t)kthread_exit;
+    stack_values[-3] =  arg; /* param */
+    stack_values[-4] =  (uintptr_t)kthread_exit;
 
     Task * new_task = kmalloc(sizeof(Task) + sizeof(Process), "task-kernel");
     strlcpy(new_task->name, "kernel-task", sizeof(new_task->name));
@@ -2246,14 +2259,17 @@ static Task * create_task(void (*eip)(int ), unsigned int stack_size)
 #if SPRAY_MEMORY
     memset(&new_task->reg, 0xFA, sizeof(new_task->reg));
 #endif
-    new_task->reg.esp = (uint32_t)(stack_values - 4);
-    new_task->reg.eip = (uint32_t)eip;
+    new_task->reg.esp = (uintptr_t)(stack_values - sizeof(uintptr_t));
+    new_task->reg.eip = (uintptr_t)eip;
     new_task->reg.cs = 0x8;
     new_task->reg.ds = 0x10;
     new_task->reg.ss = 0x10;
     new_task->reg.eax = 0;
     new_task->reg.eflags = 0x200;
     new_task->thread_parent = NULL;
+#if defined(ARCH_x86_64)
+    new_task->reg.edi = arg;
+#endif
 
     new_task->proc = (Process *)(new_task + 1);
     new_task->proc->pgrp = new_task->id;
@@ -2274,9 +2290,9 @@ static Task * create_task(void (*eip)(int ), unsigned int stack_size)
 
 #include "elf.h"
 
-static void create_vm_block(uint32_t addr, uint32_t size)
+static void create_vm_block(uintptr_t addr, uintptr_t size)
 {
-    unsigned int i;
+    uintptr_t i;
     for (i = addr & ~0xfff; i < addr + size; i += 0x1000)
         alloc_frame(get_page_entry(i, 1, current_directory), 0, 1); /* user, write */
 
@@ -2292,23 +2308,41 @@ static void create_vm_block(uint32_t addr, uint32_t size)
 }
 
 //FIXME: no error checking
-
-static uint32_t create_task_elf_fd(FileDescriptor * fd)
+//
+static uintptr_t create_task_elf_fd(FileDescriptor * fd)
 {
+#if defined(ARCH_i686)
     ElfHeader e;
-    vfs_read(fd, &e, sizeof(ElfHeader));
+#elif defined(ARCH_x86_64)
+    Elf64Header e;
+#endif
+    vfs_read(fd, &e, sizeof(e));
 
     if (e.e_ident[0] != 0x7F || e.e_ident[1] != 'E' || e.e_ident[2] != 'L' || e.e_ident[3] != 'F') {
         kprintf("ELF header missing\n");
         return 0;
     }
 
+    if (e.e_type != 2)
+        return 0; /* not executable file */
+
+    switch(e.e_machine) {
+#if defined(ARCH_i686)
+    case 0x3: break;
+#elif defined(ARCH_x86_64)
+    case 0x3E: break;
+#endif
+    default: return 0;
+    }
+
     for (unsigned int i = 0; i < e.e_phnum; i++) {
-
-        vfs_lseek(fd, e.e_phoff + i * sizeof(ElfPHeader), SEEK_SET);
-
+#if defined(ARCH_i686)
         ElfPHeader p;
-        vfs_read(fd, &p, sizeof(ElfPHeader));
+#elif defined(ARCH_x86_64)
+        Elf64PHeader p;
+#endif
+        vfs_lseek(fd, e.e_phoff + i * sizeof(p), SEEK_SET);
+        vfs_read(fd, &p, sizeof(p));
 
         if (p.p_type != PT_LOAD)
             continue;
@@ -2323,11 +2357,10 @@ static uint32_t create_task_elf_fd(FileDescriptor * fd)
     }
 
     vfs_close(fd);
-
     return e.e_entry;
 }
 
-static uint32_t create_task_elf(const char * path)
+static uintptr_t create_task_elf(const char * path)
 {
     FileDescriptor * fd = vfs_open(path, O_RDONLY, 0);
     if (!fd) {
@@ -2350,7 +2383,7 @@ static int vector_flat_size(char * const v[])
     int count = 0;
     for (int i = 0; v[i]; i++)
         count += sizeof(char *) + strlen(v[i]) + 1;
-#define PAD(x) ((x + 4) & ~3)
+#define PAD(x) ((x + sizeof(uintptr_t)) & ~(sizeof(uintptr_t) - 1))
     return PAD(count + sizeof(char *));
 }
 
@@ -2433,18 +2466,18 @@ static int sys_execve(registers * regs, const char * pathname, char * const argv
     int argv_size = vector_flat_size(argv_local);
     int envp_size = vector_flat_size(envp_local);
 
-    regs->esp = USER_STACK_TOP - 8 - argv_size - envp_size;
+    regs->esp = USER_STACK_TOP - 2 * sizeof(uintptr_t) - argv_size - envp_size;
     regs->ebp = 0;
 
-    uint32_t * stack_values = (uint32_t *)(USER_STACK_TOP - argv_size - envp_size);
-    stack_values[0] = USER_STACK_TOP - envp_size + 4; //envp
-    stack_values[-1] = USER_STACK_TOP - argv_size - envp_size + 4; //argv
+    uintptr_t * stack_values = (uintptr_t *)(USER_STACK_TOP - argv_size - envp_size);
+    stack_values[0] = USER_STACK_TOP - envp_size + sizeof(uintptr_t); //envp
+    stack_values[-1] = USER_STACK_TOP - argv_size - envp_size + sizeof(uintptr_t); //argv
     stack_values[-2] = vector_count(argv_local); //argc
 
-    void * envp_stack = (uint32_t*)(USER_STACK_TOP - envp_size + 4);
+    void * envp_stack = (uintptr_t *)(USER_STACK_TOP - envp_size + sizeof(uintptr_t));
     vector_dup2(envp_stack, envp_local);
 
-    void * argv_stack = (uint32_t*)(USER_STACK_TOP - argv_size - envp_size + 4);
+    void * argv_stack = (uintptr_t *)(USER_STACK_TOP - argv_size - envp_size + sizeof(uintptr_t));
     vector_dup2(argv_stack, argv_local);
 
     sigemptyset(&current_task->proc->signal);
@@ -2685,7 +2718,13 @@ static int sys_uname(struct utsname * name)
     strlcpy(name->nodename, "localhost", sizeof(name->nodename));
     strlcpy(name->release, "1", sizeof(name->release));
     strlcpy(name->version, "stock", sizeof(name->version));
-    strlcpy(name->machine, "i686", sizeof(name->machine));
+    strlcpy(name->machine,
+#if defined(ARCH_i686)
+    "i686"
+#elif defined(ARCH_x86_64)
+    "x86_64"
+#endif
+        , sizeof(name->machine));
     return 0;
 }
 
@@ -2773,8 +2812,8 @@ static int sys_pthread_create(pthread_t * thread, const pthread_attr_t * attr, v
     new_task->ppid = current_task->id;
     new_task->state = STATE_RUNNING;
     new_task->reg = current_task->reg;
-    new_task->reg.eip = (uint32_t)start_routine;
-    new_task->reg.esp = current_task->proc->stack_next - 4;
+    new_task->reg.eip = (uintptr_t)start_routine;
+    new_task->reg.esp = current_task->proc->stack_next - sizeof(uintptr_t);
     new_task->stack_top = current_task->proc->stack_next;
     move_stack((void*)(current_task->proc->stack_next), USER_STACK_SIZE, 0xf2);
     current_task->proc->stack_next -= USER_STACK_SIZE;
@@ -2787,7 +2826,10 @@ static int sys_pthread_create(pthread_t * thread, const pthread_attr_t * attr, v
 
     void ** stack_values = (void **)new_task->reg.esp;
     stack_values[1] = arg;
-    stack_values[0] = (void *)(uint32_t)sys_pthread_join; /* thread termination indicator, will deliberatey trigger page fault */
+    stack_values[0] = (void *)(uintptr_t)sys_pthread_join; /* thread termination indicator, will deliberatey trigger page fault */
+#if defined(ARCH_x86_64)
+    new_task->reg.edi = (uintptr_t)arg;
+#endif
 
     // insert into ready queue
     new_task->next = (Task *)ready_queue;
@@ -3182,31 +3224,26 @@ static int pci_enum(void * cntx, int bus, int slot, int func)
 }
 #endif
 
-void jmp_to_userspace(uint32_t eip, uint32_t esp);
+void jmp_to_userspace(uintptr_t eip, uintptr_t esp);
 
 static void idle(int param);
 
-void start2(uint32_t magic, const void * info, uint32_t initial_esp);
-void start2(uint32_t magic, const void * info, uint32_t initial_esp)
+void start3(int magic, const void * info, void * initial_esp);
+void start3(int magic, const void * info, void * initial_esp)
 {
-    uint32_t low_size, up_start, up_size, mod_start, mod_end;
+    uintptr_t mod_start, mod_end;
     kprintf("Hello world, magic=0x%x, info=%p, esp=0x%x\n", magic, info, initial_esp);
-    if (magic == 0x2BADB002)
-        parse_multiboot_info(info, &low_size, &up_start, &up_size, &mod_start, &mod_end);
-    else if (magic == 0x1337)
-        parse_linux_params(info, &low_size, &up_start, &up_size, &mod_start, &mod_end);
-    else
-        panic("invalid magic number");
 
     cpu_init();
-
-    init_gdt();
-
     init_idt();
-
     init_timer(TICKS_PER_SECOND);
 
-    init_paging(low_size, up_start, up_size);
+    if (magic == 0x2BADB002)
+        parse_multiboot_info(info, &mod_start, &mod_end);
+    else if (magic == 0x1337)
+        parse_linux_params(info, &mod_start, &mod_end);
+    else
+        panic("invalid magic number");
 
 #if 0
     pci_scan(pci_enum, NULL);
@@ -3270,14 +3307,11 @@ void start2(uint32_t magic, const void * info, uint32_t initial_esp)
 
     init_tasking("/dev/tty"); /* must come after paging */
 
-    idle_task = create_task(idle, 0x1000);
+    idle_task = create_task(idle, 0x1000, 0xbeef);
 
-    uint32_t entry = create_task_elf("/bin/init");
+    uintptr_t entry = create_task_elf("/bin/init");
     if (!entry)
         panic("create task elf failed");
-
-    uint32_t g_kernel_stack = kmalloc_a(KERNEL_STACK_SIZE, "kernel-stack");
-    set_kernel_stack(g_kernel_stack + KERNEL_STACK_SIZE);
 
     rtc_init();
 
@@ -3285,11 +3319,11 @@ void start2(uint32_t magic, const void * info, uint32_t initial_esp)
 
     kprintf("\n\nswitching to user mode:\n");
 
-    uint32_t * stack_values = (uint32_t *)USER_STACK_TOP;
+    uintptr_t * stack_values = (uintptr_t *)USER_STACK_TOP;
     stack_values[0] = 0; //envp
     stack_values[-1] = 0; //argv
     stack_values[-2] = 0; //argc
-    jmp_to_userspace((uint32_t)entry, USER_STACK_TOP - 8);
+    jmp_to_userspace(entry, USER_STACK_TOP - 2 * sizeof(uintptr_t));
 
     /* never reach here */
 }

@@ -49,8 +49,8 @@ void panic(const char * reason);
 
 void dump_processes(void);
 
-void * kmalloc(uint32_t size, const char * tag);
-uint32_t kmalloc_ap(uint32_t size, uint32_t * phys, const char * tag);
+void * kmalloc(uintptr_t size, const char * tag);
+uintptr_t kmalloc_ap(uintptr_t size, uintptr_t * phys, const char * tag);
 
 void kfree(void *);
 

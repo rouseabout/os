@@ -1,5 +1,6 @@
 #!/bin/sh
 set -e
+. ./.config
 
 filename=disk_image
 size=1024 #megabytes
@@ -40,6 +41,6 @@ cp $PROGRAMS mnt/bin
 cp README.md mnt/
 mkdir mnt/tmp
 cp -R sysroot/* mnt/
-find mnt -type f -executable -exec toolchain-i686-pc-elf/bin/i686-pc-elf-strip {} \;
+find mnt -type f -executable -exec toolchain-${ARCH}-pc-elf/bin/${ARCH}-pc-elf-strip {} \;
 
 grub-install --boot-directory=mnt/boot --target=i386-pc --modules="ext2 part_msdos" ${dev}

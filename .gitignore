@@ -60,7 +60,7 @@ dumpgpt
 ext2test
 heaptest
 .sysroot
-.toolchain-i686-binutils
-.toolchain-i686-stage1
-.toolchain-i686-stage2
-toolchain-i686-pc-elf
+.toolchain-*-binutils
+.toolchain-*-stage1
+.toolchain-*-stage2
+toolchain-*-pc-elf

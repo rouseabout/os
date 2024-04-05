@@ -39,9 +39,10 @@ typedef struct {
     int (*columns)(void);
 } TTYCommands;
 
-void fb_init(uint64_t addr, uint32_t stride, uint32_t width, uint32_t height, uint32_t bpp);
-uint32_t fb_get_base(void);
-uint32_t fb_get_end(void);
+void fb_init(uintptr_t addr, uint32_t stride, uint32_t width, uint32_t height, uint32_t bpp);
+void fb_init2(void);
+uintptr_t fb_get_base(void);
+uintptr_t fb_get_end(void);
 extern const DeviceOperations fb_io;
 
 void textmode_init(void);

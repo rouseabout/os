@@ -109,10 +109,10 @@ void halloc_init(Halloc * cntx, void * start, unsigned int initial_size)
     cntx->end   = t + 1;
 }
 
-static unsigned int calc_alignment_size(const Head * h, int size, int page_align)
+static uintptr_t calc_alignment_size(const Head * h, uintptr_t size, int page_align)
 {
-    unsigned int data0 = (unsigned int)(h + 1);
-    unsigned int data1 = data0;
+    uintptr_t data0 = (uintptr_t)(h + 1);
+    uintptr_t data1 = data0;
     if (page_align) {
         data1 += sizeof(Head) + 1 + sizeof(Tail);
         data1 += (page_align - 1);
@@ -121,7 +121,7 @@ static unsigned int calc_alignment_size(const Head * h, int size, int page_align
     return (data1 - data0) + size;  /* padding plus size */
 }
 
-static Head * grow(Halloc * cntx, unsigned int size, int page_align)
+static Head * grow(Halloc * cntx, uintptr_t size, int page_align)
 {
     /* ...[hl]...[tl]         */
     /*              |<-- end */
@@ -210,8 +210,8 @@ static void shrink(Halloc * cntx)
     if (h->used || h->size < 8192)
         return;
 
-    unsigned int boundary = (((unsigned int)h + 0x1000) & ~0xfff);
-    unsigned int size = boundary - (unsigned int)h;
+    uintptr_t boundary = (((uintptr_t)h + 0x1000) & ~0xfff);
+    uintptr_t size = boundary - (uintptr_t)h;
     if (size <= sizeof(Head) + sizeof(Tail))
         return;
 
@@ -271,8 +271,8 @@ void * halloc(Halloc * cntx, const unsigned int size, int page_align, const char
 
     /* accomodate page alignment padding */
 
-    unsigned int data0 = (unsigned int)head_data(h0);
-    unsigned int data1 = data0;
+    uintptr_t data0 = (uintptr_t)head_data(h0);
+    uintptr_t data1 = data0;
     if (page_align) {
         data1 += sizeof(Head) + 1 + sizeof(Tail);
         data1 += (page_align - 1);
@@ -363,7 +363,7 @@ void * halloc(Halloc * cntx, const unsigned int size, int page_align, const char
 
     memset(head_data(h0), 0xAB, size);
     if (page_align)
-        ASSERT(((unsigned int)head_data(h0) & (page_align - 1)) == 0);
+        ASSERT(((uintptr_t)head_data(h0) & (page_align - 1)) == 0);
 #endif
 
 #if 0

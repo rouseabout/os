@@ -339,7 +339,7 @@ static int tty_ioctl(FileDescriptor * fd, int request, void * data)
         *(int *)data = kb_rawmode ? K_MEDIUMRAW : K_UNICODE;
         return 0;
     } else if (request == KDSKBMODE) {
-        kb_rawmode = (int)data == K_MEDIUMRAW;
+        kb_rawmode = (intptr_t)data == K_MEDIUMRAW;
         return 0;
     } else if (request == TIOCGWINSZ) {
         struct winsize * ws = data;

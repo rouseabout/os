@@ -124,6 +124,12 @@ To attach gdb to the operating system append `-S` to QEMUFLAGS in the Makefile a
 Then run `gdb kernel.bin`, and type `target remote localhost:1234` at the gdb prompt.
 
 
+### 64-bit
+
+To build a 64-bit *os*, edit `.config` and set `ARCH=x86_64` etc., then perform `make clean` and `make`.
+When using multiboot, the `kernel.bin` and `initrd` files must fit within the first 8 MiB of memory.
+
+
 ### Networking
 
 *os* supports the NE2000 network device.

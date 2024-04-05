@@ -1,35 +1,5 @@
 bits 32
-
 section .text
-align 4
-
-global gdt_flush
-gdt_flush:
-    mov eax, [esp+4]
-    lgdt [eax]
-
-    mov ax, 0x10
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
-    mov ss, ax
-    jmp 0x08:.flush
-.flush:
-    ret
-
-global idt_flush
-idt_flush:
-    mov eax, [esp+4]
-    lidt [eax]
-    ret
-
-global tss_flush:
-tss_flush:
-    mov ax, 0x2b ; tss segment in gdt + rpl 3
-    ltr ax
-    ret
-
 
 %macro DEFISR 1
 global isr%1
@@ -239,27 +209,6 @@ isr_common:
     mov ecx, [esp - 20]  ; restore ecx
     jmp .exit_continue
 
-global force_segfault
-force_segfault:
-    ;; try to write to undefined segment
-    mov ax, 0x5678
-    mov ds, ax
-    mov dword [ds:0x0], 1
-
-    ; try to jump to undefined segment
-    ;;jmp 0x30:.halt
-.halt:
-    hlt
-
-global get_esp
-get_esp:
-    mov eax, esp
-    ret
-
-global get_ss
-get_ss:
-    mov eax, ss
-    ret
 
 global jmp_to_userspace
 jmp_to_userspace:
@@ -278,9 +227,6 @@ jmp_to_userspace:
     push eax      ; userspace esp
 
     pushf         ; eflags
-    pop eax
-    or eax, 0x200 ; enable interrupts
-    push eax
 
     push 0x1b     ; userspace cs
 
@@ -288,39 +234,3 @@ jmp_to_userspace:
     push eax      ; userspace eip
 
     iret
-
-
-global copy_page_physical
-copy_page_physical:
-    push ebx
-    pushf
-
-    cli
-
-    mov ebx, [esp+12] ; source
-    mov ecx, [esp+16] ; destination
-
-    ; disable paging
-    mov edx, cr0
-    and edx, 0x7fffffff
-    mov cr0, edx
-
-    mov edx, 1024
-
-.loop:
-    mov eax, [ebx]
-    mov [ecx], eax
-    add ebx, 4
-    add ecx, 4
-    dec edx
-    jnz .loop
-
-    ; enable paging
-    mov edx, cr0
-    or edx, 0x80000000
-    mov cr0, edx
-
-    popf
-    pop ebx
-
-    ret

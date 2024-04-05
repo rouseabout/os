@@ -51,9 +51,9 @@ static void fb_reset()
     scroll_bottom = fb_height - 8;
 }
 
-void fb_init(uint64_t addr, uint32_t stride, uint32_t width, uint32_t height, uint32_t bpp)
+void fb_init(uintptr_t addr, uint32_t stride, uint32_t width, uint32_t height, uint32_t bpp)
 {
-    fb_addr = (uint8_t *)(uint32_t)addr;
+    fb_addr = (uint8_t *)(uintptr_t)addr;
     fb_stride = stride;
     fb_width = width;
     fb_height = height;
@@ -61,10 +61,13 @@ void fb_init(uint64_t addr, uint32_t stride, uint32_t width, uint32_t height, ui
 
     fb_reset();
 
+    kprintf("fb_init 0x%llx, 0x%x, stride=%d, height=%d\n", addr, fb_addr, stride, height);
+}
+
+void fb_init2()
+{
     memset(fb_addr, 0xFF, fb_stride * fb_height);
     cursor_xor();
-
-    kprintf("fb_init 0x%llx, 0x%x, stride=%d, height=%d\n", addr, fb_addr, stride, height);
 }
 
 #include "font8x8_basic.h"
@@ -219,14 +222,14 @@ static void fb_putc(int c)
     cursor_xor();
 }
 
-uint32_t fb_get_base(void)
+uintptr_t fb_get_base(void)
 {
-    return (uint32_t)fb_addr;
+    return (uintptr_t)fb_addr;
 }
 
-uint32_t fb_get_end(void)
+uintptr_t fb_get_end(void)
 {
-    return (uint32_t)fb_addr + fb_stride * fb_height;
+    return (uintptr_t)fb_addr + fb_stride * fb_height;
 }
 
 static void fb_move_cursor(int direction, int count)

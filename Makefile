@@ -1,7 +1,4 @@
-ARCH=i686
-QEMUARCH=i386
-NASMFORMAT=elf32
-
+include .config
 HOSTCC=cc
 HOSTCCFLAGS=-m32
 TOOLCHAIN=$(PWD)/toolchain-$(ARCH)-pc-elf
@@ -11,7 +8,7 @@ AR=$(TOOLCHAIN)/bin/$(ARCH)-pc-elf-ar
 STRIP=$(TOOLCHAIN)/bin/$(ARCH)-pc-elf-strip
 READELF=$(TOOLCHAIN)/bin/$(ARCH)-pc-elf-readelf
 OBJDUMP=$(TOOLCHAIN)/bin/$(ARCH)-pc-elf-objdump
-CFLAGS=-ffreestanding -Wall -pedantic -Wshadow -Wextra -Werror=format-security -Werror=implicit-function-declaration -Werror=missing-prototypes -Werror=pointer-arith -Werror=return-type -Werror=vla -Werror=logical-op -g -Ilibc -Ilibdl -Ilibm -Wno-unused-parameter -Wno-sign-compare
+CFLAGS=-ffreestanding -Wall -pedantic -Wshadow -Wextra -Werror=format-security -Werror=implicit-function-declaration -Werror=missing-prototypes -Werror=pointer-arith -Werror=return-type -Werror=vla -Werror=logical-op -g -Ilibc -Ilibdl -Ilibm -Wno-unused-parameter -Wno-sign-compare -DARCH_$(ARCH)
 CXXFLAGS=
 LD=$(CC)
 LDFLAGS=-ffreestanding -nostdlib -g -Lsysroot/usr/lib
@@ -22,7 +19,11 @@ QEMUFLAGS+=-debugcon stdio
 #QEMUFLAGS+=-S  #(wait for debugger connection)
 #QEMUFLAGS+=-enable-kvm
 
+ifeq ($(ARCH),x86_64)
+all: qemu-linux
+else
 all: qemu
+endif
 
 qemu: kernel.bin initrd
 	$(QEMU) $(QEMUFLAGS) -kernel $< -append "" -initrd initrd
@@ -91,7 +92,7 @@ qemu-linux: kernel.linux initrd
 	$(QEMU) $(QEMUFLAGS) -kernel kernel.linux -initrd initrd
 
 %.o: %.asm
-	nasm -f $(NASMFORMAT) -o $@ $<
+	nasm -f $(NASMFORMAT) -DARCH_$(ARCH) -o $@ $<
 
 #libc modules common to kernel and libc.a
 LIBC_COMMON_OBJS=$(addprefix libc/,bsd_string.o ctype.o heap.o langinfo.o libgen.o signal.o stdio.o stdlib.o string.o strings.o time.o) $(addprefix libm/,math.o)
@@ -99,7 +100,7 @@ LIBC_COMMON_OBJS=$(addprefix libc/,bsd_string.o ctype.o heap.o langinfo.o libgen
 #libc modules only used by libc.a
 LIBC_ONLY_OBJS=$(addprefix libc/,arpa_inet.o dirent.o errno.o fcntl.o fnmatch.o getopt.o grp.o inttypes.o locale.o mntent.o netdb.o net_if.o netinet_in.o poll.o pthread.o pwd.o regex.o sched.o semaphore.o setjmp.o signal2.o stdio2.o stdlib2.o string2.o sys_ioctl.o sys_mman.o sys_resource.o sys_select.o sys_socket.o sys_stat.o sys_statvfs.o sys_time.o sys_times.o sys_uio.o sys_utsname.o sys_wait.o syslog.o termios.o time2.o unistd.o utime.o wchar.o wctype.o crt0.o)
 
-KERNEL_OBJS=$(addprefix kernel/,ata.o boot.o dev.o ext2.o fb.o kb.o loop.o main.o mem.o ne2k.o pci.o pipe.o proc.o serial.o textmode.o tty.o vfs.o) $(LIBC_COMMON_OBJS)
+KERNEL_OBJS=$(addprefix kernel/,$(ARCH)/start2.o $(ARCH)/common.o ata.o dev.o ext2.o fb.o kb.o loop.o main.o mem.o ne2k.o pci.o pipe.o proc.o serial.o textmode.o tty.o vfs.o) $(LIBC_COMMON_OBJS)
 kernel.bin: kernel/linker.ld kernel/multiboot.o $(KERNEL_OBJS) .toolchain-$(ARCH)-stage1
 	$(LD) $(LDFLAGS) -o $@ -T kernel/linker.ld kernel/multiboot.o $(KERNEL_OBJS) -lgcc
 	$(STRIP) --strip-all $@
@@ -132,17 +133,17 @@ programs/%++.o: programs/%++.cc .toolchain-$(ARCH)-stage2 .sysroot
 	$(CXX) -o $@ -c $<
 
 crash: programs/crash.o .toolchain-$(ARCH)-stage2 .sysroot
-	$(LD) $(LDFLAGS) -o $@ $<
+	$(LD) $(LDFLAGS) $(PROGLDFLAGS) -o $@ $<
 
 hello: programs/hello.o .toolchain-$(ARCH)-stage2 .sysroot
-	$(LD) $(LDFLAGS) -o $@ $<
+	$(LD) $(LDFLAGS) $(PROGLDFLAGS) -o $@ $<
 
 %++: programs/%++.o .toolchain-$(ARCH)-stage2 .sysroot
-	$(CXX) -o $@ $<
+	$(CXX) $(PROGLDFLAGS) -o $@ $<
 	$(STRIP) --strip-all $@
 
 %: programs/%.o libc.a libm.a .toolchain-$(ARCH)-stage2 .sysroot
-	$(CC) -o $@ $<
+	$(CC) $(PROGLDFLAGS) -o $@ $<
 	$(STRIP) --strip-all $@
 
 %.o: %.cc .toolchain-$(ARCH)-stage1
@@ -155,7 +156,7 @@ hello: programs/hello.o .toolchain-$(ARCH)-stage2 .sysroot
 	$(CC) -o $@ -c $< $(CFLAGS)
 
 d-%: %
-	($(READELF) -h $<; $(OBJDUMP) -d -l $<) | less
+	($(READELF) -h $<; $(OBJDUMP) -h $<;  $(OBJDUMP) -d -l $<) | less
 
 gdb: kernel.bin
 	gdb $< -ex 'target remote localhost:1234'
@@ -167,7 +168,7 @@ clean:
 
 initrd: $(PROGRAMS) README.md
 	rm -f $@
-	/sbin/mkfs.ext2 -r 1 -b 4096 $@ 640
+	/sbin/mkfs.ext2 -r 1 -b 4096 $@ $(INITRDSIZE)
 	e2cp -p $(PROGRAMS) $@:bin/
 	e2mkdir $@:/tmp
 	e2cp README.md $@:
