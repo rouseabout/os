@@ -362,7 +362,7 @@ static void gdt_set(int idx, uint32_t base, uint32_t limit, uint8_t flags, uint8
     gdt[idx].base_high   = base >> 24;
 
     gdt[idx].limit_low   = limit & 0xFFFF;
-    gdt[idx].granularity = (limit >> 16) | granularity;
+    gdt[idx].granularity = ((limit >> 16) & 0xF) | granularity;
 
     gdt[idx].flags       = flags;
 }
@@ -394,13 +394,15 @@ static void tss_set(int idx, uint16_t ss0, uint32_t esp0)
 
 static void init_gdt()
 {
-    //FIXME: decode the flags with macros
+#define G_4096 (1<<7)
+#define G_32BIT (1<<6)
+#define G_64BIT (1<<5)
            /* base  limit       flags granularity */
-    gdt_set(0, 0x0, 0x0,        0x0,  0xCF);
-    gdt_set(1, 0x0, 0xFFFFFFFF, 0x9A, 0xCF); /* 0x8 kernel code */
-    gdt_set(2, 0x0, 0xFFFFFFFF, 0x92, 0xCF); /* 0x10 kernel data */
-    gdt_set(3, 0x0, 0xFFFFFFFF, 0xFA, 0xCF); /* 0x18 user code */
-    gdt_set(4, 0x0, 0xFFFFFFFF, 0xF2, 0xCF); /* 0x20 user data */
+    gdt_set(0, 0x0, 0x0,        0x0,  0x00);
+    gdt_set(1, 0x0, 0xFFFFFFFF, 0x9A, G_4096 | G_32BIT); /* 0x8 kernel code */
+    gdt_set(2, 0x0, 0xFFFFFFFF, 0x92, G_4096 | G_32BIT); /* 0x10 kernel data */
+    gdt_set(3, 0x0, 0xFFFFFFFF, 0xFA, G_4096 | G_32BIT); /* 0x18 user code */
+    gdt_set(4, 0x0, 0xFFFFFFFF, 0xF2, G_4096 | G_32BIT); /* 0x20 user data */
     tss_set(5, 0x10, 0x0);
 
     gdt_ptr.limit = sizeof(gdt) - 1;
