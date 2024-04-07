@@ -1228,7 +1228,7 @@ static page_directory * clone_directory_r(const page_directory * src, const page
 
     //copy each page
     for (unsigned int i = 0; i < ENTRIES_PER_TABLE; i++) {
-        uintptr_t base2 = base | i << (12 + (level-1)*BITS_PER_TABLE);
+        uintptr_t base2 = base | (uintptr_t)i << (12 + (level-1)*BITS_PER_TABLE);
 
         if (!src->tables[i])
             continue;
@@ -1423,7 +1423,7 @@ static void init_timer(int freq)
 
 #define USER_STACK_SIZE 0x30000 /* 192k */
 
-#define USER_STACK_TOP (0xF0000000 - sizeof(uintptr_t))
+#define USER_STACK_TOP (KERNEL_START - sizeof(uintptr_t))
 
 static void move_stack(void * new_stack_start, unsigned int size, int spray)
 {
