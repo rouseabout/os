@@ -1,6 +1,6 @@
 # OS
 
-*os* is a toy Unix-like operating system for 32-bit x86 computers.
+*os* is a toy Unix-like operating system for x86 computers.
 
 Features:
 
@@ -37,11 +37,19 @@ There is no user login.
 See below for a list of included programs.
 
 
+## 64-bit operating system
+
+By default *os* is 32-bit.
+To build a 64-bit *os*, edit `.config` and set `ARCH=x86_64` etc., then perform `make clean` and `make`.
+NASM >= 2.16 is required.
+
+
 ## Alternative boot methods
 
 *os* can be booted many ways.
 First it is important to understand the high-level design of the operating system.
 *os* consists of a kernel file and sysroot directory. The `kernel.bin` file is compatible with the multiboot specification. The `kernel.linux` file is compatbile with the Linux boot protocol. The sysroot directory is copied to an ext2 file system, either intended to function as a ram disk (`initrd`) or a hard disk (`disk_image`).
+When using multiboot with an initrd module, both kernel and initrd files must fit within the first 8 MiB of memory.
 
 
 ### ISO image boot
@@ -124,13 +132,6 @@ To attach gdb to the operating system append `-S` to QEMUFLAGS in the Makefile a
 Then run `gdb kernel.bin`, and type `target remote localhost:1234` at the gdb prompt.
 
 
-### 64-bit
-
-To build a 64-bit *os*, edit `.config` and set `ARCH=x86_64` etc., then perform `make clean` and `make`.
-When using multiboot, the `kernel.bin` and `initrd` files must fit within the first 8 MiB of memory.
-NASM >= 2.16 is required.
-
-
 ### Networking
 
 *os* supports the NE2000 network device.
@@ -207,7 +208,7 @@ There is no `shutdown` program; use `echo 0 > /dev/power` instead.
 The `sh` program supports running programs, pipes, redirection and background processes, but little else.
 
 
-# History
+## History
 
 I wrote my first hobby operating system in 1998 as a learning exercise..
 At this time there were very few educational resources on the Internet; many ideas were borrowed from the Linux kernel and another long forgotten website.
