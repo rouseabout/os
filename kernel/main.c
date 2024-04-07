@@ -108,7 +108,7 @@ static const char * get_cmdline_token(const char * token, const char * def, char
 static void pmm_init(uintptr_t low_size, uintptr_t up_size, uintptr_t extra);
 static void init_paging(uintptr_t low_size);
 static void set_frame(uintptr_t frame_address);
-static void set_frame_identity(page_entry * page, int addr, int is_kernel, int is_writeable, int pat);
+static void set_frame_identity(page_entry * page, uintptr_t addr, int is_kernel, int is_writeable, int pat);
 
 static void mem_set_frames(uintptr_t phy_addr, int size)
 {
@@ -1093,7 +1093,7 @@ static void free_frame(page_entry *page)
     page->frame   = 0xBEEF;
 }
 
-static void set_frame_identity(page_entry * page, int addr, int is_kernel, int is_writeable, int pat)
+static void set_frame_identity(page_entry * page, uintptr_t addr, int is_kernel, int is_writeable, int pat)
 {
     if (page->present)
         panic("set_frame_identity: page already present\n");
@@ -1272,7 +1272,7 @@ static void clean_directory_r(page_directory * dir, const page_directory * kd, i
         if (!dir->tables[i] || (kd && dir->tables[i] == kd->tables[i]))
             continue;
         if (level > 2) {
-            clean_directory_r(dir->tables[i], kd->tables[i], level - 1);
+            clean_directory_r(dir->tables[i], kd ? kd->tables[i] : NULL, level - 1);
         } else {
             clean_table((page_table *)dir->tables[i]);
             kfree(dir->tables[i]);
@@ -1309,7 +1309,7 @@ static int grow_cb(Halloc * cntx, unsigned int extra)
     return 0; /* always succeeds */
 }
 
-static void shrink_cb(Halloc * cntx, unsigned int boundary_addr)
+static void shrink_cb(Halloc * cntx, uintptr_t boundary_addr)
 {
     for (uintptr_t i = boundary_addr; i < (uintptr_t)cntx->end; i += 0x1000) {
         free_frame(get_page_entry(i, 0, cntx->directory));
@@ -1367,12 +1367,12 @@ static void init_paging(uintptr_t low_size)
     switch_page_directory(kernel_directory);
 
     /* create kernel heap */
-
     int initial_size = 4096;
-    for (unsigned int i = 0xD0000000; i < 0xD0000000 + initial_size; i += 0x1000)
+    uintptr_t kheap_start = KERNEL_START + 0x10000000 /* +256 MiB */ ;
+    for (uintptr_t i = kheap_start; i < kheap_start + initial_size; i += 0x1000)
         alloc_frame(get_page_entry(i, 1, kernel_directory), 1, 0);
 
-    halloc_init(&kheap, (void *)0xD0000000, initial_size);
+    halloc_init(&kheap, (void *)kheap_start, initial_size);
     kheap.directory   = kernel_directory;
     kheap.is_kernel   = 1;
     kheap.is_writable = 0;
@@ -1391,7 +1391,7 @@ static void init_paging(uintptr_t low_size)
        the biggest user of kmalloc() currently is ext2_read() for large files */
 
     int max_size = 64 * 1024 * 1024;
-    for (unsigned int i = 0xD0000000; i < 0xD0000000 + max_size; i += 0x1000)
+    for (uintptr_t i = kheap_start; i < kheap_start + max_size; i += 0x1000)
         get_page_entry(i, 1, kernel_directory);
 }
 

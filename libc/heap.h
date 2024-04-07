@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 typedef struct Halloc Halloc;
 
 struct Halloc {
@@ -10,7 +12,7 @@ struct Halloc {
     int is_writable;
 
     int (*grow_cb)(Halloc * cntx, unsigned int extra);
-    void (*shrink_cb)(Halloc *cntx, unsigned int addr);
+    void (*shrink_cb)(Halloc *cntx, uintptr_t addr);
     void (*dump_cb)(Halloc * cntx);
     int (*printf)(const char *, ...);
     void (*abort)(void);

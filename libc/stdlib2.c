@@ -23,7 +23,7 @@ static int grow_cb(Halloc * cntx, unsigned int extra)
     return 0;
 }
 
-static void shrink_cb(Halloc * cntx, unsigned int boundary_addr)
+static void shrink_cb(Halloc * cntx, uintptr_t boundary_addr)
 {
     brk((void *)boundary_addr, NULL);
 }
