@@ -2,7 +2,7 @@ bits 16
 org 0x0
 %include "kernel/x86inc.asm"
 
-SETUP_SECTS equ 1
+SETUP_SECTS equ 2
 
 start: ; linux_params
     db 0x1f1 dup (0)
@@ -23,8 +23,12 @@ start16:
     db 8 dup (0)
     dd 255 ; @0x238: cmdline_size
     db 48 dup (0)
-
 .continue:
+    jmp .continue2
+    db 0x2d0 - ($ - start) dup 0
+    resb 24 * 20 ; 24 entries should be enough
+
+.continue2:
     xor eax, eax
     xor ebx, ebx
 
@@ -35,6 +39,26 @@ start16:
     shl ebx, 6
     add eax, ebx
     mov [0x1e0], eax ; @0x1e0 alt_mem_k
+
+    ; read mmap
+    xor bp, bp
+    xor ebx, ebx
+    mov edi, 0x2d0
+.e820_loop:
+    mov edx, 0x0534D4150
+    mov eax, 0xe820
+    mov [es:di + 20], dword 1
+    mov ecx, 24
+    int 0x15
+    jc .e820_failed
+    inc bp
+    add di, 20
+    test ebx, ebx
+    jne short .e820_loop
+
+.e820_failed:
+    mov ax, bp
+    mov [0x1e8], al ; @0x1e8 e820_entries
 
 .check_switch:
     mov eax, [0x208] ; @0x208 realmode_swtch
