@@ -9,6 +9,9 @@ STRIP=$(TOOLCHAIN)/bin/$(ARCH)-pc-elf-strip
 READELF=$(TOOLCHAIN)/bin/$(ARCH)-pc-elf-readelf
 OBJDUMP=$(TOOLCHAIN)/bin/$(ARCH)-pc-elf-objdump
 CFLAGS=-ffreestanding -Wall -pedantic -Wshadow -Wextra -Werror=format-security -Werror=implicit-function-declaration -Werror=missing-prototypes -Werror=pointer-arith -Werror=return-type -Werror=vla -Werror=logical-op -g -Ilibc -Ilibdl -Ilibm -Wno-unused-parameter -Wno-sign-compare -DARCH_$(ARCH)
+ifeq ($(ARCH),x86_64)
+CFLAGS+=-mcmodel=large
+endif
 CXXFLAGS=
 LD=$(CC)
 LDFLAGS=-ffreestanding -nostdlib -g -Lsysroot/usr/lib
@@ -102,7 +105,7 @@ LIBC_ONLY_OBJS=$(addprefix libc/,arpa_inet.o dirent.o errno.o fcntl.o fnmatch.o 
 
 KERNEL_OBJS=$(addprefix kernel/,$(ARCH)/start2.o $(ARCH)/common.o ata.o dev.o ext2.o fb.o kb.o loop.o main.o mem.o ne2k.o pci.o pipe.o power.o proc.o serial.o textmode.o tty.o vfs.o) $(LIBC_COMMON_OBJS)
 kernel.bin: kernel/linker.ld kernel/multiboot.o $(KERNEL_OBJS) .toolchain-$(ARCH)-stage1
-	$(LD) $(LDFLAGS) -o $@ -T kernel/linker.ld kernel/multiboot.o $(KERNEL_OBJS) -lgcc
+	$(LD) $(LDFLAGS) -o $@ -Wl,--defsym,ARCH_$(ARCH)=1 -T kernel/linker.ld kernel/multiboot.o $(KERNEL_OBJS) -lgcc
 	$(STRIP) --strip-all $@
 
 kernel.linux: kernel.linux16 kernel.linux32
@@ -112,7 +115,7 @@ kernel.linux16: kernel/linux16.asm
 	nasm -f bin -o $@ $<
 
 kernel.linux32: kernel/linker.ld kernel/linux32.o $(KERNEL_OBJS) .toolchain-$(ARCH)-stage1
-	$(LD) $(LDFLAGS) -o $@ -Wl,--oformat=binary -T kernel/linker.ld kernel/linux32.o $(KERNEL_OBJS) -lgcc
+	$(LD) $(LDFLAGS) -o $@ -Wl,--oformat=binary -Wl,--defsym,ARCH_$(ARCH)=1 -T kernel/linker.ld kernel/linux32.o $(KERNEL_OBJS) -lgcc
 
 libc.a: $(LIBC_COMMON_OBJS) $(LIBC_ONLY_OBJS) .toolchain-$(ARCH)-stage1
 	$(AR) rc $@ $^

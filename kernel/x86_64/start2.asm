@@ -1,34 +1,34 @@
 bits 32
-section .text
+section .boot.text
 %include "kernel/x86inc.asm"
+
+KERNEL_START equ 0x8000000000
+PML123_SIZE equ 0x8000000000 ; 512 GiB
+
+extern bss
+extern end
 
 global start2
 extern start3
 start2:
-    ; identity map first 8MiB
-    mov eax, pml3
-    or eax, PAGE_PRESENT | PAGE_WRITE
-    mov [pml4], eax
 
-    mov eax, pml2
+%macro SET_PAGE 3 ; table index phy
+    mov eax, %3
     or eax, PAGE_PRESENT | PAGE_WRITE
-    mov [pml3], eax
+    mov [%1 + %2 * 8], eax
+%endmacro
 
-    mov eax, pml1_0
-    or eax, PAGE_PRESENT | PAGE_WRITE
-    mov [pml2], eax
+    ; identity map first 8MiB and mirror first 8MiB @ KERNEL_START
 
-    mov eax, pml1_1
-    or eax, PAGE_PRESENT | PAGE_WRITE
-    mov [pml2 + 8], eax
+    SET_PAGE pml4, 0, pml3
+    SET_PAGE pml4, KERNEL_START / PML123_SIZE, pml3
 
-    mov eax, pml1_2
-    or eax, PAGE_PRESENT | PAGE_WRITE
-    mov [pml2 + 16], eax
+    SET_PAGE pml3, 0, pml2
 
-    mov eax, pml1_3
-    or eax, PAGE_PRESENT | PAGE_WRITE
-    mov [pml2 + 24], eax
+    SET_PAGE pml2, 0, pml1_0
+    SET_PAGE pml2, 1, pml1_1
+    SET_PAGE pml2, 2, pml1_2
+    SET_PAGE pml2, 3, pml1_3
 
     mov edi, pml1_0
     mov eax, PAGE_PRESENT | PAGE_WRITE
@@ -57,19 +57,8 @@ start2:
     add esp, 4
     pop dword edi ; magic
     pop dword esi ; info
-    pop dword edx ; initial stack
-
-    mov eax, tss
-    mov [gdt.tss_entry + 2], ax
-    shr eax, 16
-    mov [gdt.tss_entry + 4], al
-    shr eax, 8
-    mov [gdt.tss_entry + 7], al
 
     lgdt [gdt_ptr]
-
-    mov ax, 0x2b ; tss segment in gdt + rpl 3
-    ltr ax
 
     mov eax, 0x10
     mov ds, eax
@@ -77,11 +66,83 @@ start2:
     mov fs, eax
     mov gs, eax
     mov ss, eax
-    jmp 0x8:start3
+
+    jmp 0x8:.long
+
+bits 64
+.long:
+    ; now load 64-bit gdt with high tss address
+
+    mov rax, tss
+    mov rbx, gdt64.tss_entry + 2
+    mov [rbx], ax
+
+    shr rax, 16
+    mov rbx, gdt64.tss_entry + 4
+    mov [rbx], al
+
+    shr rax, 8
+    mov rbx, gdt64.tss_entry + 7
+    mov [rbx], al
+
+    shr rax, 8
+    mov rbx, gdt64.tss_entry + 8
+    mov [rbx], eax
+
+    mov rax, gdt64_ptr
+    lgdt [rax]
+
+    mov ax, 0x2b ; tss segment in gdt64 + rpl 3
+    ltr ax
+
+    ; clear bss
+    mov r14, rdi
+    mov r15, rsi
+
+    mov rdi, bss
+    mov rcx, end
+    sub rcx, rdi
+    xor al, al
+    rep stosb
+
+    mov rsi, r15
+    mov rdi, r14
+
+    mov rsp, kernel_stack.bottom
+    xor rbp, rbp
+
+    mov rax, start3
+    jmp rax
+
+section .boot.data
+
+align 4
+gdt:
+    GDT_ENTRY32 0, 0, 0, 0
+    GDT_ENTRY32 0, 0, 0x9A, GRAN_64_BIT_MODE | GRAN_4KIB_BLOCKS
+    GDT_ENTRY32 0, 0, 0x92, GRAN_64_BIT_MODE | GRAN_4KIB_BLOCKS
+.end:
+
+align 4
+    dw 0
+gdt_ptr:
+    dw gdt.end - gdt - 1
+    dd gdt
+
+section .boot.bss
+
+pml4: resq 512
+pml3: resq 512
+pml2: resq 512
+pml1_0: resq 512
+pml1_1: resq 512
+pml1_2: resq 512
+pml1_3: resq 512
 
 section .data
 
-gdt:
+align 8
+gdt64:
     GDT_ENTRY32 0, 0, 0, 0
     GDT_ENTRY32 0, 0, 0x9A, GRAN_64_BIT_MODE | GRAN_4KIB_BLOCKS
     GDT_ENTRY32 0, 0, 0x92, GRAN_64_BIT_MODE | GRAN_4KIB_BLOCKS
@@ -92,13 +153,13 @@ gdt:
     dd 0, 0
 .end:
 
-align 4
-    dw 0
-gdt_ptr:
-    dw gdt.end - gdt - 1
-    dd gdt
+align 8
+    dw 3 dup (0)
+gdt64_ptr:
+    dw gdt64.end - gdt64 - 1
+    dq gdt64
 
-align 16
+align 8
 tss:
     dd 0
     dq kernel_stack.bottom ; rsp
@@ -119,14 +180,6 @@ tss:
 
 section .bss
 
-pml4: dq 512 dup (?)
-pml3: dq 512 dup (?)
-pml2: dq 512 dup (?)
-pml1_0: dq 512 dup (?)
-pml1_1: dq 512 dup (?)
-pml1_2: dq 512 dup (?)
-pml1_3: dq 512 dup (?)
-
 kernel_stack:
-    db 0x1000 dup (?)
+    resb 0x1000
 .bottom:

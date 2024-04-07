@@ -83,8 +83,11 @@ void khexdump(const void * ptr, unsigned int size)
      }
 }
 
-extern uintptr_t multiboot;
+extern uintptr_t boot_end;
+extern uintptr_t text;
 extern uintptr_t end;
+uintptr_t KERNEL_START;
+#define VIRT_TO_PHY(x) (x - KERNEL_START)
 char cmdline[64];
 
 static const char * get_cmdline_token(const char * token, const char * def, char * out, size_t out_size)
@@ -102,7 +105,7 @@ static const char * get_cmdline_token(const char * token, const char * def, char
     return out;
 }
 
-static void init_paging(uintptr_t low_size, uintptr_t up_start, uintptr_t up_size);
+static void init_paging(uintptr_t low_size, uintptr_t up_size, uintptr_t extra);
 static void init_paging2(void);
 static void set_frame(uintptr_t frame_address);
 static void set_frame_identity(page_entry * page, int addr, int is_kernel, int is_writeable, int pat);
@@ -121,10 +124,10 @@ static void map_address(uintptr_t phy_addr, uintptr_t virt_addr, uintptr_t size)
         set_frame_identity(get_page_entry(virt_addr + i, 1, kernel_directory), phy_addr + i, 1, 0, 0);
 }
 
+static uintptr_t allocate_kernel_address(uintptr_t size, int align);
 static void parse_multiboot_info(const multiboot_info * info, uintptr_t * mod_start, uintptr_t * mod_end)
 {
-    uintptr_t low_size, up_start, up_size;
-    up_start = (uintptr_t)&end;
+    uintptr_t low_size, up_size;
 
     if (info->flags & MULTIBOOT_INFO_CMDLINE) {
         kprintf("cmdline: %s\n", (const char *)(uintptr_t)info->cmdline);
@@ -157,14 +160,13 @@ static void parse_multiboot_info(const multiboot_info * info, uintptr_t * mod_st
 
             *mod_start = mod[i].mod_start;
             *mod_end = mod[i].mod_end;
-            up_start = MAX(up_start, mod[i].mod_end);
         }
     }
 
     if (info->flags & MULTIBOOT_INFO_MEMORY) { /* do this after finding greatest module */
         kprintf("mem_lower 0x%x, mem_higher 0x%x\n", info->mem_lower, info->mem_higher);
         low_size = info->mem_lower * 1024;
-        up_size = info->mem_higher * 1024 - (up_start - (uintptr_t)&multiboot);
+        up_size = info->mem_higher * 1024;
     } else {
         panic("no memory information\n");
         low_size = 0;
@@ -188,7 +190,17 @@ static void parse_multiboot_info(const multiboot_info * info, uintptr_t * mod_st
     }
     */
 
-    init_paging(low_size, up_start, up_size);
+    init_paging(low_size, up_size, *mod_end - VIRT_TO_PHY((uintptr_t)&end));
+
+    if (*mod_start) {
+        uintptr_t mod_size = *mod_end - *mod_start;
+        uintptr_t addr = allocate_kernel_address(mod_size, 1);
+        mem_set_frames(*mod_start, mod_size);
+        map_address(*mod_start, addr, mod_size);
+        *mod_start = addr;
+        *mod_end = addr + mod_size;
+    }
+
     init_paging2();
 
     if (tty == &fb_commands)
@@ -200,10 +212,6 @@ static void parse_multiboot_info(const multiboot_info * info, uintptr_t * mod_st
 #define read_32(params, offset) *(uint32_t *)(params + offset)
 static void parse_linux_params(const uint8_t * params, uintptr_t * mod_start, uintptr_t * mod_end)
 {
-    uintptr_t low_size, up_start, up_size;
-    low_size = 639*1024;
-    up_start = (uintptr_t)&end;
-
     kprintf("cmdline: %s\n", read_32(params, 0x228));
     strlcpy(cmdline, (const char *)(uintptr_t)read_32(params, 0x228), sizeof(cmdline));
 
@@ -219,15 +227,14 @@ static void parse_linux_params(const uint8_t * params, uintptr_t * mod_start, ui
     uint32_t alt_mem_k = read_32(params, 0x1e0);
     if (!alt_mem_k)
         panic("!alt_mem_k"); /* limine does not set alt_mem_k */
-    up_size = (alt_mem_k * 1024) - (up_start - (uintptr_t)&multiboot);
 
     uint32_t initrd_start = read_32(params, 0x218);
     uint32_t initrd_size = read_32(params, 0x21c);
 
-    init_paging(low_size, up_start, up_size);
+    init_paging(639 * 1024, alt_mem_k * 1024, 0);
 
     if (initrd_size) {
-        uintptr_t addr = 0xB0000000;
+        uintptr_t addr = allocate_kernel_address(initrd_size, 1);
         mem_set_frames(initrd_start, initrd_size);
         map_address(initrd_start, addr, initrd_size);
 
@@ -329,7 +336,7 @@ typedef struct {
 
 typedef struct {
     uint16_t limit;
-    uint32_t base;
+    uintptr_t base;
 } __attribute((packed)) idt_pointer;
 
 static idt_entry idt[256];
@@ -917,8 +924,8 @@ static Halloc kheap = {0};
 static uintptr_t allocate_kernel_address(uintptr_t size, int align)
 {
     if (align && (placement_address & 0xFFF)) {
-        placement_address &= 0xFFFFF000;
-        placement_address +=     0x1000;
+        placement_address &= ~0xFFF;
+        placement_address += 0x1000;
     }
 
     uintptr_t tmp = placement_address;
@@ -938,7 +945,7 @@ static uintptr_t kmalloc_core(uintptr_t size, int align, uintptr_t * phys, const
     } else {
         uintptr_t addr = allocate_kernel_address(size, align);
         if (phys)
-            *phys = addr;
+            *phys = VIRT_TO_PHY(addr);
         return addr;
     }
 }
@@ -992,17 +999,17 @@ static void dump_directory_r(const page_directory * dir, const page_directory * 
 {
     indent(level); kprintf("DIRECTORY level %d '%s' virtual-addr=%p", level, name, dir);
     if (level >= 2)
-        kprintf(", physical-addr=0x%x", dir->physical_address);
+        kprintf(", physical-addr=%p", dir->physical_address);
     kprintf("\n");
     for (unsigned int i = 0; i < ENTRIES_PER_TABLE; i++) {
         //KASSERT(dir->tables_physical[i].present ^ !dir->tables[i]);
-        uintptr_t base2 = base | i << (12 + (level-1)*BITS_PER_TABLE);
+        uintptr_t base2 = base | (uintptr_t)i << (12 + (level-1)*BITS_PER_TABLE);
 
         if (dir->tables_physical[i].present) {
-            indent(level); kprintf("tables_physical[%d] = 0x%x phy (<- 0x%x virt)\n", i, dir->tables_physical[i], base2);
+            indent(level); kprintf("tables_physical[%d] = %p phy (<- %p virt)\n", i, dir->tables_physical[i], base2);
         }
         if (level >= 2 && dir->tables[i]) {
-            indent(level); kprintf("tables[%d] = 0x%x (<- 0x%x virt) %s\n", i, dir->tables[i], base2, kd && (dir->tables[i] == kd->tables[i]) ? "*" : "");
+            indent(level); kprintf("tables[%d] = %p (<- %p virt) %s\n", i, dir->tables[i], base2, kd && (dir->tables[i] == kd->tables[i]) ? "*" : "");
             dump_directory_r(dir->tables[i], kd ? kd->tables[i] : NULL, name, hexdump, level - 1, base2);
         }
     }
@@ -1136,7 +1143,7 @@ page_entry * get_page_entry(uintptr_t address, int make, page_directory * dir)
     for (int level = PAGE_LEVELS - 1 ; level > 0; level--) {
         int idx = (address >> (level * BITS_PER_TABLE)) % ENTRIES_PER_TABLE;
         if (!dir->tables[idx]) {
-            //kprintf(" -> (get_page_entry physical 0x%x) level %d, idx %d missing\n", address * 0x1000, level + 1, idx);
+            //kprintf(" -> (get_page_entry %p virt) level %d, idx %d missing\n", address * 0x1000, level + 1, idx);
             if (!make)
                 return NULL;
 
@@ -1147,7 +1154,7 @@ page_entry * get_page_entry(uintptr_t address, int make, page_directory * dir)
                 dir->tables[idx] = alloc_new_page_directory();
                 phy = dir->tables[idx]->physical_address;
             }
-            //kprintf(" -> new table 0x%x virt (0x%x phy)\n", dir->tables[idx], phy);
+            //kprintf(" -> new table %p virt (%p phy)\n", dir->tables[idx], phy);
             dir->tables_physical[idx].present = 1;
             dir->tables_physical[idx].rw = 1;
             dir->tables_physical[idx].user = 1; //FIXME:
@@ -1166,19 +1173,6 @@ static void switch_page_directory(page_directory * dir)
     current_directory = dir;
     asm volatile("mov %0, %%cr3" : : "r" (dir->physical_address));
 }
-
-#if defined(ARCH_i686)
-static void enable_paging(int enable)
-{
-    uintptr_t cr0;
-    asm volatile("mov %%cr0, %0" : "=r" (cr0));
-    if (enable)
-        cr0 |= 0x80000000;
-    else
-        cr0 &= ~0x80000000;
-    asm volatile("mov %0, %%cr0" : : "r" (cr0));
-}
-#endif
 
 static page_table * clone_table(const page_table * src, uintptr_t * physical_address, uintptr_t base)
 {
@@ -1344,11 +1338,11 @@ static void kheap_panic()
     panic("kheap");
 }
 
-static void init_paging(uintptr_t low_size, uintptr_t up_start, uintptr_t up_size)
+static void init_paging(uintptr_t low_size, uintptr_t up_size, uintptr_t extra)
 {
-    uintptr_t mem_end_page = up_start + up_size;
+    uintptr_t mem_end_page = 0x100000 + up_size;
 
-    placement_address = up_start;
+    placement_address = (uintptr_t)&end + extra;
 
     /* allocate bitset for each 'page' (which is called a frame here) */
     nframes = mem_end_page / 0x1000;
@@ -1356,10 +1350,7 @@ static void init_paging(uintptr_t low_size, uintptr_t up_start, uintptr_t up_siz
     frames = kmalloc(INDEX_FROM_BIT(nframes) * sizeof(*frames), "nframes");
     memset(frames, 0, INDEX_FROM_BIT(nframes));
 
-    // kernel page directory
-    kernel_directory = (page_directory *)kmalloc_a(sizeof(page_directory), "pg-dir-kernel");
-    memset(kernel_directory, 0, sizeof(page_directory));
-    kernel_directory->physical_address = (uintptr_t)kernel_directory->tables_physical;
+    kernel_directory = alloc_new_page_directory();
 
     // mark all the frames [0x0, 1) and [0x80000 ... 0x100000) as in use
     set_frame(0);
@@ -1368,28 +1359,28 @@ static void init_paging(uintptr_t low_size, uintptr_t up_start, uintptr_t up_siz
     for (unsigned int i = low_size; i < 0x100000; i += 0x1000)
         set_frame(i);
 
-    // identity map the kernel and initial heap, mark these frames as in use
-    {
-        uintptr_t i = (uintptr_t)&multiboot;
-        while (i < placement_address + 0x1000*4) {  //FIXME: need extra placement address space for initial heap page(s)
-            set_frame(i);
-            set_frame_identity(get_page_entry(i, 1, kernel_directory), i, 1, 0, 0);
-            i += 0x1000;
-        }
+    size_t buffer =
+#if defined(ARCH_i686)
+        1
+#elif defined(ARCH_x86_64)
+        4
+#endif
+        * 0x1000;
+    for (uintptr_t i = KERNEL_START; i < placement_address + buffer; i += 0x1000) {
+        uintptr_t phy = VIRT_TO_PHY(i);
+        set_frame(phy);
+        set_frame_identity(get_page_entry(i, 1, kernel_directory), phy, 1, 0, 0);
     }
 
     switch_page_directory(kernel_directory);
-#if defined(ARCH_i686)
-    enable_paging(1);
-#endif
 
     /* create kernel heap */
 
     int initial_size = 4096;
-    for (unsigned int i = 0xC0000000; i < 0xC0000000 + initial_size; i += 0x1000)
+    for (unsigned int i = 0xD0000000; i < 0xD0000000 + initial_size; i += 0x1000)
         alloc_frame(get_page_entry(i, 1, kernel_directory), 1, 0);
 
-    halloc_init(&kheap, (void *)0xC0000000, initial_size);
+    halloc_init(&kheap, (void *)0xD0000000, initial_size);
     kheap.directory   = kernel_directory;
     kheap.is_kernel   = 1;
     kheap.is_writable = 0;
@@ -1400,6 +1391,7 @@ static void init_paging(uintptr_t low_size, uintptr_t up_start, uintptr_t up_siz
     kheap.abort = kheap_panic;
 
     use_halloc = 1;
+    allocate_kernel_address(buffer, 1);
 
     /* pre-allocate additional *page tables* so kernel heap can grow up to max_size without
        encountering this recursive allocation problem:
@@ -1407,7 +1399,7 @@ static void init_paging(uintptr_t low_size, uintptr_t up_start, uintptr_t up_siz
        the biggest user of kmalloc() currently is ext2_read() for large files */
 
     int max_size = 64 * 1024 * 1024;
-    for (unsigned int i = 0xC0000000; i < 0xC0000000 + max_size; i += 0x1000)
+    for (unsigned int i = 0xD0000000; i < 0xD0000000 + max_size; i += 0x1000)
         get_page_entry(i, 1, kernel_directory);
 
     /* identity map framebuffer or textmode buffer */
@@ -3230,11 +3222,12 @@ void jmp_to_userspace(uintptr_t eip, uintptr_t esp);
 
 static void idle(int param);
 
-void start3(int magic, const void * info, void * initial_esp);
-void start3(int magic, const void * info, void * initial_esp)
+void start3(int magic, const void * info);
+void start3(int magic, const void * info)
 {
     uintptr_t mod_start, mod_end;
-    kprintf("Hello world, magic=0x%x, info=%p, esp=0x%x\n", magic, info, initial_esp);
+    kprintf("Hello world, magic=0x%x, info=%p\n", magic, info);
+    KERNEL_START = (uintptr_t)&text - (uintptr_t)&boot_end;
 
     cpu_init();
     init_idt();

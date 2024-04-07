@@ -100,19 +100,19 @@ isr_common:
     push rsi
     push rdi
 
-    mov ebp, ds ; save user-space data segment
+    mov rbp, ds ; save user-space data segment
     push rbp
 
-    mov bp, 0x10 ; set kernel-space data segment
-    mov ds, ebp
-    mov es, ebp
+    mov rbp, 0x10 ; set kernel-space data segment
+    mov ds, rbp
+    mov es, rbp
 
     mov rdi, rsp
     call interrupt_handler
 
     pop rbp ; restore user-space data segment
-    mov ds, ebp
-    mov es, ebp
+    mov ds, rbp
+    mov es, rbp
 
     pop rdi
     pop rsi
@@ -130,7 +130,7 @@ isr_common:
     pop r14
     pop r15
 
-    add esp, 16
+    add rsp, 16
     iretq
 
 

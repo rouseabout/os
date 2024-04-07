@@ -1,5 +1,5 @@
 bits 32
-section .text
+section .boot.header
 align 4
 
 extern bss
@@ -7,31 +7,30 @@ extern end
 
 extern start2
 
-global multiboot
-multiboot:
-
 global start
 start:
     push dword 0x0
     popf
 
+%ifdef ARCH_i686
     mov edi, bss
     mov ecx, end
     sub ecx, edi
     xor eax, eax
     rep stosb
+%endif
 
-    mov esp, sys_stack_top
+    mov esp, boot_stack.bottom
     xor ebp, ebp
 
-    push esp  ; initial stack
     push dword esi  ; linux_params
     push dword 0x1337  ; magic number
     call start2
     hlt
 
 
-section .bss
+section .boot.bss
 align 4
+boot_stack:
     resb 0x1000
-sys_stack_top:
+.bottom:

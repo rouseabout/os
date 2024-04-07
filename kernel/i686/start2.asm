@@ -1,10 +1,43 @@
 bits 32
-section .text
+section .boot.text
 %include "kernel/x86inc.asm"
+
+KERNEL_START equ 0xC000000
+PML1_SIZE equ 0x40000 ; 4MiB
 
 extern start3
 global start2
 start2:
+
+%macro SET_PAGE 3 ; table index phy
+    mov eax, %3
+    or eax, PAGE_PRESENT | PAGE_WRITE
+    mov [%1 + %2 * 4], eax
+%endmacro
+
+    ; identity map first 8MiB and mirror first 8MiB @ KERNEL_START
+
+    SET_PAGE pml2, 0, pml1_0
+    SET_PAGE pml2, 1, pml1_1
+    SET_PAGE pml2, KERNEL_START / PML1_SIZE, pml1_0
+    SET_PAGE pml2, (KERNEL_START / PML1_SIZE) + 1, pml1_1
+
+    mov edi, pml1_0
+    mov eax, PAGE_PRESENT | PAGE_WRITE
+.loop:
+    mov [edi], eax
+    add eax, 0x1000
+    add edi, 4
+    cmp eax, 0x800000
+    jb .loop
+
+    mov eax, pml2
+    mov cr3, eax
+
+    mov eax, cr0
+    or eax, 0x80000000
+    mov cr0, eax
+
     mov eax, tss
     mov [gdt.tss_entry + 2], ax
     shr eax, 16
@@ -23,7 +56,32 @@ start2:
     mov fs, eax
     mov gs, eax
     mov ss, eax
+
+    ; copy arguments from boot stack to kernel stack
+    add esp, 4
+    pop eax ; magic
+    pop ebx ; info
+    mov esp, kernel_stack.bottom
+    xor ebp, ebp
+    push dword ebx ; info
+    push dword eax ; magic
+    push dword 0
+
     jmp 0x8:start3
+
+section .boot.data
+
+align 4
+    dw 0
+gdt_ptr:
+    dw gdt.end - gdt - 1
+    dd gdt
+
+section .boot.bss
+
+pml2: dd 1024 dup (0)
+pml1_0: dd 1024 dup (0)
+pml1_1: dd 1024 dup (0)
 
 section .data
 
@@ -37,12 +95,6 @@ gdt:
 .tss_entry:
     GDT_ENTRY32 0, tss.end - tss - 1, 0xE9, 0
 .end:
-
-align 4
-    dw 0
-gdt_ptr:
-    dw gdt.end - gdt - 1
-    dd gdt
 
 align 4
 tss:
@@ -76,6 +128,7 @@ tss:
 .end:
 
 section .bss
+
 kernel_stack:
-    db 0x1000 dup (?)
+    resb 0x1000
 .bottom:
