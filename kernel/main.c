@@ -729,7 +729,8 @@ void interrupt_handler(registers * regs)
             kprintf("OTHER EXCEPTION (%d)\n", regs->number);
         }
 
-        kprintf("current task pid %d %s\n", current_task->id, current_task->name);
+        if (current_task)
+            kprintf("current task pid %d %s\n", current_task->id, current_task->name);
         dump_registers(regs);
 
         if (regs->error_code & 4) {
