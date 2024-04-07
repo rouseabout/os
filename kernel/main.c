@@ -142,9 +142,6 @@ static void parse_multiboot_info(const multiboot_info * info, uintptr_t * mod_st
         kprintf("framebuffer: addr=0x%llx, pitch=0x%x, width=%d, height=%d, bpp=%d, type=%d\n", info->framebuffer_addr, info->framebuffer_pitch, info->framebuffer_width, info->framebuffer_height, info->framebuffer_bpp, info->framebuffer_type);
     }
 
-    kb_init();
-    tty_init();
-
     if (info->flags & MULTIBOOT_INFO_BOOTDEV) {
         kprintf("boot_device: 0x%x\n", info->boot_device);
     }
@@ -193,11 +190,6 @@ static void parse_multiboot_info(const multiboot_info * info, uintptr_t * mod_st
         map_address(*mod_start, addr, *mod_size);
         *mod_start = addr;
     }
-
-    if (tty == &textmode_commands)
-        textmode_init();
-    else
-        fb_init2();
 }
 
 #define read_8(params, offset) params[offset]
@@ -217,9 +209,6 @@ static void parse_linux_params(const uint8_t * params, uintptr_t * mod_start, ui
         fb_init(/*base*/read_32(params, 0x18), /*stride*/read_16(params,0x24), /*width*/read_16(params, 0x12), /*height*/read_16(params, 0x14), /*depth*/read_16(params, 0x16));
         tty = &fb_commands;
     }
-
-    kb_init();
-    tty_init();
 
     uint32_t alt_mem_k = read_32(params, 0x1e0);
     if (!alt_mem_k)
@@ -245,11 +234,6 @@ static void parse_linux_params(const uint8_t * params, uintptr_t * mod_start, ui
         map_address(initrd_start, addr, *mod_size);
         *mod_start = addr;
     }
-
-    if (tty == &textmode_commands)
-        textmode_init();
-    else
-        fb_init2();
 }
 
 /* cpu */
@@ -3230,6 +3214,14 @@ void start3(int magic, const void * info)
         parse_linux_params(info, &mod_start, &mod_size);
     else
         panic("invalid magic number");
+
+    if (tty == &textmode_commands)
+        textmode_init();
+    else
+        fb_init2();
+
+    kb_init();
+    tty_init();
 
 #if 0
     pci_scan(pci_enum, NULL);
