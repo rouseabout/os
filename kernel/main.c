@@ -105,8 +105,8 @@ static const char * get_cmdline_token(const char * token, const char * def, char
     return out;
 }
 
-static void init_paging(uintptr_t low_size, uintptr_t up_size, uintptr_t extra);
-static void init_paging2(void);
+static void pmm_init(uintptr_t low_size, uintptr_t up_size, uintptr_t extra);
+static void init_paging(uintptr_t low_size);
 static void set_frame(uintptr_t frame_address);
 static void set_frame_identity(page_entry * page, int addr, int is_kernel, int is_writeable, int pat);
 
@@ -117,15 +117,14 @@ static void mem_set_frames(uintptr_t phy_addr, int size)
         set_frame(i);
 }
 
-static void map_address(uintptr_t phy_addr, uintptr_t virt_addr, uintptr_t size)
+void map_address(uintptr_t phy_addr, uintptr_t virt_addr, uintptr_t size)
 {
     KASSERT(!(phy_addr & 0xFFF));
     for (uintptr_t i = 0; i < size; i += 0x1000)
         set_frame_identity(get_page_entry(virt_addr + i, 1, kernel_directory), phy_addr + i, 1, 0, 0);
 }
 
-static uintptr_t allocate_kernel_address(uintptr_t size, int align);
-static void parse_multiboot_info(const multiboot_info * info, uintptr_t * mod_start, uintptr_t * mod_end)
+static void parse_multiboot_info(const multiboot_info * info, uintptr_t * mod_start, uintptr_t * mod_size)
 {
     uintptr_t low_size, up_size;
 
@@ -142,8 +141,6 @@ static void parse_multiboot_info(const multiboot_info * info, uintptr_t * mod_st
         }
         kprintf("framebuffer: addr=0x%llx, pitch=0x%x, width=%d, height=%d, bpp=%d, type=%d\n", info->framebuffer_addr, info->framebuffer_pitch, info->framebuffer_width, info->framebuffer_height, info->framebuffer_bpp, info->framebuffer_type);
     }
-    if (tty == &textmode_commands)
-        textmode_init();
 
     kb_init();
     tty_init();
@@ -151,6 +148,8 @@ static void parse_multiboot_info(const multiboot_info * info, uintptr_t * mod_st
     if (info->flags & MULTIBOOT_INFO_BOOTDEV) {
         kprintf("boot_device: 0x%x\n", info->boot_device);
     }
+
+    *mod_size = 0;
     if (info->flags & MULTIBOOT_INFO_MODS) {
         kprintf("mods_count: %d\n", info->mods_count);
         const multiboot_mod * mod = (const multiboot_mod *)(uintptr_t)info->mods_addr;
@@ -159,7 +158,7 @@ static void parse_multiboot_info(const multiboot_info * info, uintptr_t * mod_st
             khexdump((void *)(uintptr_t)mod[i].mod_start, MIN(mod[i].mod_end - mod[i].mod_start, 32));
 
             *mod_start = mod[i].mod_start;
-            *mod_end = mod[i].mod_end;
+            *mod_size = mod[i].mod_end - mod[i].mod_start;
         }
     }
 
@@ -173,44 +172,43 @@ static void parse_multiboot_info(const multiboot_info * info, uintptr_t * mod_st
         up_size = 0;
     }
 
+    pmm_init(low_size, up_size, *mod_size);
+
     if (info->flags & MULTIBOOT_INFO_MMAP) {
-        //kprintf("mmap: length:0x%x, addr:0x%x\n", info->mmap_length, info->mmap_addr);
         for (unsigned int i = 0; i < info->mmap_length; ) {
             const multiboot_memory_map * mmap = (void*)(uintptr_t)(info->mmap_addr + i);
-            //FIXME: assert mmap->size >= 0x14
+            KASSERT(mmap->size >= 0x14);
             kprintf("mmap: size:0x%x, base_addr:0x%llx, length:0x%llx, type:%s\n", mmap->size, mmap->base_addr, mmap->length, mmap->type == 1 ? "available" : "reserved");
+            if (mmap->type != 1)
+                mem_set_frames(mmap->base_addr & ~0xFFF, mmap->length);
             i += mmap->size + 4;
         }
     }
-    /*
-    if (info->flags & MULTIBOOT_INFO_VBE) {
-        // this only appears on device with legacy bios, probably not worth investigating
-        kprintf("VBE control_info:0x%x, mode_info:0x%x", info->vbe_control_info, info->vbe_mode_info);
-        kprintf("VBE interface seg:0x%x, off:0x%x, len:0x%x\n", info->vbe_interface_seg, info->vbe_interface_off, info->vbe_interface_len);
-    }
-    */
 
-    init_paging(low_size, up_size, *mod_end - VIRT_TO_PHY((uintptr_t)&end));
+    init_paging(low_size);
 
-    if (*mod_start) {
-        uintptr_t mod_size = *mod_end - *mod_start;
-        uintptr_t addr = allocate_kernel_address(mod_size, 1);
-        mem_set_frames(*mod_start, mod_size);
-        map_address(*mod_start, addr, mod_size);
+    if (*mod_size) {
+        uintptr_t addr = allocate_virtual_address(*mod_size, 1);
+        mem_set_frames(*mod_start, *mod_size);
+        map_address(*mod_start, addr, *mod_size);
         *mod_start = addr;
-        *mod_end = addr + mod_size;
     }
 
-    init_paging2();
-
-    if (tty == &fb_commands)
+    if (tty == &textmode_commands)
+        textmode_init();
+    else
         fb_init2();
 }
 
 #define read_8(params, offset) params[offset]
 #define read_16(params, offset) *(uint16_t *)(params + offset)
 #define read_32(params, offset) *(uint32_t *)(params + offset)
-static void parse_linux_params(const uint8_t * params, uintptr_t * mod_start, uintptr_t * mod_end)
+typedef struct {
+    uint64_t addr;
+    uint64_t size;
+    int32_t type;
+} __attribute__((packed)) e820_entry;
+static void parse_linux_params(const uint8_t * params, uintptr_t * mod_start, uintptr_t * mod_size)
 {
     kprintf("cmdline: %s\n", read_32(params, 0x228));
     strlcpy(cmdline, (const char *)(uintptr_t)read_32(params, 0x228), sizeof(cmdline));
@@ -218,8 +216,7 @@ static void parse_linux_params(const uint8_t * params, uintptr_t * mod_start, ui
     if (read_8(params, 0xf) == 0x23) {
         fb_init(/*base*/read_32(params, 0x18), /*stride*/read_16(params,0x24), /*width*/read_16(params, 0x12), /*height*/read_16(params, 0x14), /*depth*/read_16(params, 0x16));
         tty = &fb_commands;
-    } else
-        textmode_init();
+    }
 
     kb_init();
     tty_init();
@@ -229,22 +226,29 @@ static void parse_linux_params(const uint8_t * params, uintptr_t * mod_start, ui
         panic("!alt_mem_k"); /* limine does not set alt_mem_k */
 
     uint32_t initrd_start = read_32(params, 0x218);
-    uint32_t initrd_size = read_32(params, 0x21c);
+    *mod_size = read_32(params, 0x21c);
 
-    init_paging(639 * 1024, alt_mem_k * 1024, 0);
+    pmm_init(639 * 1024, alt_mem_k * 1024, 0);
 
-    if (initrd_size) {
-        uintptr_t addr = allocate_kernel_address(initrd_size, 1);
-        mem_set_frames(initrd_start, initrd_size);
-        map_address(initrd_start, addr, initrd_size);
-
-        *mod_start = addr;
-        *mod_end = addr + initrd_size;
+    const e820_entry * mmap = (const e820_entry *)(params + 0x2d0);
+    for (int i = 0; i < read_8(params, 0x1e8); i++) {
+        kprintf("mmap: addr:0x%llx size:0x%llx type:0x%d\n", mmap[i].addr, mmap[i].size, mmap[i].type);
+        if (mmap[i].type != 1)
+            mem_set_frames(mmap[i].addr & ~0xFFF, mmap[i].size);
     }
 
-    init_paging2();
+    init_paging(639 * 1024);
 
-    if (tty == &fb_commands)
+    if (*mod_size) {
+        uintptr_t addr = allocate_virtual_address(*mod_size, 1);
+        mem_set_frames(initrd_start, *mod_size);
+        map_address(initrd_start, addr, *mod_size);
+        *mod_start = addr;
+    }
+
+    if (tty == &textmode_commands)
+        textmode_init();
+    else
         fb_init2();
 }
 
@@ -922,7 +926,7 @@ static uintptr_t placement_address;
 static int use_halloc = 0;
 static Halloc kheap = {0};
 
-static uintptr_t allocate_kernel_address(uintptr_t size, int align)
+uintptr_t allocate_virtual_address(uintptr_t size, int align)
 {
     if (align && (placement_address & 0xFFF)) {
         placement_address &= ~0xFFF;
@@ -944,7 +948,7 @@ static uintptr_t kmalloc_core(uintptr_t size, int align, uintptr_t * phys, const
         }
         return addr;
     } else {
-        uintptr_t addr = allocate_kernel_address(size, align);
+        uintptr_t addr = allocate_virtual_address(size, align);
         if (phys)
             *phys = VIRT_TO_PHY(addr);
         return addr;
@@ -1339,7 +1343,7 @@ static void kheap_panic()
     panic("kheap");
 }
 
-static void init_paging(uintptr_t low_size, uintptr_t up_size, uintptr_t extra)
+static void pmm_init(uintptr_t low_size, uintptr_t up_size, uintptr_t extra)
 {
     uintptr_t mem_end_page = 0x100000 + up_size;
 
@@ -1350,7 +1354,10 @@ static void init_paging(uintptr_t low_size, uintptr_t up_size, uintptr_t extra)
     nframes &= ~31; // INDEX_FROM_BIT works on 32 pages at a time only
     frames = kmalloc(INDEX_FROM_BIT(nframes) * sizeof(*frames), "nframes");
     memset(frames, 0, INDEX_FROM_BIT(nframes));
+}
 
+static void init_paging(uintptr_t low_size)
+{
     kernel_directory = alloc_new_page_directory();
 
     // mark all the frames [0x0, 1) and [0x80000 ... 0x100000) as in use
@@ -1392,7 +1399,7 @@ static void init_paging(uintptr_t low_size, uintptr_t up_size, uintptr_t extra)
     kheap.abort = kheap_panic;
 
     use_halloc = 1;
-    allocate_kernel_address(buffer, 1);
+    allocate_virtual_address(buffer, 1);
 
     /* pre-allocate additional *page tables* so kernel heap can grow up to max_size without
        encountering this recursive allocation problem:
@@ -1402,23 +1409,6 @@ static void init_paging(uintptr_t low_size, uintptr_t up_size, uintptr_t extra)
     int max_size = 64 * 1024 * 1024;
     for (unsigned int i = 0xD0000000; i < 0xD0000000 + max_size; i += 0x1000)
         get_page_entry(i, 1, kernel_directory);
-
-    /* identity map framebuffer or textmode buffer */
-
-    if (fb_get_base()) {
-        for (unsigned int i = fb_get_base(); i < fb_get_end(); i += 0x1000)
-            set_frame_identity(get_page_entry(i, 1, kernel_directory), i, 0, 1, 1);
-    } else {
-        unsigned int i = 0xb8000;
-        set_frame_identity(get_page_entry(i, 1, kernel_directory), i, 1, 0, 1);
-    }
-
-    /* identity map bios region */
-
-    for (unsigned int i = 0xe0000; i < 0x100000; i += 0x1000)
-        set_frame_identity(get_page_entry(i, 1, kernel_directory), i, 1, 0, 1);
-
-    /* clone kernel directory, and switch to that */
 }
 
 static void init_paging2()
@@ -3226,7 +3216,7 @@ static void idle(int param);
 void start3(int magic, const void * info);
 void start3(int magic, const void * info)
 {
-    uintptr_t mod_start, mod_end;
+    uintptr_t mod_start, mod_size;
     kprintf("Hello world, magic=0x%x, info=%p\n", magic, info);
     KERNEL_START = (uintptr_t)&text - (uintptr_t)&boot_end;
 
@@ -3235,9 +3225,9 @@ void start3(int magic, const void * info)
     init_timer(TICKS_PER_SECOND);
 
     if (magic == 0x2BADB002)
-        parse_multiboot_info(info, &mod_start, &mod_end);
+        parse_multiboot_info(info, &mod_start, &mod_size);
     else if (magic == 0x1337)
-        parse_linux_params(info, &mod_start, &mod_end);
+        parse_linux_params(info, &mod_start, &mod_size);
     else
         panic("invalid magic number");
 
@@ -3256,8 +3246,8 @@ void start3(int magic, const void * info)
     dev_register_device("power", &power_dio, 0, NULL, NULL);
     dev_register_device("reboot", &reboot_dio, 0, NULL, NULL);
 
-    if (mod_end - mod_start > 0) {
-        void * module = mem_init((void *)mod_start, mod_end - mod_start);
+    if (mod_size) {
+        void * module = mem_init((void *)mod_start, mod_size);
         dev_register_device("module", &mem_dio, 0, mem_getsize, module);
     }
 
@@ -3272,10 +3262,12 @@ void start3(int magic, const void * info)
         }
     }
 
-    void * bios = mem_init((void *)0, 0x100000);
+    uintptr_t e0000 = allocate_virtual_address(0x20000, 1);
+    map_address(0xe0000, e0000, 0x20000);
+    void * bios = mem_init((void *)(e0000 - 0xe0000), 0x100000);
     dev_register_device("mem", &mem_dio, 0, mem_getsize, bios);
 
-    if (fb_get_base())
+    if (fb_commands.ready())
         dev_register_device("fb0", &fb_io, 0, NULL, NULL);
 
     dev_register_device("console0", &tty_dio, 1, NULL, NULL);
@@ -3300,6 +3292,8 @@ void start3(int magic, const void * info)
     char tty_dev[128];
     get_cmdline_token("console=", "/dev/console0", tty_dev, sizeof(tty_dev));
     dev_register_symlink("tty", tty_dev);
+
+    init_paging2();
 
     init_tasking("/dev/tty"); /* must come after paging */
 

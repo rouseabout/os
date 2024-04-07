@@ -10,6 +10,7 @@ static int scroll_top = 0;
 static int scroll_bottom = 24;
 static int saved_x = 0;
 static int saved_y = 0;
+static uint8_t * ptr = NULL;
 
 void textmode_init()
 {
@@ -20,6 +21,14 @@ void textmode_init()
     l |= inb(0x3D5);
     y = l / 80;
     x = l % 80;
+
+    ptr = (void *)allocate_virtual_address(80*25*2, 0);
+    map_address(0xb8000, (uintptr_t)ptr, 80*25*2);
+}
+
+static int textmode_ready()
+{
+    return !!ptr;
 }
 
 static void xor(uint8_t * dst, int size)
@@ -52,8 +61,6 @@ static void update_cursor()
 
 static void textmode_clear(int what)
 {
-    uint8_t * ptr = (uint8_t *)0xb8000;
-
     switch (what) {
     case TTY_PAGE:
         clear(ptr, 80*25);
@@ -92,8 +99,6 @@ static void textmode_set_pos(int xx, int yy)
 
 static void check_scroll_down()
 {
-    uint8_t * ptr = (uint8_t *)0xb8000;
-
     if (y == scroll_bottom + 1) {
 
         memcpy(ptr + scroll_top*80*2, ptr + (scroll_top + 1)*80*2, (scroll_bottom - scroll_top)*80*2);
@@ -106,8 +111,6 @@ static void check_scroll_down()
 
 static void check_scroll_up()
 {
-    uint8_t * ptr = (uint8_t *)0xb8000;
-
     if (y == scroll_top - 1) {
         memmove(ptr + (scroll_top + 1)*80*2, ptr + scroll_top*80*2, (scroll_bottom - scroll_top)*80*2);
         clear(ptr + 80*2*scroll_top, 80);
@@ -118,8 +121,6 @@ static void check_scroll_up()
 
 static void textmode_putc(int ch)
 {
-    uint8_t * ptr = (uint8_t *)0xb8000;
-
     if (ch == '\r') {
         x = 0;
     } else if (ch == '\n') {
@@ -240,6 +241,7 @@ static int textmode_columns()
 }
 
 const TTYCommands textmode_commands = {
+    .ready = textmode_ready,
     .putc = textmode_putc,
     .clear = textmode_clear,
     .set_pos = textmode_set_pos,

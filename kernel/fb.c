@@ -5,7 +5,8 @@
 #include "tty.h"
 #include "utils.h"
 
-static uint8_t * fb_addr;
+static uintptr_t fb_phy_addr;
+static uint8_t * fb_addr = NULL;
 static unsigned int fb_stride;
 static int fb_width;
 static int fb_height;
@@ -51,9 +52,9 @@ static void fb_reset()
     scroll_bottom = fb_height - 8;
 }
 
-void fb_init(uintptr_t addr, uint32_t stride, uint32_t width, uint32_t height, uint32_t bpp)
+void fb_init(uintptr_t phy_addr, uint32_t stride, uint32_t width, uint32_t height, uint32_t bpp)
 {
-    fb_addr = (uint8_t *)(uintptr_t)addr;
+    fb_phy_addr = phy_addr;
     fb_stride = stride;
     fb_width = width;
     fb_height = height;
@@ -61,13 +62,23 @@ void fb_init(uintptr_t addr, uint32_t stride, uint32_t width, uint32_t height, u
 
     fb_reset();
 
-    kprintf("fb_init 0x%llx, 0x%x, stride=%d, height=%d\n", addr, fb_addr, stride, height);
+    kprintf("fb_init %p, 0x%x, stride=%d, height=%d\n", phy_addr, fb_addr, stride, height);
 }
 
 void fb_init2()
 {
+    size_t size = fb_stride * fb_height;
+
+    fb_addr = (void *)allocate_virtual_address(size, 1);
+    map_address(fb_phy_addr, (uintptr_t)fb_addr, size);
+
     memset(fb_addr, 0xFF, fb_stride * fb_height);
     cursor_xor();
+}
+
+static int fb_ready()
+{
+    return !!fb_addr;
 }
 
 #include "font8x8_basic.h"
@@ -222,16 +233,6 @@ static void fb_putc(int c)
     cursor_xor();
 }
 
-uintptr_t fb_get_base(void)
-{
-    return (uintptr_t)fb_addr;
-}
-
-uintptr_t fb_get_end(void)
-{
-    return (uintptr_t)fb_addr + fb_stride * fb_height;
-}
-
 static void fb_move_cursor(int direction, int count)
 {
     count = MAX(1, count);
@@ -309,6 +310,7 @@ static int fb_columns()
 }
 
 const TTYCommands fb_commands = {
+    .ready = fb_ready,
     .putc = fb_putc,
     .clear = fb_clear,
     .set_pos = fb_set_pos,

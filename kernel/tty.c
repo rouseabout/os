@@ -17,6 +17,8 @@ static int saved_inverse = 0;
 
 void tty_puts(const char * s)
 {
+    if (!tty->ready())
+        return;
     while (*s)
         tty->putc(*s++);
 }

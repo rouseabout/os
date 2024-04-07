@@ -26,6 +26,7 @@ enum {
 };
 
 typedef struct {
+    int (*ready)(void);
     void (*putc)(int c);
     void (*clear)(int what);
     void (*set_pos)(int xx, int yy);
@@ -41,8 +42,6 @@ typedef struct {
 
 void fb_init(uintptr_t addr, uint32_t stride, uint32_t width, uint32_t height, uint32_t bpp);
 void fb_init2(void);
-uintptr_t fb_get_base(void);
-uintptr_t fb_get_end(void);
 extern const DeviceOperations fb_io;
 
 void textmode_init(void);
