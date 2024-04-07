@@ -105,7 +105,7 @@ LIBC_ONLY_OBJS=$(addprefix libc/,arpa_inet.o dirent.o errno.o fcntl.o fnmatch.o 
 
 KERNEL_OBJS=$(addprefix kernel/,$(ARCH)/start2.o $(ARCH)/common.o ata.o dev.o ext2.o fb.o kb.o loop.o main.o mem.o ne2k.o pci.o pipe.o power.o proc.o serial.o textmode.o tty.o vfs.o) $(LIBC_COMMON_OBJS)
 kernel.bin: kernel/linker.ld kernel/multiboot.o $(KERNEL_OBJS) .toolchain-$(ARCH)-stage1
-	$(LD) $(LDFLAGS) -o $@ -Wl,--defsym,ARCH_$(ARCH)=1 -T kernel/linker.ld kernel/multiboot.o $(KERNEL_OBJS) -lgcc
+	$(LD) $(LDFLAGS) -o $@ -Wl,--defsym,ARCH_$(ARCH)=1 -T kernel/linker.ld -Wl,-Map,kernel.map kernel/multiboot.o $(KERNEL_OBJS) -lgcc
 	$(STRIP) --strip-all $@
 
 kernel.linux: kernel.linux16 kernel.linux32
@@ -115,7 +115,7 @@ kernel.linux16: kernel/linux16.asm
 	nasm -f bin -o $@ $<
 
 kernel.linux32: kernel/linker.ld kernel/linux32.o $(KERNEL_OBJS) .toolchain-$(ARCH)-stage1
-	$(LD) $(LDFLAGS) -o $@ -Wl,--oformat=binary -Wl,--defsym,ARCH_$(ARCH)=1 -T kernel/linker.ld kernel/linux32.o $(KERNEL_OBJS) -lgcc
+	$(LD) $(LDFLAGS) -o $@ -Wl,--oformat=binary -Wl,--defsym,ARCH_$(ARCH)=1 -T kernel/linker.ld -Wl,-Map,kernel.map kernel/linux32.o $(KERNEL_OBJS) -lgcc
 
 libc.a: $(LIBC_COMMON_OBJS) $(LIBC_ONLY_OBJS) .toolchain-$(ARCH)-stage1
 	$(AR) rc $@ $^
@@ -166,7 +166,7 @@ gdb: kernel.bin
 
 PROGRAMS=cat chat clear cmp crash date draw echo env false flash forkbomb getty hello hello++ hexdump hostname init kill ln ls mkdir more mount mv pwd reset rm rmdir sh sleep testcases tolower touch tree true truncate uname unixping unixserver wc
 clean:
-	rm -f kernel.bin kernel.linux* $(KERNEL_OBJS) kernel/multiboot.o kernel/linux32.o cdrom.iso iso/boot/kernel.bin initrd iso/boot/initrd disk_image disk_image.vdi hd/boot/kernel.bin hd/boot/initrd $(TFTP_FILES) programs/*.o libc/*.o libdl/*.o libg/*.o libm/*.o $(PROGRAMS) libc.a libdl.a libg.a libm.a $(TEST_BIN) $(DUMPELF_BIN) $(DUMPEXT2_BIN) $(EXT2TEST_BIN) .sysroot
+	rm -f kernel.bin kernel.linux* kernel.map $(KERNEL_OBJS) kernel/multiboot.o kernel/linux32.o cdrom.iso iso/boot/kernel.bin initrd iso/boot/initrd disk_image disk_image.vdi hd/boot/kernel.bin hd/boot/initrd $(TFTP_FILES) programs/*.o libc/*.o libdl/*.o libg/*.o libm/*.o $(PROGRAMS) libc.a libdl.a libg.a libm.a $(TEST_BIN) $(DUMPELF_BIN) $(DUMPEXT2_BIN) $(EXT2TEST_BIN) .sysroot
 	rm -rf sysroot
 
 initrd: $(PROGRAMS) README.md

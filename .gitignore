@@ -1,6 +1,7 @@
 *.o
 kernel.bin
 kernel.linux*
+kernel.map
 initrd
 sysroot
 cdrom.iso
