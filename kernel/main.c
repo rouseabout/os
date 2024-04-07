@@ -928,6 +928,10 @@ static uintptr_t kmalloc_core(uintptr_t size, int align, uintptr_t * phys, const
         uintptr_t addr = (uintptr_t)halloc(&kheap, size, align ? 4096 : 0, tag);
         if (phys) {
             page_entry *page = get_page_entry(addr, 0, current_directory);
+            if (!page) {
+                hfree(&kheap, (void *)addr);
+                return 0;
+            }
             *phys = page->frame*0x1000 + (addr & 0xFFF);
         }
         return addr;
