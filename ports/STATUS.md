@@ -44,6 +44,7 @@ Build and working status of ports.
 |tinycc |[TCC](https://bellard.org/tcc/) | | ✗ |linking error |
 |units |[units](https://www.gnu.org/software/units/) | | ✓ | |
 |vim |[Vim](https://www.vim.org/) | ncurses | ✓ | |
+|vlink |[vlink](http://sun.hasenbraten.de/vlink/) | | ✓ | |
 |vttest |[VTTEST](https://invisible-island.net/vttest/) | | ✓ | |
 |xz |[XZ Utils](https://xz.tukaani.org/xz-utils/) | | ✓ | |
 |yasm |[Yasm](https://yasm.tortall.net/) | | ✓ | |

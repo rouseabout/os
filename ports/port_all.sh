@@ -50,6 +50,7 @@ g sqlite
 g tinycc
 g units
 g vim
+g vlink
 g vttest
 #g xz
 g yasm
