@@ -128,6 +128,7 @@ Then run `gdb kernel.bin`, and type `target remote localhost:1234` at the gdb pr
 
 To build a 64-bit *os*, edit `.config` and set `ARCH=x86_64` etc., then perform `make clean` and `make`.
 When using multiboot, the `kernel.bin` and `initrd` files must fit within the first 8 MiB of memory.
+NASM >= 2.16 is required.
 
 
 ### Networking

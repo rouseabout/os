@@ -110,14 +110,14 @@ static void set_frame_identity(page_entry * page, int addr, int is_kernel, int i
 static void mem_set_frames(uintptr_t phy_addr, int size)
 {
     KASSERT(!(phy_addr & 0xFFF));
-    for (unsigned int i = phy_addr; i < phy_addr + size; i += 0x1000)
+    for (uintptr_t i = phy_addr; i < phy_addr + size; i += 0x1000)
         set_frame(i);
 }
 
 static void map_address(uintptr_t phy_addr, uintptr_t virt_addr, uintptr_t size)
 {
     KASSERT(!(phy_addr & 0xFFF));
-    for (unsigned int i = 0; i < size; i += 0x1000)
+    for (uintptr_t i = 0; i < size; i += 0x1000)
         set_frame_identity(get_page_entry(virt_addr + i, 1, kernel_directory), phy_addr + i, 1, 0, 0);
 }
 
@@ -369,14 +369,14 @@ typedef struct
 typedef struct StackFrame StackFrame;
 struct StackFrame {
     StackFrame * ebp;
-    uint32_t eip;
+    uintptr_t eip;
 };
 
 static void dump_registers(const registers * regs)
 {
-    kprintf("    EIP=0x%x, ESP=0x%x, CS=0x%x, DS=0x%x, SS=0x%x\n", regs->eip, regs->esp, regs->cs, regs->ds, regs->ss);
-    kprintf("    EAX=0x%x, EBX=0x%x, ECX=0x%x, EDX=0x%x\n", regs->eax, regs->ebx, regs->ecx, regs->edx);
-    kprintf("    ESI=0x%x, EDI=0x%x\n", regs->esi, regs->edi);
+    kprintf("    EIP=%p, ESP=%p, CS=%p, DS=%p, SS=%p\n", regs->eip, regs->esp, regs->cs, regs->ds, regs->ss);
+    kprintf("    EAX=%p, EBX=%p, ECX=%p, EDX=%p\n", regs->eax, regs->ebx, regs->ecx, regs->edx);
+    kprintf("    ESI=%p, EDI=%p\n", regs->esi, regs->edi);
     kprintf("    EFLAGS=0x%x\n", regs->eflags);
 
     StackFrame * s = (StackFrame *)regs->ebp;
@@ -710,7 +710,7 @@ void interrupt_handler(registers * regs)
                 switch_task(regs);
                 return;
             }
-            kprintf("PAGE FAULT: address 0x%x, error_code 0x%x:", cr2, regs->error_code);
+            kprintf("PAGE FAULT: address %p, error_code 0x%x:", cr2, regs->error_code);
             if (regs->error_code & 1)  kprintf(" Present"); else kprintf(" Not-Present");
             if (regs->error_code & 2)  kprintf(" Write"); else kprintf(" Read");
             if (regs->error_code & 4)  kprintf(" User"); else kprintf(" Supervisor");

@@ -115,7 +115,7 @@ tss:
     dq 0
     dw 0
     dw 0
-.end
+.end:
 
 section .bss
 
