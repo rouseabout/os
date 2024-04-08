@@ -721,7 +721,7 @@ void interrupt_handler(registers * regs)
             kprintf("current task pid %d %s\n", current_task->id, current_task->name);
         dump_registers(regs);
 
-        if (regs->error_code & 4) {
+        if (regs->number != 14 || regs->error_code & 4) {
             sys_exit(1);
             switch_task(regs);
             return;
