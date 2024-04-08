@@ -1167,6 +1167,8 @@ static void switch_page_directory(page_directory * dir)
     asm volatile("mov %0, %%cr3" : : "r" (dir->physical_address));
 }
 
+static uintptr_t clone_vaddr;
+static page_entry * clone_pe;
 static page_table * clone_table(const page_table * src, uintptr_t * physical_address, uintptr_t base)
 {
     page_table * table = (page_table *)kmalloc_ap(sizeof(page_table), physical_address, "pg-table-clone");
@@ -1186,11 +1188,9 @@ static page_table * clone_table(const page_table * src, uintptr_t * physical_add
         return NULL;
     }
 
-    uintptr_t pdst = 0;
-    page_entry * pe0 = get_page_entry(pdst, 1, current_directory);
-    pe0->present = 1;
-    pe0->user = 0;
-    pe0->rw = 1;
+    clone_pe->present = 1;
+    clone_pe->user = 0;
+    clone_pe->rw = 1;
 
     //copy each entry
     for (unsigned int i = 0; i < ENTRIES_PER_TABLE; i++) {
@@ -1214,9 +1214,9 @@ _(dirty)
         const page_entry * pe_src = get_page_entry(psrc, 0, current_directory);
         KASSERT(pe_src && src->pages[i].frame == pe_src->frame);
 #endif
-        pe0->frame = table->pages[i].frame; /* temporarily map destination physical frame to virtual address 0x0 */
+        clone_pe->frame = table->pages[i].frame; /* temporarily map destination physical frame */
         switch_page_directory(current_directory); /* reload */
-        memcpy((void *)(uintptr_t)pdst, (void *)(uintptr_t)psrc, 0x1000);
+        memcpy((void *)clone_vaddr, (void *)(uintptr_t)psrc, 0x1000);
     }
 
     return table;
@@ -1348,10 +1348,6 @@ static void init_paging(uintptr_t low_size)
 {
     kernel_directory = alloc_new_page_directory();
 
-    // mark all the frames [0x0, 1) and [0x80000 ... 0x100000) as in use
-    set_frame(0);
-    set_frame(1);
-
     for (unsigned int i = low_size; i < 0x100000; i += 0x1000)
         set_frame(i);
 
@@ -1388,6 +1384,10 @@ static void init_paging(uintptr_t low_size)
 
     use_halloc = 1;
     allocate_virtual_address(buffer, 1);
+
+    /* allocate page use by clone_directory() */
+    clone_vaddr = allocate_virtual_address(0x1000, 1);
+    clone_pe = get_page_entry(clone_vaddr, 1, kernel_directory);
 
     /* pre-allocate additional *page tables* so kernel heap can grow up to max_size without
        encountering this recursive allocation problem:
