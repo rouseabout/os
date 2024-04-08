@@ -142,7 +142,10 @@ ldiv_t ldiv(long numer, long denom)
 
 void * malloc(size_t size)
 {
-    return halloc(&uheap, size, 4, "stdlib");
+    void * ret = halloc(&uheap, size, 4, "stdlib");
+    if (!ret)
+        errno = ENOMEM;
+    return ret;
 }
 
 size_t mbstowcs(wchar_t * pwcs, const char * s, size_t n)
