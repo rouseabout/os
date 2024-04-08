@@ -3296,7 +3296,7 @@ void start3(int magic, const void * info)
        panic("ext2_init failed");
     vfs_register_mount_point2(1, "", &ext2_io, ext2, 2);
 
-    char tty_dev[128];
+    static char tty_dev[128];
     get_cmdline_token("console=", "/dev/console0", tty_dev, sizeof(tty_dev));
     dev_register_symlink("tty", tty_dev);
 
