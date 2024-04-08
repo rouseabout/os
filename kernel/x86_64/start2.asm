@@ -110,7 +110,7 @@ bits 64
 
     mov rsp, kernel_stack.bottom
     xor rbp, rbp
-
+    push $
     mov rax, start3
     jmp rax
 

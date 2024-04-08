@@ -111,6 +111,7 @@ isr_common:
     and esp, ~0xF  ; align stack
     mov [esp], ebx
 
+    xor ebp, ebp
     call interrupt_handler
     mov esp, ebx
 

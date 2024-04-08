@@ -65,7 +65,7 @@ start2:
     xor ebp, ebp
     push dword ebx ; info
     push dword eax ; magic
-    push dword 0
+    push dword $
 
     jmp 0x8:start3
 

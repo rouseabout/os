@@ -107,6 +107,7 @@ isr_common:
     mov ds, rbp
     mov es, rbp
 
+    xor rbp, rbp
     mov rdi, rsp
     call interrupt_handler
 

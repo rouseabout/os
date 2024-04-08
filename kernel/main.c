@@ -369,13 +369,13 @@ struct StackFrame {
 
 static void dump_registers(const registers * regs)
 {
-    kprintf("    EIP=%p, ESP=%p, CS=%p, DS=%p, SS=%p\n", regs->eip, regs->esp, regs->cs, regs->ds, regs->ss);
+    kprintf("    EIP=%p, ESP=%p, CS=%p, DS=%p, SS=%p, EBP=%p\n", regs->eip, regs->esp, regs->cs, regs->ds, regs->ss, regs->ebp);
     kprintf("    EAX=%p, EBX=%p, ECX=%p, EDX=%p\n", regs->eax, regs->ebx, regs->ecx, regs->edx);
     kprintf("    ESI=%p, EDI=%p\n", regs->esi, regs->edi);
     kprintf("    EFLAGS=0x%x\n", regs->eflags);
 
     StackFrame * s = (StackFrame *)regs->ebp;
-    for(int i = 0; s > (StackFrame *)0x14 && i < 16; i++) {
+    for(int i = 0; s && i < 16; i++) {
         kprintf("Stack EIP: %p\n", s->eip);
         s = s->ebp;
     }
@@ -681,7 +681,7 @@ void interrupt_handler(registers * regs)
             kprintf(" E=%d, Tbl=%d, index=0x%x\n", !!(regs->error_code & 1), (regs->error_code >> 1) & 3, regs->error_code >> 4);
         } else if (regs->number == 14) {
             void * cr2 = get_cr2();
-            if (cr2 == (void *)(uintptr_t)sys_pthread_join && current_task->thread_parent) {
+            if (cr2 == (void *)(uintptr_t)sys_pthread_join && current_task && current_task->thread_parent) {
                 if (current_task->proc->thread_signal) {
                     Task * parent = current_task->thread_parent;
                     exit2(1, 1);
