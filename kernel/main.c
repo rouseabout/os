@@ -2443,14 +2443,20 @@ static int sys_execve(registers * regs, const char * pathname, char * const argv
 #if ARCH_i686
     regs->esp = PAD_DOWN(USER_STACK_TOP - argv_size - envp_size - 3 * sizeof(uintptr_t));
 #elif ARCH_x86_64
-    regs->esp = PAD_DOWN(USER_STACK_TOP - argv_size - envp_size) - 3 * sizeof(uintptr_t);
+    regs->esp = PAD_DOWN(USER_STACK_TOP - argv_size - envp_size);
 #endif
     regs->ebp = 0;
 
     uintptr_t * stack_values = (uintptr_t *)regs->esp;
+#if ARCH_i686
     stack_values[2] = USER_STACK_TOP - envp_size; //envp
     stack_values[1] = USER_STACK_TOP - argv_size - envp_size; //argv
     stack_values[0] = vector_count(argv_local); //argc
+#elif ARCH_x86_64
+    regs->edx = USER_STACK_TOP - envp_size; //envp;
+    regs->esi = USER_STACK_TOP - argv_size - envp_size; //argv
+    regs->edi = vector_count(argv_local); //argc
+#endif
 
     void * envp_stack = (uintptr_t *)(USER_STACK_TOP - envp_size);
     vector_dup2(envp_stack, envp_local);
@@ -3311,10 +3317,13 @@ void start3(int magic, const void * info)
     kprintf("\n\nswitching to user mode:\n");
 
     uintptr_t * stack_values = (uintptr_t *)USER_STACK_TOP;
-    stack_values[-1] = 0; //envp
-    stack_values[-2] = 0; //argv
-    stack_values[-3] = 0; //argc
-    jmp_to_userspace(entry, USER_STACK_TOP - 3 * sizeof(uintptr_t));
+#if ARCH_i686
+    stack_values -= 3;
+    stack_values[2] = 0; //envp
+    stack_values[1] = 0; //argv
+    stack_values[0] = 0; //argc
+#endif
+    jmp_to_userspace(entry, (uintptr_t)stack_values);
 
     /* never reach here */
 }

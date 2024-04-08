@@ -148,4 +148,8 @@ jmp_to_userspace:
     pushf
     push 0x1b
     push rdi
+
+    xor rdi, rdi ; envp
+    xor rsi, rsi ; argv
+    xor rdx, rdx ; argc
     iretq
