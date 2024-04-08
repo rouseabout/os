@@ -228,4 +228,5 @@ jmp_to_userspace:
     mov eax, [ebp + 4]
     push eax      ; userspace eip
 
+    xor ebp, ebp
     iret
