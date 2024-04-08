@@ -23,6 +23,7 @@ SECTIONS {
     .data ALIGN(4096) : AT(ADDR(.data) - KERNEL_ADDRESS) {
         *(.data)
         *(.rodata)
+        *(.rodata.*)
     }
 
     .eh_frame_hdr : {
