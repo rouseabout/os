@@ -1430,16 +1430,13 @@ static void init_timer(int freq)
 
 #define USER_STACK_SIZE 0x30000 /* 192k */
 
-#define USER_STACK_TOP (KERNEL_START - sizeof(uintptr_t))
+#define USER_STACK_TOP KERNEL_START
 
 static void move_stack(void * new_stack_start, unsigned int size, int spray)
 {
     // allocate new stack pages...
-    for (uintptr_t i = (uintptr_t)new_stack_start;
-         i > (uintptr_t)new_stack_start - size;
-         i -= 0x1000) {
+    for (uintptr_t i = (uintptr_t)new_stack_start - size; i < (uintptr_t)new_stack_start; i += 0x1000)
         alloc_frame(get_page_entry(i, 1, current_directory), 0 /*user mode */, 1 /* writable */ );
-    }
 
     // now that page table has changed, need to flush tlb cache
     switch_page_directory(current_directory);
@@ -1974,7 +1971,7 @@ static Task ** find_pp(Task *t)
 
 static void free_stack(uintptr_t stack_top, uintptr_t size)
 {
-    for (uintptr_t i = stack_top; i > stack_top - size; i -= 0x1000)
+    for (uintptr_t i = stack_top - size; i < stack_top; i += 0x1000)
         free_frame(get_page_entry(i, 0, current_directory));
 
     switch_page_directory(current_directory);
@@ -2442,18 +2439,18 @@ static int sys_execve(registers * regs, const char * pathname, char * const argv
     int argv_size = vector_flat_size(argv_local);
     int envp_size = vector_flat_size(envp_local);
 
-    regs->esp = USER_STACK_TOP - 2 * sizeof(uintptr_t) - argv_size - envp_size;
+    regs->esp = USER_STACK_TOP - 3 * sizeof(uintptr_t) - argv_size - envp_size;
     regs->ebp = 0;
 
     uintptr_t * stack_values = (uintptr_t *)(USER_STACK_TOP - argv_size - envp_size);
-    stack_values[0] = USER_STACK_TOP - envp_size + sizeof(uintptr_t); //envp
-    stack_values[-1] = USER_STACK_TOP - argv_size - envp_size + sizeof(uintptr_t); //argv
-    stack_values[-2] = vector_count(argv_local); //argc
+    stack_values[-1] = USER_STACK_TOP - envp_size; //envp
+    stack_values[-2] = USER_STACK_TOP - argv_size - envp_size; //argv
+    stack_values[-3] = vector_count(argv_local); //argc
 
-    void * envp_stack = (uintptr_t *)(USER_STACK_TOP - envp_size + sizeof(uintptr_t));
+    void * envp_stack = (uintptr_t *)(USER_STACK_TOP - envp_size);
     vector_dup2(envp_stack, envp_local);
 
-    void * argv_stack = (uintptr_t *)(USER_STACK_TOP - argv_size - envp_size + sizeof(uintptr_t));
+    void * argv_stack = (uintptr_t *)(USER_STACK_TOP - argv_size - envp_size);
     vector_dup2(argv_stack, argv_local);
 
     sigemptyset(&current_task->proc->signal);
@@ -3309,10 +3306,10 @@ void start3(int magic, const void * info)
     kprintf("\n\nswitching to user mode:\n");
 
     uintptr_t * stack_values = (uintptr_t *)USER_STACK_TOP;
-    stack_values[0] = 0; //envp
-    stack_values[-1] = 0; //argv
-    stack_values[-2] = 0; //argc
-    jmp_to_userspace(entry, USER_STACK_TOP - 2 * sizeof(uintptr_t));
+    stack_values[-1] = 0; //envp
+    stack_values[-2] = 0; //argv
+    stack_values[-3] = 0; //argc
+    jmp_to_userspace(entry, USER_STACK_TOP - 3 * sizeof(uintptr_t));
 
     /* never reach here */
 }
