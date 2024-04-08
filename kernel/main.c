@@ -1337,6 +1337,9 @@ static void pmm_init(uintptr_t low_size, uintptr_t up_size, uintptr_t extra)
 
     placement_address = (uintptr_t)&end + extra;
 
+    if (placement_address - KERNEL_START > 0x800000)
+        panic("placement address > 8MiB; kernel or kernel+initrd too big");
+
     /* allocate bitset for each 'page' (which is called a frame here) */
     nframes = mem_end_page / 0x1000;
     nframes &= ~31; // INDEX_FROM_BIT works on 32 pages at a time only
