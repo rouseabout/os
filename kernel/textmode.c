@@ -23,7 +23,7 @@ void textmode_init()
     x = l % 80;
 
     ptr = (void *)allocate_virtual_address(80*25*2, 0);
-    map_address(0xb8000, (uintptr_t)ptr, 80*25*2);
+    map_address(0xb8000, (uintptr_t)ptr, 80*25*2, MAP_WRITETHROUGH);
 }
 
 static int textmode_ready()

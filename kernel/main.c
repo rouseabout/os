@@ -108,7 +108,7 @@ static const char * get_cmdline_token(const char * token, const char * def, char
 static void pmm_init(uintptr_t low_size, uintptr_t up_size, uintptr_t extra);
 static void init_paging(uintptr_t low_size);
 static void set_frame(uintptr_t frame_address);
-static void set_frame_identity(page_entry * page, uintptr_t addr, int is_kernel, int is_writeable, int pat);
+static void set_frame_identity(page_entry * page, uintptr_t addr, int flags);
 
 static void mem_set_frames(uintptr_t phy_addr, int size)
 {
@@ -117,11 +117,11 @@ static void mem_set_frames(uintptr_t phy_addr, int size)
         set_frame(i);
 }
 
-void map_address(uintptr_t phy_addr, uintptr_t virt_addr, uintptr_t size)
+void map_address(uintptr_t phy_addr, uintptr_t virt_addr, uintptr_t size, int flags)
 {
     KASSERT(!(phy_addr & 0xFFF));
     for (uintptr_t i = 0; i < size; i += 0x1000)
-        set_frame_identity(get_page_entry(virt_addr + i, 1, kernel_directory), phy_addr + i, 1, 0, 0);
+        set_frame_identity(get_page_entry(virt_addr + i, 1, kernel_directory), phy_addr + i, flags);
 }
 
 static void parse_multiboot_info(const multiboot_info * info, uintptr_t * mod_start, uintptr_t * mod_size)
@@ -187,7 +187,7 @@ static void parse_multiboot_info(const multiboot_info * info, uintptr_t * mod_st
     if (*mod_size) {
         uintptr_t addr = allocate_virtual_address(*mod_size, 1);
         mem_set_frames(*mod_start, *mod_size);
-        map_address(*mod_start, addr, *mod_size);
+        map_address(*mod_start, addr, *mod_size, 0);
         *mod_start = addr;
     }
 }
@@ -231,7 +231,7 @@ static void parse_linux_params(const uint8_t * params, uintptr_t * mod_start, ui
     if (*mod_size) {
         uintptr_t addr = allocate_virtual_address(*mod_size, 1);
         mem_set_frames(initrd_start, *mod_size);
-        map_address(initrd_start, addr, *mod_size);
+        map_address(initrd_start, addr, *mod_size, 0);
         *mod_start = addr;
     }
 }
@@ -1097,18 +1097,18 @@ static void free_frame(page_entry *page)
     page->frame   = 0xBEEF;
 }
 
-static void set_frame_identity(page_entry * page, uintptr_t addr, int is_kernel, int is_writeable, int pat)
+static void set_frame_identity(page_entry * page, uintptr_t addr, int flags)
 {
     if (page->present)
         panic("set_frame_identity: page already present\n");
 
     page->present = 1;
-    page->rw      = !!is_writeable;
-    page->user    = !is_kernel;
+    page->rw      = !!(flags & MAP_WRITABLE);
+    page->user    = !!(flags & MAP_USER);
     if (cpu_has_pat) {
         page->nocache = 0;
         page->writethrough = 0;
-        page->pat = !!pat;
+        page->pat = !!(flags & MAP_WRITETHROUGH);
     }
     page->frame   = addr / 0x1000;
 }
@@ -1364,7 +1364,7 @@ static void init_paging(uintptr_t low_size)
     for (uintptr_t i = KERNEL_START; i < placement_address + buffer; i += 0x1000) {
         uintptr_t phy = VIRT_TO_PHY(i);
         set_frame(phy);
-        set_frame_identity(get_page_entry(i, 1, kernel_directory), phy, 1, 0, 0);
+        set_frame_identity(get_page_entry(i, 1, kernel_directory), phy, 0);
     }
 
     switch_page_directory(kernel_directory);
@@ -3270,7 +3270,7 @@ void start3(int magic, const void * info)
     }
 
     uintptr_t e0000 = allocate_virtual_address(0x20000, 1);
-    map_address(0xe0000, e0000, 0x20000);
+    map_address(0xe0000, e0000, 0x20000, 0);
     void * bios = mem_init((void *)(e0000 - 0xe0000), 0x100000);
     dev_register_device("mem", &mem_dio, 0, mem_getsize, bios);
 

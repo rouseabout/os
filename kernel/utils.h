@@ -50,7 +50,10 @@ void panic(const char * reason);
 void dump_processes(void);
 
 uintptr_t allocate_virtual_address(uintptr_t size, int align);
-void map_address(uintptr_t phy_addr, uintptr_t virt_addr, uintptr_t size);
+#define MAP_WRITABLE (1<<1)
+#define MAP_USER (1<<2)
+#define MAP_WRITETHROUGH (1<<7)
+void map_address(uintptr_t phy_addr, uintptr_t virt_addr, uintptr_t size, int flags);
 
 void * kmalloc(uintptr_t size, const char * tag);
 uintptr_t kmalloc_ap(uintptr_t size, uintptr_t * phys, const char * tag);

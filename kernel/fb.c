@@ -70,7 +70,7 @@ void fb_init2()
     size_t size = fb_stride * fb_height;
 
     fb_addr = (void *)allocate_virtual_address(size, 1);
-    map_address(fb_phy_addr, (uintptr_t)fb_addr, size);
+    map_address(fb_phy_addr, (uintptr_t)fb_addr, size, MAP_USER|MAP_WRITABLE|MAP_WRITETHROUGH);
 
     memset(fb_addr, 0xFF, fb_stride * fb_height);
     cursor_xor();
