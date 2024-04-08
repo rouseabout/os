@@ -5,9 +5,7 @@ section .text
 global isr%1
 isr%1:
     cli
-    ;;mov word [0xb8000 + %1 * 2], 0x2f00 + 'A' + %1
-    ;;inc word [0xb8000 + (80 + %1) * 2]
-    push byte 0
+    push 0
     push %1
     jmp isr_common
 %endmacro
@@ -16,8 +14,6 @@ isr%1:
 global isr%1
 isr%1:
     cli
-    ;;mov word [0xb8000 + %1 * 2], 0x2f00 + 'A' + %1
-    ;;inc word [0xb8000 + (80 + %1) * 2]
     push %1
     jmp isr_common
 %endmacro
@@ -26,9 +22,7 @@ isr%1:
 global irq%1
 irq%1:
     cli
-    ;;mov word [0xb8000 + %1 * 2], 0x2f00 + 'A' + %1
-    ;;inc word [0xb8000 + (80 + %1) * 2]
-    push byte 0
+    push 0
     push 32 + %1
     jmp isr_common
 %endmacro

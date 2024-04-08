@@ -5,7 +5,7 @@ section .text
 global isr%1
 isr%1:
     cli
-    push byte 0
+    push 0
     push %1
     jmp isr_common
 %endmacro
@@ -22,7 +22,7 @@ isr%1:
 global irq%1
 irq%1:
     cli
-    push byte 0
+    push 0
     push 32 + %1
     jmp isr_common
 %endmacro
