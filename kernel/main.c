@@ -2439,13 +2439,18 @@ static int sys_execve(registers * regs, const char * pathname, char * const argv
     int argv_size = vector_flat_size(argv_local);
     int envp_size = vector_flat_size(envp_local);
 
-    regs->esp = USER_STACK_TOP - 3 * sizeof(uintptr_t) - argv_size - envp_size;
+#define PAD_DOWN(x) ((x) & ~15)
+#if ARCH_i686
+    regs->esp = PAD_DOWN(USER_STACK_TOP - argv_size - envp_size - 3 * sizeof(uintptr_t));
+#elif ARCH_x86_64
+    regs->esp = PAD_DOWN(USER_STACK_TOP - argv_size - envp_size) - 3 * sizeof(uintptr_t);
+#endif
     regs->ebp = 0;
 
-    uintptr_t * stack_values = (uintptr_t *)(USER_STACK_TOP - argv_size - envp_size);
-    stack_values[-1] = USER_STACK_TOP - envp_size; //envp
-    stack_values[-2] = USER_STACK_TOP - argv_size - envp_size; //argv
-    stack_values[-3] = vector_count(argv_local); //argc
+    uintptr_t * stack_values = (uintptr_t *)regs->esp;
+    stack_values[2] = USER_STACK_TOP - envp_size; //envp
+    stack_values[1] = USER_STACK_TOP - argv_size - envp_size; //argv
+    stack_values[0] = vector_count(argv_local); //argc
 
     void * envp_stack = (uintptr_t *)(USER_STACK_TOP - envp_size);
     vector_dup2(envp_stack, envp_local);
