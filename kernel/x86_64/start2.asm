@@ -15,7 +15,7 @@ start2:
 %macro SET_PAGE 3 ; table index phy
     mov eax, %3
     or eax, PAGE_PRESENT | PAGE_WRITE
-    mov [%1 + %2 * 8], eax
+    mov [%1 + (%2) * 8], eax
 %endmacro
 
     ; identity map first 8MiB and mirror first 8MiB @ KERNEL_START
