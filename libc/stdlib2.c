@@ -45,6 +45,7 @@ int main(int argc, char **argv, char ** envp);
 int _libc_main(int argc, char **argv, char ** envp);
 int _libc_main(int argc, char **argv, char ** envp)
 {
+    uheap.reserve_size = 0;
     uheap.grow_cb = grow_cb;
     uheap.shrink_cb = shrink_cb;
     uheap.dump_cb = NULL;

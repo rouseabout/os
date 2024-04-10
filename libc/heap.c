@@ -4,6 +4,7 @@
 #include <string.h>
 #include <limits.h>
 #include <bsd/string.h>
+#include <errno.h>
 
 #if TEST
 #include <stdio.h>
@@ -121,7 +122,7 @@ static uintptr_t calc_alignment_size(const Head * h, uintptr_t size, int page_al
     return (data1 - data0) + size;  /* padding plus size */
 }
 
-static Head * grow(Halloc * cntx, uintptr_t size, int page_align)
+static int grow(Halloc * cntx, uintptr_t size, int page_align, Head ** head_ptr)
 {
     /* ...[hl]...[tl]         */
     /*              |<-- end */
@@ -150,12 +151,15 @@ static Head * grow(Halloc * cntx, uintptr_t size, int page_align)
     /* align to nearest 4k page */
     extra += 0xfff;
     extra &= ~0xfff;
+    extra += cntx->reserve_size;
 
     Head * hn = cntx->end;
 
-    if (cntx->grow_cb)
-        if (cntx->grow_cb(cntx, extra) < 0)
-            return NULL;
+    if (cntx->grow_cb) {
+        int ret = cntx->grow_cb(cntx, extra);
+        if (ret < 0)
+            return ret;
+    }
 
     if (!hl->used) {
         /* from: ...[hl]...[tl]NNNNNNN */
@@ -174,7 +178,8 @@ static Head * grow(Halloc * cntx, uintptr_t size, int page_align)
         tl->magic = 0;
 #endif
 
-        return hl;
+        *head_ptr = hl;
+        return 0;
     } else {
         /* from: ...[hl]...[tl]NNNNNNNNNNN  */
         /*   to: ...[hl]...[tl][hn]...[tn] */
@@ -191,7 +196,8 @@ static Head * grow(Halloc * cntx, uintptr_t size, int page_align)
 #endif
         tn->size  = hn->size;
 
-        return hn;
+        *head_ptr = hn;
+        return 0;
     }
 }
 
@@ -245,6 +251,7 @@ static void shrink(Halloc * cntx)
 
 void * halloc(Halloc * cntx, const unsigned int size, int page_align, const char * tag)
 {
+repeat:
     halloc_integrity_check(cntx);
 
     if (!size || size > INT_MAX/2)
@@ -264,9 +271,11 @@ void * halloc(Halloc * cntx, const unsigned int size, int page_align, const char
     }
 
     if (!h0) {
-        h0 = grow(cntx, size, page_align);
-        if (!h0)
+        int ret = grow(cntx, size, page_align, &h0);
+        if (ret == -ENOMEM)
             return NULL;
+        if (ret == -EAGAIN)
+            goto repeat;
     }
 
     /* accomodate page alignment padding */

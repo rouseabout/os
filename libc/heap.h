@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <stdint.h>
 
 typedef struct Halloc Halloc;
@@ -5,6 +6,7 @@ typedef struct Halloc Halloc;
 struct Halloc {
     void * start;
     void * end;
+    size_t reserve_size;
     int (*grow_cb)(Halloc * cntx, unsigned int extra);
     void (*shrink_cb)(Halloc *cntx, uintptr_t addr);
     void (*dump_cb)(Halloc * cntx);

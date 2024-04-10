@@ -89,6 +89,11 @@ extern uintptr_t end;
 uintptr_t KERNEL_START;
 #define VIRT_TO_PHY(x) (x - KERNEL_START)
 #define KHEAP_OFFSET 0x10000000 /* KERNEL_START + 256 MiB */
+#if defined(ARCH_i686)
+#define KHEAP_RESERVE 16384
+#elif defined(ARCH_x86_64)
+#define KHEAP_RESERVE (3 * 16384)
+#endif
 char cmdline[64];
 
 static const char * get_cmdline_token(const char * token, const char * def, char * out, size_t out_size)
@@ -122,7 +127,7 @@ void map_address(uintptr_t phy_addr, uintptr_t virt_addr, uintptr_t size, int fl
 {
     KASSERT(!(phy_addr & 0xFFF));
     for (uintptr_t i = 0; i < size; i += 0x1000)
-        set_frame_identity(get_page_entry(virt_addr + i, 1, kernel_directory), phy_addr + i, flags);
+        set_frame_identity(get_page_entry(virt_addr + i, 1, kernel_directory, NULL), phy_addr + i, flags);
 }
 
 static void parse_multiboot_info(const multiboot_info * info, uintptr_t * mod_start, uintptr_t * mod_size)
@@ -928,7 +933,7 @@ static uintptr_t kmalloc_core(uintptr_t size, int align, uintptr_t * phys, const
     if (use_halloc) {
         uintptr_t addr = (uintptr_t)halloc(&kheap, size, align ? 4096 : 0, tag);
         if (phys) {
-            page_entry *page = get_page_entry(addr, 0, current_directory);
+            page_entry *page = get_page_entry(addr, 0, current_directory, NULL);
             if (!page) {
                 hfree(&kheap, (void *)addr);
                 return 0;
@@ -1131,7 +1136,7 @@ static void * alloc_new_page_table(uintptr_t * phy)
     return pt;
 }
 
-page_entry * get_page_entry(uintptr_t address, int make, page_directory * dir)
+page_entry * get_page_entry(uintptr_t address, int make, page_directory * dir, int * called_alloc)
 {
     address /= 0x1000;
     for (int level = PAGE_LEVELS - 1 ; level > 0; level--) {
@@ -1140,7 +1145,8 @@ page_entry * get_page_entry(uintptr_t address, int make, page_directory * dir)
             //kprintf(" -> (get_page_entry %p virt) level %d, idx %d missing\n", address * 0x1000, level + 1, idx);
             if (!make)
                 return NULL;
-
+            if (called_alloc)
+                *called_alloc = 1;
             uintptr_t phy;
             if (level + 1 == 2) {
                 dir->tables[idx] = alloc_new_page_table(&phy);
@@ -1293,31 +1299,40 @@ static void clean_directory(page_directory * dir)
     switch_page_directory(current_directory);
 }
 
-static int alloc_frames(uintptr_t start, uintptr_t size, page_directory * directory, int flags)
+static int alloc_frames(uintptr_t start, uintptr_t size, page_directory * directory, int flags, int dry_run)
 {
+      int called_alloc = 0;
       if (nframes - count_used_frames() < (size + 0xFFF) / 0x1000)
           return -ENOMEM;
 
-      for (uintptr_t i = start; i < start + size; i += 0x1000)
-          alloc_frame(get_page_entry(i, 1, directory), flags);
+      for (uintptr_t i = start; i < start + size; i += 0x1000) {
+          page_entry * pe = get_page_entry(i, 1, directory, &called_alloc);
+          if (!dry_run)
+              alloc_frame(pe, flags);
+      }
 
-      return 0;
+      return called_alloc ? -EAGAIN : 0;
 }
 
 static int grow_cb(Halloc * cntx, unsigned int extra)
 {
-    if (alloc_frames((uintptr_t)cntx->end, extra, kernel_directory, MAP_WRITABLE) < 0)
-        return -ENOMEM;
-
+    int ret = alloc_frames((uintptr_t)cntx->end, extra, kernel_directory, MAP_WRITABLE, 1);
     switch_page_directory(current_directory);
+    if (ret < 0)
+        return ret;
+
+    ret = alloc_frames((uintptr_t)cntx->end, extra, kernel_directory, MAP_WRITABLE, 0);
+    if (ret < 0)
+        return ret;
+
     cntx->end = (uint8_t *)cntx->end + extra;
-    return 0; /* always succeeds */
+    return ret;
 }
 
 static void shrink_cb(Halloc * cntx, uintptr_t boundary_addr)
 {
     for (uintptr_t i = boundary_addr; i < (uintptr_t)cntx->end; i += 0x1000) {
-        free_frame(get_page_entry(i, 0, kernel_directory));
+        free_frame(get_page_entry(i, 0, kernel_directory, NULL));
     }
     switch_page_directory(current_directory);
 }
@@ -1365,18 +1380,21 @@ static void init_paging(uintptr_t low_size)
     for (uintptr_t i = KERNEL_START; i < placement_address + buffer; i += 0x1000) {
         uintptr_t phy = VIRT_TO_PHY(i);
         set_frame(phy);
-        set_frame_identity(get_page_entry(i, 1, kernel_directory), phy, 0);
+        set_frame_identity(get_page_entry(i, 1, kernel_directory, NULL), phy, 0);
     }
 
     switch_page_directory(kernel_directory);
 
     /* create kernel heap */
-    int initial_size = 4096;
+    int initial_size = KHEAP_RESERVE;
     uintptr_t kheap_start = KERNEL_START + KHEAP_OFFSET;
-    for (uintptr_t i = kheap_start; i < kheap_start + initial_size; i += 0x1000)
-        alloc_frame(get_page_entry(i, 1, kernel_directory), MAP_WRITABLE);
+    for (uintptr_t i = kheap_start; i < kheap_start + initial_size; i += 0x1000) {
+        kprintf("heap_initial_page: %p\n", i);
+        alloc_frame(get_page_entry(i, 1, kernel_directory, NULL), MAP_WRITABLE);
+    }
 
     halloc_init(&kheap, (void *)kheap_start, initial_size);
+    kheap.reserve_size = KHEAP_RESERVE;
     kheap.grow_cb   = grow_cb;
     kheap.shrink_cb = shrink_cb;
     kheap.dump_cb = dump_cb;
@@ -1388,16 +1406,7 @@ static void init_paging(uintptr_t low_size)
 
     /* allocate page use by clone_directory() */
     clone_vaddr = allocate_virtual_address(0x1000, 1);
-    clone_pe = get_page_entry(clone_vaddr, 1, kernel_directory);
-
-    /* pre-allocate additional *page tables* so kernel heap can grow up to max_size without
-       encountering this recursive allocation problem:
-                kmalloc() -> grow_cb() -> get_page_entry() -> kmalloc() -> ...
-       the biggest user of kmalloc() currently is ext2_read() for large files */
-
-    int max_size = 64 * 1024 * 1024;
-    for (uintptr_t i = kheap_start; i < kheap_start + max_size; i += 0x1000)
-        get_page_entry(i, 1, kernel_directory);
+    clone_pe = get_page_entry(clone_vaddr, 1, kernel_directory, NULL);
 }
 
 static void init_paging2()
@@ -1434,7 +1443,7 @@ static void move_stack(void * new_stack_start, unsigned int size, int spray)
 {
     // allocate new stack pages...
     for (uintptr_t i = (uintptr_t)new_stack_start - size; i < (uintptr_t)new_stack_start; i += 0x1000)
-        alloc_frame(get_page_entry(i, 1, current_directory), MAP_USER|MAP_WRITABLE);
+        alloc_frame(get_page_entry(i, 1, current_directory, NULL), MAP_USER|MAP_WRITABLE);
 
     // now that page table has changed, need to flush tlb cache
     switch_page_directory(current_directory);
@@ -1970,7 +1979,7 @@ static Task ** find_pp(Task *t)
 static void free_stack(uintptr_t stack_top, uintptr_t size)
 {
     for (uintptr_t i = stack_top - size; i < stack_top; i += 0x1000)
-        free_frame(get_page_entry(i, 0, current_directory));
+        free_frame(get_page_entry(i, 0, current_directory, NULL));
 
     switch_page_directory(current_directory);
 }
@@ -2187,14 +2196,14 @@ static int sys_brk(uintptr_t addr, uintptr_t * current_brk)
 {
     if (addr) {
         if (addr > current_task->proc->brk) {
-            if (alloc_frames(current_task->proc->brk, addr - current_task->proc->brk, current_directory, MAP_USER|MAP_WRITABLE) < 0)
+            if (alloc_frames(current_task->proc->brk, addr - current_task->proc->brk, current_directory, MAP_USER|MAP_WRITABLE, 0) == -ENOMEM)
                 return -ENOMEM;
             current_task->proc->brk = addr;
         } else {
             addr += 0xfff;
             addr &= ~0xfff;
             for (uintptr_t i = addr; i < current_task->proc->brk; i += 0x1000) {
-                free_frame(get_page_entry(i, 0, current_directory));
+                free_frame(get_page_entry(i, 0, current_directory, NULL));
             }
             current_task->proc->brk = addr;
         }
@@ -2268,7 +2277,7 @@ static void create_vm_block(uintptr_t addr, uintptr_t size)
 {
     uintptr_t i;
     for (i = addr & ~0xfff; i < addr + size; i += 0x1000)
-        alloc_frame(get_page_entry(i, 1, current_directory), MAP_USER|MAP_WRITABLE);
+        alloc_frame(get_page_entry(i, 1, current_directory, NULL), MAP_USER|MAP_WRITABLE);
 
     switch_page_directory(current_directory);
 
