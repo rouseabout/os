@@ -2208,21 +2208,24 @@ static int sys_brk(uintptr_t addr, uintptr_t * current_brk)
     return 0;
 }
 
-static void kthread_exit(int value)
+static void kthread_exit()
 {
-    kprintf("kthread exit: %x\n", value);
+    kprintf("kthread exit\n");
     while(1);
 }
 
-static Task * create_task(void (*eip)(int ), unsigned int stack_size, uintptr_t arg)
-{
-    uint8_t *  stack = (void *) kmalloc_a(stack_size, "kernel-task-stack");
-    uintptr_t * stack_values = (uintptr_t *)(stack + stack_size);
+#define PAD_DOWN(x) ((x) & ~15)
 
-    stack_values[-1] =  0; /* eip */
-    stack_values[-2] =  0; /* ebp */
-    stack_values[-3] =  arg; /* param */
-    stack_values[-4] =  (uintptr_t)kthread_exit;
+static Task * create_task_kernel(void (*eip)(int), unsigned int stack_size, uintptr_t arg)
+{
+    uintptr_t stack = kmalloc_a(stack_size, "kernel-task-stack");
+#if defined(ARCH_i686)
+    uintptr_t * stack_values = (uintptr_t *)PAD_DOWN(stack + stack_size - 2*sizeof(uintptr_t));
+    stack_values[1] = arg;
+#elif defined(ARCH_x86_64)
+    uintptr_t * stack_values = (uintptr_t *)PAD_DOWN(stack + stack_size - sizeof(uintptr_t));
+#endif
+    stack_values[0] = (uintptr_t)kthread_exit;
 
     Task * new_task = kmalloc(sizeof(Task) + sizeof(Process), "task-kernel");
     strlcpy(new_task->name, "kernel-task", sizeof(new_task->name));
@@ -2232,12 +2235,12 @@ static Task * create_task(void (*eip)(int ), unsigned int stack_size, uintptr_t 
 #if SPRAY_MEMORY
     memset(&new_task->reg, 0xFA, sizeof(new_task->reg));
 #endif
-    new_task->reg.esp = (uintptr_t)(stack_values - sizeof(uintptr_t));
+    new_task->reg.esp = (uintptr_t)stack_values;
     new_task->reg.eip = (uintptr_t)eip;
     new_task->reg.cs = 0x8;
     new_task->reg.ds = 0x10;
     new_task->reg.ss = 0x10;
-    new_task->reg.eax = 0;
+    new_task->reg.ebp = 0;
     new_task->reg.eflags = 0x200;
     new_task->thread_parent = NULL;
 #if defined(ARCH_x86_64)
@@ -2439,20 +2442,19 @@ static int sys_execve(registers * regs, const char * pathname, char * const argv
     int argv_size = vector_flat_size(argv_local);
     int envp_size = vector_flat_size(envp_local);
 
-#define PAD_DOWN(x) ((x) & ~15)
-#if ARCH_i686
+#if defined(ARCH_i686)
     regs->esp = PAD_DOWN(USER_STACK_TOP - argv_size - envp_size - 3 * sizeof(uintptr_t));
-#elif ARCH_x86_64
+#elif defined(ARCH_x86_64)
     regs->esp = PAD_DOWN(USER_STACK_TOP - argv_size - envp_size);
 #endif
     regs->ebp = 0;
 
-#if ARCH_i686
+#if defined(ARCH_i686)
     uintptr_t * stack_values = (uintptr_t *)regs->esp;
     stack_values[2] = USER_STACK_TOP - envp_size; //envp
     stack_values[1] = USER_STACK_TOP - argv_size - envp_size; //argv
     stack_values[0] = vector_count(argv_local); //argc
-#elif ARCH_x86_64
+#elif defined(ARCH_x86_64)
     regs->edx = USER_STACK_TOP - envp_size; //envp;
     regs->esi = USER_STACK_TOP - argv_size - envp_size; //argv
     regs->edi = vector_count(argv_local); //argc
@@ -2797,8 +2799,12 @@ static int sys_pthread_create(pthread_t * thread, const pthread_attr_t * attr, v
     new_task->state = STATE_RUNNING;
     new_task->reg = current_task->reg;
     new_task->reg.eip = (uintptr_t)start_routine;
-    new_task->reg.esp = current_task->proc->stack_next - sizeof(uintptr_t);
     new_task->stack_top = current_task->proc->stack_next;
+#if defined(ARCH_i686)
+    new_task->reg.esp = PAD_DOWN(current_task->proc->stack_next - 2*sizeof(uintptr_t));
+#elif defined(ARCH_x86_64)
+    new_task->reg.esp = PAD_DOWN(current_task->proc->stack_next - sizeof(uintptr_t));
+#endif
     move_stack((void*)(current_task->proc->stack_next), USER_STACK_SIZE, 0xf2);
     current_task->proc->stack_next -= USER_STACK_SIZE;
 
@@ -2809,7 +2815,9 @@ static int sys_pthread_create(pthread_t * thread, const pthread_attr_t * attr, v
     current_task->proc->thread_signal = 0; /* when thread exits, don't do_signal_action */
 
     void ** stack_values = (void **)new_task->reg.esp;
+#if defined(ARCH_i686)
     stack_values[1] = arg;
+#endif
     stack_values[0] = (void *)(uintptr_t)sys_pthread_join; /* thread termination indicator, will deliberatey trigger page fault */
 #if defined(ARCH_x86_64)
     new_task->reg.edi = (uintptr_t)arg;
@@ -3304,7 +3312,7 @@ void start3(int magic, const void * info)
 
     init_tasking("/dev/tty"); /* must come after paging */
 
-    idle_task = create_task(idle, 0x1000, 0xbeef);
+    idle_task = create_task_kernel(idle, 0x1000, 0xbeef);
 
     uintptr_t entry = create_task_elf("/bin/init");
     if (!entry)
@@ -3316,12 +3324,13 @@ void start3(int magic, const void * info)
 
     kprintf("\n\nswitching to user mode:\n");
 
-    uintptr_t * stack_values = (uintptr_t *)USER_STACK_TOP;
-#if ARCH_i686
-    stack_values -= 3;
+#if defined(ARCH_i686)
+    uintptr_t * stack_values = (uintptr_t *)PAD_DOWN(USER_STACK_TOP - 3*sizeof(uintptr_t));
     stack_values[2] = 0; //envp
     stack_values[1] = 0; //argv
     stack_values[0] = 0; //argc
+#elif defined(ARCH_x86_64)
+    uintptr_t * stack_values = (uintptr_t *)USER_STACK_TOP;
 #endif
     jmp_to_userspace(entry, (uintptr_t)stack_values);
 
