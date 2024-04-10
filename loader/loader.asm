@@ -13,6 +13,9 @@ start:
     mov ss, ax
     mov sp, 0x7c00
 
+    mov ax, 0x2401
+    int 0x15
+
     mov si, zsetup
     call printz
 
