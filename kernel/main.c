@@ -88,6 +88,7 @@ extern uintptr_t text;
 extern uintptr_t end;
 uintptr_t KERNEL_START;
 #define VIRT_TO_PHY(x) (x - KERNEL_START)
+#define KHEAP_OFFSET 0x10000000 /* KERNEL_START + 256 MiB */
 char cmdline[64];
 
 static const char * get_cmdline_token(const char * token, const char * def, char * out, size_t out_size)
@@ -972,7 +973,7 @@ void * krealloc(void * buf, unsigned int size)
 
 void kfree(void * ptr)
 {
-    if (use_halloc)
+    if ((uintptr_t)ptr >= KERNEL_START + KHEAP_OFFSET)
         hfree(&kheap, ptr);
 }
 
@@ -1371,7 +1372,7 @@ static void init_paging(uintptr_t low_size)
 
     /* create kernel heap */
     int initial_size = 4096;
-    uintptr_t kheap_start = KERNEL_START + 0x10000000 /* +256 MiB */ ;
+    uintptr_t kheap_start = KERNEL_START + KHEAP_OFFSET;
     for (uintptr_t i = kheap_start; i < kheap_start + initial_size; i += 0x1000)
         alloc_frame(get_page_entry(i, 1, kernel_directory), MAP_WRITABLE);
 
