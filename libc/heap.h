@@ -5,12 +5,6 @@ typedef struct Halloc Halloc;
 struct Halloc {
     void * start;
     void * end;
-
-    /* used by kernel only */
-    void * directory; /* page_directory */
-    int is_kernel;
-    int is_writable;
-
     int (*grow_cb)(Halloc * cntx, unsigned int extra);
     void (*shrink_cb)(Halloc *cntx, uintptr_t addr);
     void (*dump_cb)(Halloc * cntx);

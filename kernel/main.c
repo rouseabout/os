@@ -1075,14 +1075,14 @@ static uintptr_t first_frame()
     return 0;
 }
 
-static void alloc_frame(page_entry * page, int is_kernel, int is_writeable)
+static void alloc_frame(page_entry * page, int flags)
 {
     if (page->present)
         panic("alloc_frame: page already present\n");
 
     page->present = 1;
-    page->rw      = !!is_writeable;
-    page->user    = !is_kernel;
+    page->rw      = !!(flags & MAP_WRITABLE);
+    page->user    = !!(flags & MAP_USER);
     page->frame   = first_frame();
     set_frame(page->frame * 0x1000);
 }
@@ -1198,7 +1198,7 @@ static page_table * clone_table(const page_table * src, uintptr_t * physical_add
         if (!src->pages[i].present)
             continue;
 
-        alloc_frame(&table->pages[i], 0, 0); // user, not writable(what?)
+        alloc_frame(&table->pages[i], 0);
 
 #define _(x) if (src->pages[i].x) table->pages[i].x = 1;
 _(present)
@@ -1292,20 +1292,20 @@ static void clean_directory(page_directory * dir)
     switch_page_directory(current_directory);
 }
 
-static int alloc_frames(uintptr_t start, uintptr_t size, page_directory * directory, int is_kernel, int is_writable)
+static int alloc_frames(uintptr_t start, uintptr_t size, page_directory * directory, int flags)
 {
       if (nframes - count_used_frames() < (size + 0xFFF) / 0x1000)
           return -ENOMEM;
 
       for (uintptr_t i = start; i < start + size; i += 0x1000)
-          alloc_frame(get_page_entry(i, 1, directory), is_kernel, is_writable);
+          alloc_frame(get_page_entry(i, 1, directory), flags);
 
       return 0;
 }
 
 static int grow_cb(Halloc * cntx, unsigned int extra)
 {
-    if (alloc_frames((uintptr_t)cntx->end, extra, cntx->directory, cntx->is_kernel, cntx->is_writable) < 0)
+    if (alloc_frames((uintptr_t)cntx->end, extra, kernel_directory, MAP_WRITABLE) < 0)
         return -ENOMEM;
 
     switch_page_directory(current_directory);
@@ -1316,14 +1316,14 @@ static int grow_cb(Halloc * cntx, unsigned int extra)
 static void shrink_cb(Halloc * cntx, uintptr_t boundary_addr)
 {
     for (uintptr_t i = boundary_addr; i < (uintptr_t)cntx->end; i += 0x1000) {
-        free_frame(get_page_entry(i, 0, cntx->directory));
+        free_frame(get_page_entry(i, 0, kernel_directory));
     }
     switch_page_directory(current_directory);
 }
 
 static void dump_cb(Halloc * cntx)
 {
-    dump_directory(cntx->directory, "directory", 0);
+    dump_directory(kernel_directory, "directory", 0);
 }
 
 static void kheap_panic()
@@ -1373,12 +1373,9 @@ static void init_paging(uintptr_t low_size)
     int initial_size = 4096;
     uintptr_t kheap_start = KERNEL_START + 0x10000000 /* +256 MiB */ ;
     for (uintptr_t i = kheap_start; i < kheap_start + initial_size; i += 0x1000)
-        alloc_frame(get_page_entry(i, 1, kernel_directory), 1, 0);
+        alloc_frame(get_page_entry(i, 1, kernel_directory), MAP_WRITABLE);
 
     halloc_init(&kheap, (void *)kheap_start, initial_size);
-    kheap.directory   = kernel_directory;
-    kheap.is_kernel   = 1;
-    kheap.is_writable = 0;
     kheap.grow_cb   = grow_cb;
     kheap.shrink_cb = shrink_cb;
     kheap.dump_cb = dump_cb;
@@ -1436,7 +1433,7 @@ static void move_stack(void * new_stack_start, unsigned int size, int spray)
 {
     // allocate new stack pages...
     for (uintptr_t i = (uintptr_t)new_stack_start - size; i < (uintptr_t)new_stack_start; i += 0x1000)
-        alloc_frame(get_page_entry(i, 1, current_directory), 0 /*user mode */, 1 /* writable */ );
+        alloc_frame(get_page_entry(i, 1, current_directory), MAP_USER|MAP_WRITABLE);
 
     // now that page table has changed, need to flush tlb cache
     switch_page_directory(current_directory);
@@ -2189,7 +2186,7 @@ static int sys_brk(uintptr_t addr, uintptr_t * current_brk)
 {
     if (addr) {
         if (addr > current_task->proc->brk) {
-            if (alloc_frames(current_task->proc->brk, addr - current_task->proc->brk, current_directory, 0, 1) < 0) /* user, write */
+            if (alloc_frames(current_task->proc->brk, addr - current_task->proc->brk, current_directory, MAP_USER|MAP_WRITABLE) < 0)
                 return -ENOMEM;
             current_task->proc->brk = addr;
         } else {
@@ -2270,7 +2267,7 @@ static void create_vm_block(uintptr_t addr, uintptr_t size)
 {
     uintptr_t i;
     for (i = addr & ~0xfff; i < addr + size; i += 0x1000)
-        alloc_frame(get_page_entry(i, 1, current_directory), 0, 1); /* user, write */
+        alloc_frame(get_page_entry(i, 1, current_directory), MAP_USER|MAP_WRITABLE);
 
     switch_page_directory(current_directory);
 
