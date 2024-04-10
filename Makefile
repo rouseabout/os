@@ -136,17 +136,17 @@ programs/%++.o: programs/%++.cc .toolchain-$(ARCH)-stage2 .sysroot
 	$(CXX) -o $@ -c $<
 
 crash: programs/crash.o .toolchain-$(ARCH)-stage2 .sysroot
-	$(LD) $(LDFLAGS) $(PROGLDFLAGS) -o $@ $<
+	$(LD) $(LDFLAGS) -o $@ $<
 
 hello: programs/hello.o .toolchain-$(ARCH)-stage2 .sysroot
-	$(LD) $(LDFLAGS) $(PROGLDFLAGS) -o $@ $<
+	$(LD) $(LDFLAGS) -o $@ $<
 
 %++: programs/%++.o .toolchain-$(ARCH)-stage2 .sysroot
-	$(CXX) $(PROGLDFLAGS) -o $@ $<
+	$(CXX) -o $@ $<
 	$(STRIP) --strip-all $@
 
 %: programs/%.o libc.a libm.a .toolchain-$(ARCH)-stage2 .sysroot
-	$(CC) $(PROGLDFLAGS) -o $@ $<
+	$(CC) -o $@ $<
 	$(STRIP) --strip-all $@
 
 %.o: %.cc .toolchain-$(ARCH)-stage1
