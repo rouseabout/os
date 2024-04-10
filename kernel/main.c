@@ -1311,26 +1311,40 @@ static void clean_table(page_table * table)
     }
 }
 
-static void clean_directory_r(page_directory * dir, const page_directory * kd, int level, uintptr_t base)
+static int clean_directory_r(page_directory * dir, const page_directory * kd, int level, uintptr_t base, int free_all)
 {
+    int empty = 1;
     for (unsigned int i = 0; i < ENTRIES_PER_TABLE; i++) {
         uintptr_t base2 = base | (uintptr_t)i << (12 + (level-1)*BITS_PER_TABLE);
-        if (!dir->tables[i] || (kd && dir->tables[i] == kd->tables[i] && base2 >= KERNEL_START))
+        if (!dir->tables[i])
             continue;
+        if (kd && dir->tables[i] == kd->tables[i] && base2 >= KERNEL_START) {
+            empty = 0;
+            continue;
+        }
+        int free_this;
         if (level > 2) {
-            clean_directory_r(dir->tables[i], kd ? kd->tables[i] : NULL, level - 1, base2);
+            free_this = clean_directory_r(dir->tables[i], kd ? kd->tables[i] : NULL, level - 1, base2, free_all);
         } else {
             clean_table((page_table *)dir->tables[i]);
+            free_this = 1;
+        }
+        if (free_this || free_all) {
             kfree(dir->tables[i]);
             dir->tables[i] = NULL;
             dir->tables_physical[i].present = 0;
+        } else {
+            empty = 0;
         }
     }
+    return empty;
 }
 
-static void clean_directory(page_directory * dir)
+static void clean_directory(page_directory * dir, int free_all)
 {
-    clean_directory_r(dir, kernel_directory, PAGE_LEVELS, 0);
+    clean_directory_r(dir, kernel_directory, PAGE_LEVELS, 0, free_all);
+    if (free_all)
+        kfree(dir);
 }
 
 static int alloc_frames(uintptr_t start, uintptr_t size, page_directory * directory, int flags, int use_reserve)
@@ -2028,8 +2042,7 @@ static int exit2(int status, int thread_termination)
                 vfs_close(ct->proc->fd[i]);
 
         /* free page directory and process frames */
-        clean_directory(ct->proc->page_directory);
-        kfree(ct->proc->page_directory);
+        clean_directory(ct->proc->page_directory, 1);
 
         /* kill any threads belonging to this process */
         kill_threads(current_task);
@@ -2440,7 +2453,7 @@ static int sys_execve(registers * regs, const char * pathname, char * const argv
 
     kill_threads(current_task);
 
-    clean_directory(current_task->proc->page_directory);
+    clean_directory(current_task->proc->page_directory, 0);
 
     current_task->stack_top = USER_STACK_TOP;
     alloc_stack(current_task->proc->page_directory, (void*)USER_STACK_TOP, USER_STACK_SIZE, 0xf1);
