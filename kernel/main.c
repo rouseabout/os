@@ -2447,8 +2447,8 @@ static int sys_execve(registers * regs, const char * pathname, char * const argv
 #endif
     regs->ebp = 0;
 
-    uintptr_t * stack_values = (uintptr_t *)regs->esp;
 #if ARCH_i686
+    uintptr_t * stack_values = (uintptr_t *)regs->esp;
     stack_values[2] = USER_STACK_TOP - envp_size; //envp
     stack_values[1] = USER_STACK_TOP - argv_size - envp_size; //argv
     stack_values[0] = vector_count(argv_local); //argc
