@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-int main(int argc, char ** argv)
+static int rmdir_main(int argc, char ** argv, char ** envp)
 {
     for (int i = 1; i < argc; i++) {
         if (rmdir(argv[i]) < 0) {

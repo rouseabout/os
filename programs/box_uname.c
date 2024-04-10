@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <sys/utsname.h>
 
-int main(int argc, char ** argv)
+static int uname_main(int argc, char ** argv, char ** envp)
 {
     int m = 0, n = 0, r = 0, s = 0, v = 0;
     int opt;

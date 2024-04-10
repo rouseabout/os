@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-int main(int argc, char ** argv)
+static int cmp_main(int argc, char ** argv, char ** envp)
 {
     int fda, fdb;
     if (argc != 3) {

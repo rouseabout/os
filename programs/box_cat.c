@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-int main(int argc, char ** argv)
+static int cat_main(int argc, char ** argv, char ** envp)
 {
     int fd;
     if (argc == 2) {

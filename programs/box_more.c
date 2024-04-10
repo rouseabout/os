@@ -15,7 +15,7 @@ static void signal_handler(int sig)
     exit(0);
 }
 
-int main(int argc, char ** argv)
+static int more_main(int argc, char ** argv, char ** envp)
 {
     int fd;
     if (argc == 2) {

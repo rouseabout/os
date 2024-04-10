@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-int main()
+static int pwd_main(int argc, char ** argv, char ** envp)
 {
     char cwd[256];
     printf("%s\n", getcwd(cwd, sizeof(cwd)));

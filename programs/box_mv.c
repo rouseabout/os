@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int main(int argc, char ** argv)
+static int mv_main(int argc, char ** argv, char ** envp)
 {
     if (argc != 3) {
         fprintf(stderr, "usage: %s old new\n", argv[0]);

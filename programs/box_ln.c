@@ -3,7 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 
-int main(int argc, char ** argv)
+static int ln_main(int argc, char ** argv, char ** envp)
 {
     int ret;
     if (argc == 3) {

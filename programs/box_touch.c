@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <utime.h>
 
-int main(int argc, char ** argv)
+static int touch_main(int argc, char ** argv, char ** envp)
 {
     if (argc !=2)
         return -1;

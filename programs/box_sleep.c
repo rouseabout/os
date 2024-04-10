@@ -1,7 +1,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-int main(int argc, char ** argv)
+static int sleep_main(int argc, char ** argv, char ** envp)
 {
     if (argc != 2)
         return -1;

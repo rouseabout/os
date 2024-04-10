@@ -72,7 +72,7 @@ static void ls(const char * dir_name, int a, int l)
     closedir(dir);
 }
 
-int main(int argc, char ** argv, char ** envp)
+static int ls_main(int argc, char ** argv, char ** envp)
 {
     int a = 0, l = 0;
     int opt;

@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <ctype.h>
 
-int main(int argc, char ** argv)
+static int wc_main(int argc, char ** argv, char ** envp)
 {
     int fd;
     if (argc == 2) {

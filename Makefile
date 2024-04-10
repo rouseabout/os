@@ -164,15 +164,15 @@ d-%: %
 gdb: kernel.bin
 	gdb $< -ex 'target remote localhost:1234'
 
-PROGRAMS=cat chat clear cmp crash date draw echo env false flash forkbomb getty hello hello++ hexdump hostname init kill ln ls mkdir more mount mv pwd reset rm rmdir sh sleep testcases tolower touch tree true truncate uname unixping unixserver wc
 clean:
-	rm -f kernel.bin kernel.linux* kernel.map $(KERNEL_OBJS) kernel/multiboot.o kernel/linux32.o cdrom.iso iso/boot/kernel.bin initrd iso/boot/initrd disk_image disk_image.vdi hd/boot/kernel.bin hd/boot/initrd $(TFTP_FILES) programs/*.o libc/*.o libdl/*.o libg/*.o libm/*.o $(PROGRAMS) libc.a libdl.a libg.a libm.a $(TEST_BIN) $(DUMPELF_BIN) $(DUMPEXT2_BIN) $(EXT2TEST_BIN) .sysroot
+	rm -f kernel.bin kernel.linux* kernel.map $(KERNEL_OBJS) kernel/multiboot.o kernel/linux32.o cdrom.iso iso/boot/kernel.bin initrd iso/boot/initrd disk_image disk_image.vdi hd/boot/kernel.bin hd/boot/initrd $(TFTP_FILES) programs/*.o libc/*.o libdl/*.o libg/*.o libm/*.o $(shell echo $(PROGRAMS)) libc.a libdl.a libg.a libm.a $(TEST_BIN) $(DUMPELF_BIN) $(DUMPEXT2_BIN) $(EXT2TEST_BIN) .sysroot
 	rm -rf sysroot
 
-initrd: $(PROGRAMS) README.md
+initrd: $(shell echo $(PROGRAMS)) README.md
 	rm -f $@
 	/sbin/mkfs.ext2 -r 1 -b 4096 $@ $(INITRDSIZE)
-	e2cp -p $(PROGRAMS) $@:bin/
+	e2cp -p $(shell echo $(PROGRAMS)) $@:bin/
+	for x in $(shell echo $(BOXPROGRAMS)); do e2ln initrd:/bin/box bin/$$x; done
 	e2mkdir $@:/tmp
 	e2cp README.md $@:
 
