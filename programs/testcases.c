@@ -9,6 +9,8 @@
 #include <errno.h>
 #include <limits.h>
 #include <math.h>
+#include <pthread.h>
+#include <signal.h>
 
 static int test_dirname(const char * path, const char * expect)
 {
@@ -37,6 +39,17 @@ static int cmp(const void * key_, const void * ent_)
      const char * key = key_;
      const ref_entry * ent = ent_;
      return strcmp(key, ent->name);
+}
+
+static void * thread_func(void * v)
+{
+    return (void *)0xc0de;
+}
+
+static int signal_fired = 0;
+void alarm_handler(int sig)
+{
+    signal_fired = 1;
 }
 
 #define TESTCASE(x) do { if (!(x)) printf("FAILED %d\n", __LINE__); } while(0)
@@ -357,6 +370,18 @@ int main(int argc, char **argv, char ** envp)
     TESTCASE(fabs(log2(1024) - 10.0) < 0.00001);
     TESTCASE(fabs(log2f(1024) - 10.0) < 0.00001);
 }
+
+{
+    pthread_t t;
+    pthread_create(&t, NULL, thread_func, (void *)0xc0de);
+    void *ret;
+    pthread_join(t, &ret);
+    TESTCASE(ret == (void *)0xc0de);
+}
+
+    signal(SIGALRM, alarm_handler);
+    kill(getpid(), SIGALRM);
+    while(!signal_fired) ;
 
     TESTCASE(system("true") == 0);
     TESTCASE(system("false") != 0);
