@@ -98,6 +98,8 @@ int execlp(const char *file, const char *arg0, ... /*, (char *)0 */)
     return -1;
 }
 
+extern char **environ;
+
 int execv(const char * path, char * const argv[])
 {
     return execve(path, argv, environ);

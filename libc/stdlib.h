@@ -68,8 +68,6 @@ int unsetenv(const char *);
 int wctomb(char *, wchar_t);
 size_t wcstombs(char *, const wchar_t *, size_t);
 
-extern char ** environ;
-
 #ifdef __cplusplus
 }
 #endif
