@@ -11,7 +11,7 @@ start:
     mov ss, ax
     mov sp, 0x7c00
 
-    mov ecx, zsetup
+    mov si, zsetup
     call printz
 
     mov dword [dap.lba], 1
@@ -19,21 +19,21 @@ start:
     mov word [dap.blocks], SETUP_SECTORS
     call read_sector
 
-    mov ecx, zkernel
+    mov si, zkernel
     call printz
 
     mov ecx, KERNEL_SECTORS
     mov ebx, 0x100000
     call read_sectors_high
 
-    mov ecx, zinitrd
+    mov si, zinitrd
     call printz
 
     mov ecx, INITRD_SECTORS
     mov ebx, 0x200000
     call read_sectors_high
 
-    mov ecx, znewline
+    mov si, znewline
     call printz
 
     mov ebx, 0x200000
@@ -112,15 +112,14 @@ read_sector:
     ret
 
 .error:
-    mov ecx, zerror
+    mov si, zerror
     call printz
     jmp short $
 
 
 printz:
 .loop:
-    mov al, [ecx]
-    inc ecx
+    lodsb
     test al, al
     jz .ret
     mov ah, 0xe
