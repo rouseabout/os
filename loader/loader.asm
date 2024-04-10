@@ -2,6 +2,8 @@ bits 16
 %include "kernel/x86inc.asm"
 org 0x7c00
 
+INITRD_START equ 0x800000 ; @ 8MiB
+
 start:
     mov [read_sector.dl + 1], dl ; boot device
 
@@ -30,13 +32,13 @@ start:
     call printz
 
     mov ecx, INITRD_SECTORS
-    mov ebx, 0x200000
+    mov ebx, INITRD_START
     call read_sectors_high
 
     mov si, znewline
     call printz
 
-    mov ebx, 0x200000
+    mov ebx, INITRD_START
     mov [0x7c00 + 0x218], ebx
     mov ebx, INITRD_SECTORS * 512
     mov [0x7c00 + 0x21c], ebx
