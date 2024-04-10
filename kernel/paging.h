@@ -44,6 +44,6 @@ struct page_directory {
 extern page_directory *kernel_directory;
 extern page_directory *current_directory;
 
-page_entry * get_page_entry(uintptr_t address, int make, page_directory * dir, int * called_alloc);
+page_entry * get_page_entry(uintptr_t address, int make, page_directory * dir, int * called_alloc, int use_reserve);
 
 #endif

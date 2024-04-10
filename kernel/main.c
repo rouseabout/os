@@ -127,7 +127,7 @@ void map_address(uintptr_t phy_addr, uintptr_t virt_addr, uintptr_t size, int fl
 {
     KASSERT(!(phy_addr & 0xFFF));
     for (uintptr_t i = 0; i < size; i += 0x1000)
-        set_frame_identity(get_page_entry(virt_addr + i, 1, kernel_directory, NULL), phy_addr + i, flags);
+        set_frame_identity(get_page_entry(virt_addr + i, 1, kernel_directory, NULL, 0), phy_addr + i, flags);
 }
 
 static void parse_multiboot_info(const multiboot_info * info, uintptr_t * mod_start, uintptr_t * mod_size)
@@ -942,12 +942,12 @@ uintptr_t allocate_virtual_address(uintptr_t size, int align)
     return tmp;
 }
 
-static uintptr_t kmalloc_core(uintptr_t size, int align, uintptr_t * phys, const char * tag)
+static uintptr_t kmalloc_core(uintptr_t size, int align, uintptr_t * phys, int use_reserve, const char * tag)
 {
     if (use_halloc) {
-        uintptr_t addr = (uintptr_t)halloc(&kheap, size, align ? 4096 : 0, tag);
+        uintptr_t addr = (uintptr_t)halloc(&kheap, size, align ? 4096 : 0, use_reserve, tag);
         if (phys) {
-            page_entry *page = get_page_entry(addr, 0, kernel_directory, NULL);
+            page_entry *page = get_page_entry(addr, 0, kernel_directory, NULL, 0);
             if (!page) {
                 hfree(&kheap, (void *)addr);
                 return 0;
@@ -965,12 +965,12 @@ static uintptr_t kmalloc_core(uintptr_t size, int align, uintptr_t * phys, const
 
 void * kmalloc(uintptr_t size, const char * tag)
 {
-    return (void *)kmalloc_core(size, 0, 0, tag);
+    return (void *)kmalloc_core(size, 0, 0, 0, tag);
 }
 
 static uintptr_t kmalloc_a(uintptr_t size, const char * tag)
 {
-    return kmalloc_core(size, 1, 0, tag);
+    return kmalloc_core(size, 1, 0, 0, tag);
 }
 
 #if 0
@@ -982,7 +982,12 @@ static uintptr_t kmalloc_p(uintptr_t size, uintptr_t * phys)
 
 uintptr_t kmalloc_ap(uintptr_t size, uintptr_t * phys, const char * tag)
 {
-    return kmalloc_core(size, 1, phys, tag);
+    return kmalloc_core(size, 1, phys, 0, tag);
+}
+
+static uintptr_t kmalloc_ap2(uintptr_t size, uintptr_t * phys, int use_reserve, const char * tag)
+{
+    return kmalloc_core(size, 1, phys, use_reserve, tag);
 }
 
 void * krealloc(void * buf, unsigned int size)
@@ -1154,24 +1159,24 @@ static void set_frame_identity(page_entry * page, uintptr_t addr, int flags)
     page->frame   = addr / 0x1000;
 }
 
-static page_directory * alloc_new_page_directory()
+static page_directory * alloc_new_page_directory(int use_reserve)
 {
     uintptr_t phy;
-    page_directory * dir = (page_directory *)kmalloc_ap(sizeof(page_directory), &phy, "pg-dir");
+    page_directory * dir = (page_directory *)kmalloc_ap2(sizeof(page_directory), &phy, use_reserve, "pg-dir");
     memset(dir->tables_physical, 0, sizeof(dir->tables_physical));
     memset(dir->tables, 0, sizeof(dir->tables));
     dir->physical_address = phy;
     return dir;
 }
 
-static void * alloc_new_page_table(uintptr_t * phy)
+static void * alloc_new_page_table(uintptr_t * phy, int use_reserve)
 {
-    page_table * pt = (page_table *)kmalloc_ap(sizeof(page_table), phy, "pg-table");
+    page_table * pt = (page_table *)kmalloc_ap2(sizeof(page_table), phy, use_reserve, "pg-table");
     memset(pt, 0, sizeof(page_table));
     return pt;
 }
 
-page_entry * get_page_entry(uintptr_t address, int make, page_directory * dir, int * called_alloc)
+page_entry * get_page_entry(uintptr_t address, int make, page_directory * dir, int * called_alloc, int use_reserve)
 {
     address /= 0x1000;
     for (int level = PAGE_LEVELS - 1 ; level > 0; level--) {
@@ -1184,9 +1189,9 @@ page_entry * get_page_entry(uintptr_t address, int make, page_directory * dir, i
                 *called_alloc = 1;
             uintptr_t phy;
             if (level + 1 == 2) {
-                dir->tables[idx] = alloc_new_page_table(&phy);
+                dir->tables[idx] = alloc_new_page_table(&phy, use_reserve);
             } else {
-                dir->tables[idx] = alloc_new_page_directory();
+                dir->tables[idx] = alloc_new_page_directory(use_reserve);
                 phy = dir->tables[idx]->physical_address;
             }
             //kprintf(" -> new table %p virt (%p phy)\n", dir->tables[idx], phy);
@@ -1328,15 +1333,15 @@ static void clean_directory(page_directory * dir)
     clean_directory_r(dir, kernel_directory, PAGE_LEVELS, 0);
 }
 
-static int alloc_frames(uintptr_t start, uintptr_t size, page_directory * directory, int flags, int dry_run)
+static int alloc_frames(uintptr_t start, uintptr_t size, page_directory * directory, int flags, int use_reserve)
 {
       int called_alloc = 0;
       if (nframes - count_used_frames() < (size + 0xFFF) / 0x1000)
           return -ENOMEM;
 
       for (uintptr_t i = start; i < start + size; i += 0x1000) {
-          page_entry * pe = get_page_entry(i, 1, directory, &called_alloc);
-          if (!dry_run)
+          page_entry * pe = get_page_entry(i, 1, directory, &called_alloc, use_reserve);
+          if (!use_reserve)
               alloc_frame(pe, flags);
       }
 
@@ -1361,7 +1366,7 @@ static int grow_cb(Halloc * cntx, unsigned int extra)
 static void shrink_cb(Halloc * cntx, uintptr_t boundary_addr)
 {
     for (uintptr_t i = boundary_addr; i < (uintptr_t)cntx->end; i += 0x1000) {
-        free_frame(get_page_entry(i, 0, kernel_directory, NULL));
+        free_frame(get_page_entry(i, 0, kernel_directory, NULL, 0));
     }
     switch_page_directory(kernel_directory);
 }
@@ -1394,7 +1399,7 @@ static void pmm_init(uintptr_t low_size, uintptr_t up_size, uintptr_t extra)
 
 static void init_paging(uintptr_t low_size)
 {
-    kernel_directory = alloc_new_page_directory();
+    kernel_directory = alloc_new_page_directory(0);
 
     for (unsigned int i = low_size; i < 0x100000; i += 0x1000)
         set_frame(i);
@@ -1409,18 +1414,16 @@ static void init_paging(uintptr_t low_size)
     for (uintptr_t i = KERNEL_START; i < placement_address + buffer; i += 0x1000) {
         uintptr_t phy = VIRT_TO_PHY(i);
         set_frame(phy);
-        set_frame_identity(get_page_entry(i, 1, kernel_directory, NULL), phy, 0);
+        set_frame_identity(get_page_entry(i, 1, kernel_directory, NULL, 0), phy, 0);
     }
 
     switch_page_directory(kernel_directory);
 
     /* create kernel heap */
-    int initial_size = KHEAP_RESERVE;
+    int initial_size = KHEAP_RESERVE*2;
     uintptr_t kheap_start = KERNEL_START + KHEAP_OFFSET;
-    for (uintptr_t i = kheap_start; i < kheap_start + initial_size; i += 0x1000) {
-        kprintf("heap_initial_page: %p\n", i);
-        alloc_frame(get_page_entry(i, 1, kernel_directory, NULL), MAP_WRITABLE);
-    }
+    for (uintptr_t i = kheap_start; i < kheap_start + initial_size; i += 0x1000)
+        alloc_frame(get_page_entry(i, 1, kernel_directory, NULL, 0), MAP_WRITABLE);
 
     halloc_init(&kheap, (void *)kheap_start, initial_size);
     kheap.reserve_size = KHEAP_RESERVE;
@@ -1435,7 +1438,7 @@ static void init_paging(uintptr_t low_size)
 
     /* allocate page use by clone_directory() */
     clone_vaddr = allocate_virtual_address(0x1000, 1);
-    clone_pe = get_page_entry(clone_vaddr, 1, kernel_directory, NULL);
+    clone_pe = get_page_entry(clone_vaddr, 1, kernel_directory, NULL, 0);
 }
 
 /* timer */
@@ -1465,7 +1468,7 @@ static void alloc_stack(page_directory * dir, void * new_stack_start, unsigned i
 {
     // allocate new stack pages...
     for (uintptr_t i = (uintptr_t)new_stack_start - size; i < (uintptr_t)new_stack_start; i += 0x1000)
-        alloc_frame(get_page_entry(i, 1, dir, NULL), MAP_USER|MAP_WRITABLE);
+        alloc_frame(get_page_entry(i, 1, dir, NULL, 0), MAP_USER|MAP_WRITABLE);
 }
 
 static void init_sigact(Task * t)
@@ -1992,7 +1995,7 @@ static Task ** find_pp(Task *t)
 static void free_stack(uintptr_t stack_top, uintptr_t size)
 {
     for (uintptr_t i = stack_top - size; i < stack_top; i += 0x1000)
-        free_frame(get_page_entry(i, 0, current_task->proc->page_directory, NULL));
+        free_frame(get_page_entry(i, 0, current_task->proc->page_directory, NULL, 0));
 }
 
 static int exit2(int status, int thread_termination)
@@ -2211,7 +2214,7 @@ static int sys_brk(uintptr_t addr, uintptr_t * current_brk)
             addr += 0xfff;
             addr &= ~0xfff;
             for (uintptr_t i = addr; i < current_task->proc->brk; i += 0x1000) {
-                free_frame(get_page_entry(i, 0, current_task->proc->page_directory, NULL));
+                free_frame(get_page_entry(i, 0, current_task->proc->page_directory, NULL, 0));
             }
             current_task->proc->brk = addr;
         }
@@ -2284,7 +2287,7 @@ static void create_vm_block(page_directory * dir, uintptr_t addr, uintptr_t size
 {
     uintptr_t i;
     for (i = addr & ~0xfff; i < addr + size; i += 0x1000)
-        alloc_frame(get_page_entry(i, 1, dir, NULL), MAP_USER|MAP_WRITABLE);
+        alloc_frame(get_page_entry(i, 1, dir, NULL, 0), MAP_USER|MAP_WRITABLE);
 
 #if SPRAY_MEMORY
     for (i = addr & ~0xfff; i < addr + size; i += 0x1000) {

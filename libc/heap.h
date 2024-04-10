@@ -19,7 +19,7 @@ void halloc_init(Halloc * cntx, void * start, unsigned int size);
 void halloc_dump(const Halloc * cntx);
 void halloc_dump2(const Halloc * cntx, void * highlight, const char * name);
 
-void * halloc(Halloc * cntx, unsigned int size, int page_align, const char * tag);
+void * halloc(Halloc * cntx, unsigned int size, int page_align, int use_reserve, const char * tag);
 
 void hfree(Halloc * cntx, void * ptr);
 

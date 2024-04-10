@@ -27,11 +27,11 @@ static void panic(){exit(1);}
 
 typedef struct {
 #if VALIDATE
-    uint32_t magic : 28;
+    uint32_t magic;
 #endif
-    uint32_t align : 4;
-    uint32_t size : 31;
-    uint32_t used : 1;
+    size_t size;
+    uint8_t align : 4;
+    uint8_t used : 1;
 #if VALIDATE
     char tag[16];
 #endif
@@ -41,7 +41,7 @@ typedef struct {
 #if VALIDATE
     uint32_t magic;
 #endif
-    uint32_t size;
+    size_t size;
 } Tail;
 
 static Tail * head_tail(Head * h)
@@ -136,10 +136,12 @@ static int grow(Halloc * cntx, uintptr_t size, int page_align, Head ** head_ptr)
     ASSERT(hl->magic == HEAD_MAGIC);
 #endif
 
-    int extra;
+    size_t extra;
 
     if (!hl->used) {
-        extra = calc_alignment_size(hl, size, page_align) - hl->size;
+        extra = calc_alignment_size(hl, size, page_align);
+        if (hl->size < extra)
+            extra -= hl->size;
     } else {
         /* increase size to accomodate any page alignment padding */
         size = calc_alignment_size(cntx->end, size, page_align);
@@ -151,7 +153,6 @@ static int grow(Halloc * cntx, uintptr_t size, int page_align, Head ** head_ptr)
     /* align to nearest 4k page */
     extra += 0xfff;
     extra &= ~0xfff;
-    extra += cntx->reserve_size;
 
     Head * hn = cntx->end;
 
@@ -201,6 +202,21 @@ static int grow(Halloc * cntx, uintptr_t size, int page_align, Head ** head_ptr)
     }
 }
 
+static Head * find_reserve(Halloc * cntx)
+{
+    Head * hreserve = NULL;
+    for (Head * h = cntx->start; h < (Head *)cntx->end; h = head_next(h)) {
+        if (h->used)
+            continue;
+        int aligned_size = calc_alignment_size(h, cntx->reserve_size, 0);
+        if (h->size < aligned_size)
+            continue;
+        if (!hreserve || h->size < hreserve->size)
+            hreserve = h;
+    }
+    return hreserve;
+}
+
 /* if possible, shrink memory usage to nearest page boundary */
 static void shrink(Halloc * cntx)
 {
@@ -213,7 +229,7 @@ static void shrink(Halloc * cntx)
     ASSERT(h->magic == HEAD_MAGIC);
 #endif
 
-    if (h->used || h->size < 8192)
+    if (h->used || h->size < 8192 || h == find_reserve(cntx))
         return;
 
     uintptr_t boundary = (((uintptr_t)h + 0x1000) & ~0xfff);
@@ -249,7 +265,7 @@ static void shrink(Halloc * cntx)
 
 #define log2int(x) (31 - __builtin_clz(x))
 
-void * halloc(Halloc * cntx, const unsigned int size, int page_align, const char * tag)
+void * halloc(Halloc * cntx, const unsigned int size, int page_align, int use_reserve, const char * tag)
 {
 repeat:
     halloc_integrity_check(cntx);
@@ -257,11 +273,16 @@ repeat:
     if (!size || size > INT_MAX/2)
         return NULL;
 
+    /* find smallest hole fitting reserve size */
+    Head * hreserve = NULL;
+    if (cntx->reserve_size && !use_reserve) {
+        hreserve = find_reserve(cntx);
+    }
+
     /* find smallest hole */
-    Head * h;
     Head * h0 = NULL;
-    for (h = cntx->start; h < (Head *)cntx->end; h = head_next(h)) {
-        if (h->used)
+    for (Head * h = cntx->start; h < (Head *)cntx->end; h = head_next(h)) {
+        if (h->used || h == hreserve)
             continue;
         int aligned_size = calc_alignment_size(h, size, page_align);
         if (h->size < aligned_size)
@@ -270,8 +291,11 @@ repeat:
             h0 = h;
     }
 
-    if (!h0) {
-        int ret = grow(cntx, size, page_align, &h0);
+    if (use_reserve)
+        ASSERT(h0);
+
+    if (!use_reserve && (!h0 || !hreserve)) {
+        int ret = grow(cntx, size + (!hreserve ? cntx->reserve_size : 0), page_align, &h0);
         if (ret == -ENOMEM)
             return NULL;
         if (ret == -EAGAIN)
@@ -460,7 +484,7 @@ void * hrealloc(Halloc * cntx, void * ptr, unsigned int size)
     halloc_integrity_check(cntx);
 
     if (!ptr)
-        return halloc(cntx, size, 0, "hrealloc");
+        return halloc(cntx, size, 0, 0, "hrealloc");
 
     Head * h = (Head *)ptr - 1;//((uint8_t *)ptr - sizeof(Head));
     ASSERT(h->magic == HEAD_MAGIC);
@@ -473,7 +497,7 @@ void * hrealloc(Halloc * cntx, void * ptr, unsigned int size)
 
     //FIXME: if next block is empty, and that is enough space, merge into that block
 
-    void * tmp = halloc(cntx, size, h->align ? 1 << h->align : 0,
+    void * tmp = halloc(cntx, size, h->align ? 1 << h->align : 0, 0,
 #if VALIDATE
         h->tag
 #else
@@ -495,7 +519,7 @@ void halloc_dump2(const Halloc * cntx, void * highlight, const char * name)
     Head * h = cntx->start;
     while (h < (Head *)cntx->end) {
         Tail * t = head_tail(h);
-        cntx->printf("\t[H:size=%5d, used=%d] ... [T:size=%5d] %p %s %s%s\n", h->size, h->used, t->size, head_data(h), h->used ? h->tag : "",
+        cntx->printf("\t[H:size=%5d, used=%d] ... [T:size=%5d] %p '%s' %s%s\n", (int)h->size, (int)h->used, (int)t->size, head_data(h), h->used ? h->tag : "",
             head_data(h) == highlight ? " <--- " : "",
             head_data(h) == highlight ? name : "");
         ASSERT(h->magic == HEAD_MAGIC);
@@ -528,7 +552,7 @@ static int grow_cb(Halloc * cntx, unsigned int extra)
 {
     Head * hend_new = (Head *)((uint8_t*)cntx->end + extra); /* magic */
     if ((uint8_t *)hend_new - (uint8_t *)cntx->start > MEMORY_SIZE)
-        return -1;
+        return -ENOMEM;
     cntx->end = hend_new;
     return 0;
 }
@@ -538,7 +562,8 @@ int main()
      void * store = malloc(MEMORY_SIZE);
 
      Halloc cntx;
-     halloc_init(&cntx, store, 8192);
+     halloc_init(&cntx, store, 8192*2);
+     cntx.reserve_size = 8192;
      cntx.grow_cb = grow_cb;
      cntx.shrink_cb = 0;
      cntx.dump_cb = 0;
@@ -567,7 +592,7 @@ int main()
              array[idx] = NULL;
          } else {
              sizes[idx] = random() % 10000;
-             array[idx] = halloc(&cntx, sizes[idx], random() ? 4 : 4096, "stdlib");
+             array[idx] = halloc(&cntx, sizes[idx], random() ? 4 : 4096, 0, "stdlib");
              if (array[idx])
                  memset(array[idx], idx, sizes[idx]);
          }
@@ -578,12 +603,12 @@ int main()
 
 #else
 
-     void *p = halloc(25, 0);
-     void *q = halloc(30, 0);
-     halloc_dump();
-     hfree(q);
-     hfree(p);
-     halloc_dump();
+     void *p = halloc(&cntx, 25, 0, "p");
+     void *q = halloc(&cntx, 30, 0, "q");
+     halloc_dump(&cntx);
+     hfree(&cntx, q);
+     hfree(&cntx, p);
+     halloc_dump(&cntx);
 #endif
 }
 #endif /* TEST */

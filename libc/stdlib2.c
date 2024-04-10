@@ -143,7 +143,7 @@ ldiv_t ldiv(long numer, long denom)
 
 void * malloc(size_t size)
 {
-    void * ret = halloc(&uheap, size, 4, "stdlib");
+    void * ret = halloc(&uheap, size, 4, 0, "stdlib");
     if (!ret)
         errno = ENOMEM;
     return ret;
@@ -188,7 +188,7 @@ int posix_memalign(void ** memptr, size_t alignment, size_t size)
     if (alignment < 4 || !is_power_of_two(alignment))
         return EINVAL;
 
-    void * ptr = halloc(&uheap, size, alignment, "posix_memalign");
+    void * ptr = halloc(&uheap, size, alignment, 0, "posix_memalign");
     if (!ptr)
         return ENOMEM;
 
