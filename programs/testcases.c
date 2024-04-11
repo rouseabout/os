@@ -340,6 +340,17 @@ int main(int argc, char **argv, char ** envp)
 }
 
 {
+    char * testv[] = {"program", "-ba", "arg"};
+    int ret;
+    ret =  getopt(sizeof(testv)/sizeof(testv[0]), testv, "a:b");
+    TESTCASE(ret == 'b' && optind == 1);
+    ret =  getopt(sizeof(testv)/sizeof(testv[0]), testv, "a:b");
+    TESTCASE(ret == 'a' && optind == 3 && optarg == testv[2]);
+    ret =  getopt(sizeof(testv)/sizeof(testv[0]), testv, "a:b");
+    TESTCASE(ret == -1 && optind == 3);
+}
+
+{
     ref_entry entries[3] = {"bisect", "heads", "tags"};
     char * key = "worktree";
     TESTCASE(bsearch(key, entries, 3, sizeof(ref_entry), cmp) == NULL);

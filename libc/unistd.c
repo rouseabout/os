@@ -225,31 +225,56 @@ char * getlogin()
     return "user"; //FIXME:
 }
 
-#include <ctype.h>
-
+static const char * nextchar = NULL;
 int getopt(int argc, char * const argv[], const char *optstring)
 {
-    //syslog(LOG_DEBUG, "libc: getopt: %s", optstring);
+    const char * s, *p;
+
+    if (nextchar && *nextchar) {
+        s = nextchar++;
+        nextchar = NULL;
+        goto process;
+    }
+
+    if (nextchar) {
+        nextchar = NULL;
+        optind++;
+    }
+
     if (optind >= argc)
         return -1;
 
-    const char * s = argv[optind];
-    if (s[0] == '-' && isgraph(s[1]) && !s[2]) {
-        const char * p = strchr(optstring, s[1]);
-        if (!p) {
-            fprintf(stderr, "%s: invalid option '%c'\n", argv[0], s[1]);
-            opterr = 1;
-            return s[1];
-        }
-        if (p[1] == ':') {
+    s = argv[optind];
+    if (s[0] != '-')
+        return -1;
+    s++;
+
+process:
+    p = strchr(optstring, s[0]);
+    if (!p) {
+        fprintf(stderr, "%s: invalid option '%c'\n", argv[0], s[0]);
+        opterr = 1;
+        optopt = *s;
+        if (s[1])
+            nextchar = s + 1;
+        else
             optind++;
-            optarg = argv[optind];
-        }
-        optind++;
-        return s[1];
+        return '?';
     }
 
-    return -1;
+    if (p[1] == ':') {
+        optind += 1;
+        optarg = argv[optind];
+        optind += 1;
+        return s[0];
+    }
+
+    if (s[1])
+        nextchar = s + 1;
+    else
+        optind++;
+
+    return s[0];
 }
 
 int getpagesize(void)
