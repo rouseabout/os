@@ -142,7 +142,9 @@ int main(int argc, char ** argv)
             }
 
             pid = fork();
-            if (!pid) {
+            if (pid < 0) {
+                perror("fork");
+            } else if (!pid) {
                 if (background) {
                      fprintf(stderr, "[1] %d\n", getpid());
                      close(STDIN_FILENO);
