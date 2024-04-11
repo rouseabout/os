@@ -51,7 +51,8 @@ start2:
     wrmsr
 
     mov eax, cr0
-    or eax, 0x80000001
+    or eax, 0x80000001 ; pg,pe
+    and eax, ~0x10000 ; wp
     mov cr0, eax
 
     add esp, 4

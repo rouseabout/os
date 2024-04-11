@@ -35,7 +35,8 @@ start2:
     mov cr3, eax
 
     mov eax, cr0
-    or eax, 0x80000000
+    or eax, 0x80000000 ; pg
+    and eax, ~0x10000 ; wp
     mov cr0, eax
 
     mov eax, tss
