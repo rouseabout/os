@@ -81,6 +81,9 @@ static int init()
     for (int i = 0; i < sizeof(id)/sizeof(id[0]); i++)
         id[i] = inw(ATA_PORT_DATA);
 
+    if (id[83] & (1 << 10))
+        kprintf("ata: lba48\n");
+
     int lba28_sectors = id[60] | (id[61] << 16);
 
     return lba28_sectors;
@@ -90,25 +93,27 @@ static int init()
 #define BMR_STATUS  (s->bar4 + 2)
 #define BMR_PRDT    (s->bar4 + 4)
 
+static void seek(int lba, int sectors)
+{
+    wait_bsy();
+    outb(ATA_PORT_DH, 0xE0 | (lba >> 24)); // e0: lba28
+    outb(ATA_PORT_SC, sectors);
+    outb(ATA_PORT_LBA_LOW, lba);
+    outb(ATA_PORT_LBA_MID, lba >> 8);
+    outb(ATA_PORT_LBA_HIGH, lba >> 16);
+}
+
 static void ata_read_sector(ATAContext * s, void * data_, int lba, int sectors)
 {
     uint16_t * data = data_;
 
+    seek(lba, sectors);
     if (s->bar4) {
         KASSERT(sectors == 1);
         outb(BMR_COMMAND, 0x00);
         outl(BMR_PRDT, s->prdt_phy);
         outb(BMR_STATUS, inb(BMR_STATUS) | 0x6); // clear error, interrupt bits
-    }
 
-    wait_bsy();
-    outb(ATA_PORT_DH, 0xE0 | (lba >> 24));
-    outb(ATA_PORT_SC, sectors);
-    outb(ATA_PORT_LBA_LOW, lba);
-    outb(ATA_PORT_LBA_MID, lba >> 8);
-    outb(ATA_PORT_LBA_HIGH, lba >> 16);
-
-    if (s->bar4) {
         outb(ATA_PORT_CMD, ATA_CMD_READ_DMA);
         outb(BMR_COMMAND, 0x8|0x1); // enable bus master operation
 
@@ -135,21 +140,13 @@ static void ata_write_sector(ATAContext * s, void * data_, int lba, int sectors)
 {
     uint16_t * data = data_;
 
+    seek(lba, sectors);
     if (s->bar4) {
         KASSERT(sectors == 1);
         outb(BMR_COMMAND, 0x00);
         outl(BMR_PRDT, s->prdt_phy);
         outb(BMR_STATUS, inb(BMR_STATUS) | 0x6); // clear error, interrupt bits
-    }
 
-    wait_bsy();
-    outb(ATA_PORT_DH, 0xE0 | (lba >> 24));
-    outb(ATA_PORT_SC, sectors);
-    outb(ATA_PORT_LBA_LOW, lba);
-    outb(ATA_PORT_LBA_MID, lba >> 8);
-    outb(ATA_PORT_LBA_HIGH, lba >> 16);
-
-    if (s->bar4) {
         memcpy(s->block, data, 512);
 
         outb(ATA_PORT_CMD, ATA_CMD_WRITE_DMA);
