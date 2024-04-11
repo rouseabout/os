@@ -1071,6 +1071,9 @@ static uint32_t nframes;
 static void modify_frame(uintptr_t frame_address, int set)
 {
     uintptr_t frame = frame_address / 0x1000;
+    if (frame >= nframes)
+        return;
+
     uintptr_t idx = INDEX_FROM_BIT(frame);
     int off = OFFSET_FROM_BIT(frame);
 
