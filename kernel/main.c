@@ -3238,7 +3238,7 @@ static int pci_enum(void * cntx, int bus, int slot, int func)
     kprintf("PCI %02x:%02x.%x, vendor=0x%04x, device=0x%04x, class=0x%x\n", bus, slot, func,
         pci_read(bus, slot, func, PCI_VENDOR_ID, 2),
         pci_read(bus, slot, func, PCI_DEVICE_ID, 2),
-        pci_read(bus, slot, func, PCI_CLASS, 1));
+        pci_read(bus, slot, func, PCI_CLASS, 2) >> 8);
     return 0;
 }
 #endif

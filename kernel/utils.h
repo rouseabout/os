@@ -75,7 +75,7 @@ extern struct timespec tnow;
 #define PCI_VENDOR_ID 0
 #define PCI_DEVICE_ID 2
 #define PCI_COMMAND_ID 4
-#define PCI_CLASS 0xB
+#define PCI_CLASS 0xA
 #define PCI_BAR0 0x10
 #define PCI_BAR4 0x20
 #define PCI_INTERRUPT_LINE 0x3C

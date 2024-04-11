@@ -178,7 +178,7 @@ static void ata_flush()
 static int find_storage(void * opaque, int bus, int slot, int func)
 {
     ATAContext * s = opaque;
-    if (pci_read(bus, slot, func, PCI_CLASS, 1) == 0x01) { /* mass storage controller */
+    if ((pci_read(bus, slot, func, PCI_CLASS, 2) >> 8) == 0x01) { /* mass storage controller */
         s->bus = bus;
         s->slot = slot;
         s->func = func;
