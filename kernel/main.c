@@ -1263,6 +1263,8 @@ _(dirty)
     return table;
 }
 
+static int clean_directory_r(page_directory * dir, const page_directory * kd, int level, uintptr_t base, int free_all);
+
 static page_directory * clone_directory_r(const page_directory * src, const page_directory * kd, uintptr_t * pphys, int level, uintptr_t base)
 {
     page_directory * dir = (page_directory *)kmalloc_ap(sizeof(page_directory), pphys, "pg-dir-clone");
@@ -1283,8 +1285,11 @@ static page_directory * clone_directory_r(const page_directory * src, const page
         } else {
             uintptr_t phys;
             dir->tables[i] = level > 2 ? clone_directory_r(src->tables[i], kd ? kd->tables[i] : NULL, &phys, level - 1, base2) : (page_directory *)clone_table((const page_table *)src->tables[i], &phys, base2) ;
-            if (!dir->tables[i])
-                return NULL; //FIXME: memory leak
+            if (!dir->tables[i]) {
+                clean_directory_r(dir, kd, level, base, 1);
+                kfree(dir);
+                return NULL;
+            }
             dir->tables_physical[i].present = 1;
             dir->tables_physical[i].rw = 1;
             dir->tables_physical[i].user = 1; //FIXME:
