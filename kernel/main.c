@@ -3262,8 +3262,10 @@ void start3(int magic, const void * info)
         parse_multiboot_info(info, &mod_start, &mod_size);
     else if (magic == 0x1337)
         parse_linux_params(info, &mod_start, &mod_size);
-    else
+    else {
         panic("invalid magic number");
+        return;
+    }
 
     if (tty == &textmode_commands)
         textmode_init();
