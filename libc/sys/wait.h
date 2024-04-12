@@ -17,7 +17,7 @@ extern "C" {
 #define WIFSTOPPED(x) ((x) >> 16)
 #define WIFSIGNALED(x) 0
 
-#define wait(stat_loc) waitpid((pid_t)-1, stat_loc, 0)
+pid_t wait(int * stat_loc);
 pid_t waitpid(pid_t pid, int * stat_loc, int options);
 
 //wait3 was removed in issue 6
