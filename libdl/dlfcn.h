@@ -10,6 +10,7 @@ extern "C" {
 #define RTLD_LAZY 3
 
 #define RTLD_DEFAULT 0
+#define RTLD_NEXT ((void *)-1)
 
 int dlclose(void *);
 char * dlerror(void);
