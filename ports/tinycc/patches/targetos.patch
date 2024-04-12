@@ -1,0 +1,73 @@
+diff --git a/Makefile b/Makefile
+index 2b247ea7..8ed43e0c 100644
+--- a/Makefile
++++ b/Makefile
+@@ -112,6 +112,7 @@ NATIVE_DEFINES_$(CONFIG_arm_vfp) += -DTCC_ARM_VFP
+ NATIVE_DEFINES_$(CONFIG_arm64) += -DTCC_TARGET_ARM64
+ NATIVE_DEFINES_$(CONFIG_riscv64) += -DTCC_TARGET_RISCV64
+ NATIVE_DEFINES_$(CONFIG_BSD) += -DTARGETOS_$(TARGETOS)
++NATIVE_DEFINES_$(CONFIG_os) += -DTARGETOS_$(TARGETOS)
+ NATIVE_DEFINES_$(CONFIG_Android) += -DTARGETOS_ANDROID
+ NATIVE_DEFINES_$(CONFIG_pie) += -DCONFIG_TCC_PIE
+ NATIVE_DEFINES_$(CONFIG_pic) += -DCONFIG_TCC_PIC
+diff --git a/configure b/configure
+index e7735a4e..5d9fc47d 100755
+--- a/configure
++++ b/configure
+@@ -383,6 +383,9 @@ case $targetos in
+       source_path="."
+     fi
+     ;;
++  os)
++    confvars="$confvars os pthread=no"
++    ;;
+   *)
+     ;;
+ esac
+diff --git a/tccelf.c b/tccelf.c
+index fab49c48..1ece5653 100644
+--- a/tccelf.c
++++ b/tccelf.c
+@@ -1717,6 +1717,8 @@ ST_FUNC void tccelf_add_crtbegin(TCCState *s1)
+         tcc_add_crt(s1, "crtbegin_so.o");
+     else
+         tcc_add_crt(s1, "crtbegin_dynamic.o");
++#elif TARGETOS_os
++    tcc_add_crt(s1, "crt0.o");
+ #else
+     if (s1->output_type != TCC_OUTPUT_DLL)
+         tcc_add_crt(s1, "crt1.o");
+@@ -1742,6 +1744,7 @@ ST_FUNC void tccelf_add_crtend(TCCState *s1)
+         tcc_add_crt(s1, "crtend_so.o");
+     else
+         tcc_add_crt(s1, "crtend_android.o");
++#elif TARGETOS_os
+ #else
+     tcc_add_crt(s1, "crtn.o");
+ #endif
+diff --git a/tccpp.c b/tccpp.c
+index d9d2bbc3..955eb04c 100644
+--- a/tccpp.c
++++ b/tccpp.c
+@@ -3522,6 +3522,8 @@ static const char * const target_os_defs =
+     "__NetBSD__\0"
+ # elif TARGETOS_OpenBSD
+     "__OpenBSD__\0"
++# elif TARGETOS_os
++    "__os__\0"
+ # else
+     "__linux__\0"
+     "__linux\0"
+diff --git a/tccrun.c b/tccrun.c
+index b0cb4dba..6bdf1072 100644
+--- a/tccrun.c
++++ b/tccrun.c
+@@ -204,7 +204,7 @@ LIBTCCAPI int tcc_run(TCCState *s1, int argc, char **argv)
+     const char *top_sym;
+     jmp_buf main_jb;
+ 
+-#if defined(__APPLE__) || defined(__FreeBSD__)
++#if defined(__APPLE__) || defined(__FreeBSD__) || defined(TARGETOS_os)
+     char **envp = NULL;
+ #elif defined(__OpenBSD__) || defined(__NetBSD__)
+     extern char **environ;

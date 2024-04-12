@@ -41,7 +41,7 @@ Build and working status of ports.
 |socat |[socat](http://www.dest-unreach.org/socat/) | | ✗ |no networking |
 |sox |[SoX](https://sox.sourceforge.net/) | | ✓ | |
 |sqlite |[SQLite](https://www.sqlite.org/) | | ✓ | |
-|tinycc |[TCC](https://bellard.org/tcc/) | | ✗ |linking error |
+|tinycc |[TCC](https://bellard.org/tcc/) | | ✓ | |
 |units |[units](https://www.gnu.org/software/units/) | | ✓ | |
 |vim |[Vim](https://www.vim.org/) | ncurses | ✓ | |
 |vlink |[vlink](http://sun.hasenbraten.de/vlink/) | | ✓ | |
