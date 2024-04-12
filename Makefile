@@ -118,16 +118,16 @@ kernel.linux32: kernel/linker.ld kernel/linux32.o $(KERNEL_OBJS) .toolchain-$(AR
 	$(LD) $(LDFLAGS) -o $@ -Wl,--oformat=binary -Wl,--defsym,ARCH_$(ARCH)=1 -T kernel/linker.ld -Wl,-Map,kernel.map kernel/linux32.o $(KERNEL_OBJS) -lgcc
 
 libc.a: $(LIBC_COMMON_OBJS) $(LIBC_ONLY_OBJS) .toolchain-$(ARCH)-stage1
-	$(AR) rc $@ $^
+	$(AR) rcs $@ $^
 
 libdl.a: libdl/dlfcn.o .toolchain-$(ARCH)-stage1
-	$(AR) rc $@ $^
+	$(AR) rcs $@ $^
 
 libm.a: libm/math.o .toolchain-$(ARCH)-stage1
-	$(AR) rc $@ $^
+	$(AR) rcs $@ $^
 
 libg.a: libg/dummy.o .toolchain-$(ARCH)-stage1
-	$(AR) rc $@ $^
+	$(AR) rcs $@ $^
 
 programs/%.o: programs/%.c .toolchain-$(ARCH)-stage2 .sysroot
 	$(CC) -o $@ -c $<
