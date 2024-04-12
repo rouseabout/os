@@ -406,6 +406,7 @@ enum {
     STATE_SELECT,
     STATE_PAUSE,
     STATE_ACCEPT,
+    STATE_TRAP,
     NB_STATES
 };
 
@@ -421,6 +422,7 @@ static const char * state_names[NB_STATES] = {
     [STATE_SELECT] = "select",
     [STATE_PAUSE] = "pause",
     [STATE_ACCEPT] = "accept",
+    [STATE_TRAP] = "trap",
 };
 
 typedef struct Join Join;
@@ -510,6 +512,16 @@ static Task * wait_queue =  NULL;
 static Task * zombie_queue = NULL;
 
 static unsigned int next_pid = 1;
+
+static Task ** find_pp(Task *t);
+static void move_current_task_to_queue(Task ** queue)
+{
+    Task ** pp = find_pp(current_task);
+    *pp = current_task->next;
+
+    current_task->next = *queue;
+    *queue = current_task;
+}
 
 FileDescriptor ** get_current_task_fds(void);
 FileDescriptor ** get_current_task_fds()
@@ -693,8 +705,20 @@ void interrupt_handler(registers * regs)
     if (regs->number < 32) { /* exceptions */
 
         if (regs->number == 13) {
+            if (current_task && current_task->state != STATE_TRAP && current_task->proc->act[SIGTRAP].sa_handler != SIG_DFL) {
+                sigaddset(&current_task->proc->signal, SIGTRAP);
+                current_task->state = STATE_TRAP;
+                regs->eip += 2;
+                current_task->reg = *regs;
+                move_current_task_to_queue(&wait_queue);
+                current_task = NULL;
+                switch_task(regs);
+                return;
+            }
+
             kprintf("GPF: errorcode 0x%x\n", regs->error_code);
             kprintf(" E=%d, Tbl=%d, index=0x%x\n", !!(regs->error_code & 1), (regs->error_code >> 1) & 3, regs->error_code >> 4);
+
         } else if (regs->number == 14) {
             void * cr2 = get_cr2();
             if (cr2 == (void *)(uintptr_t)sys_pthread_join && current_task && current_task->thread_parent) {
@@ -1756,8 +1780,6 @@ again:
     }
 }
 
-static Task ** find_pp(Task *t);
-
 static int do_signal_action(int i)
 {
     kprintf("do_signal_action %d\n", i);
@@ -1766,14 +1788,7 @@ static int do_signal_action(int i)
         current_task->state = STATE_STOPPED;
         current_task->u.stopped.parent_notified = 0;
         sigdelset(&current_task->proc->signal, i);
-
-        // move task to wait queue
-        Task ** pp = find_pp(current_task);
-        *pp = current_task->next;
-
-        current_task->next = wait_queue;
-        wait_queue = current_task;
-
+        move_current_task_to_queue(&wait_queue);
         current_task = NULL;
         return 1;
     }
@@ -1781,14 +1796,15 @@ static int do_signal_action(int i)
     if (i == SIGCONT && current_task->state == STATE_STOPPED) {
         current_task->state = STATE_RUNNING;
         sigdelset(&current_task->proc->signal, i);
+        move_current_task_to_queue(&ready_queue);
+        current_task = NULL;
+        return 1;
+    }
 
-        //move task to ready queue
-        Task ** pp = find_pp(current_task);
-        *pp = current_task->next;
-
-        current_task->next = ready_queue;
-        ready_queue = current_task;
-
+    if (i == SIGTRAP) {
+        current_task->state = STATE_RUNNING;
+        sigdelset(&current_task->proc->signal, i);
+        move_current_task_to_queue(&ready_queue);
         current_task = NULL;
         return 1;
     }

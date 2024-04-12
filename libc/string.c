@@ -288,6 +288,7 @@ static const char * sys_siglist[NSIG] = {
  //   [SIGVTALRM] = "Virtual timer expired",
     [SIGXCPU] = "CPU time limit exceeded",
  //   [SIGXFSZ] = "File size limit exceeded. ",
+    [SIGTRAP] = "Trap",
 };
 
 char * strsignal(int signum)
