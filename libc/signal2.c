@@ -38,12 +38,22 @@ sighandler_t signal(int signum, sighandler_t handler)
     return oldact.sa_handler;
 }
 
+int sigpending(sigset_t *set)
+{
+    return 0; //FIXME:
+}
+
 int sigprocmask(int how, const sigset_t * set, sigset_t * oset)
 {
     return 0; //FIXME:
 }
 
 int sigsuspend(const sigset_t * sigmask)
+{
+    return 0; //FIXME:
+}
+
+int sigwait(const sigset_t * set, int * sig)
 {
     return 0; //FIXME:
 }

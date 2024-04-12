@@ -96,8 +96,10 @@ int sigfillset(sigset_t *);
 int siginterrupt(int, int);
 int sigismember(const sigset_t *, int);
 sighandler_t signal(int, sighandler_t);
+int sigpending(sigset_t *set);
 int sigprocmask(int, const sigset_t *, sigset_t *);
 int sigsuspend(const sigset_t *);
+int sigwait(const sigset_t * set, int * sig);
 
 #ifdef __cplusplus
 }
