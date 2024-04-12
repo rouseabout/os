@@ -5,8 +5,13 @@
 extern "C" {
 #endif
 
+#if __x86_64__
+typedef long jmp_buf[8];
+typedef long sigjmp_buf[8];
+#else
 typedef int jmp_buf[6];
 typedef int sigjmp_buf[6];
+#endif
 
 void longjmp(jmp_buf, int);
 int setjmp(jmp_buf);

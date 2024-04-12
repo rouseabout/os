@@ -101,7 +101,7 @@ qemu-linux: kernel.linux initrd
 LIBC_COMMON_OBJS=$(addprefix libc/,bsd_string.o ctype.o heap.o langinfo.o libgen.o signal.o stdio.o stdlib.o string.o strings.o time.o) $(addprefix libm/,math.o)
 
 #libc modules only used by libc.a
-LIBC_ONLY_OBJS=$(addprefix libc/,arpa_inet.o dirent.o errno.o fcntl.o fnmatch.o getopt.o grp.o inttypes.o locale.o mntent.o netdb.o net_if.o netinet_in.o poll.o pthread.o pwd.o regex.o sched.o semaphore.o setjmp.o signal2.o stdio2.o stdlib2.o string2.o sys_ioctl.o sys_mman.o sys_resource.o sys_select.o sys_socket.o sys_stat.o sys_statvfs.o sys_time.o sys_times.o sys_uio.o sys_utsname.o sys_wait.o syslog.o termios.o time2.o unistd.o utime.o wchar.o wctype.o crt0.o)
+LIBC_ONLY_OBJS=$(addprefix libc/,arpa_inet.o dirent.o errno.o fcntl.o fnmatch.o getopt.o grp.o inttypes.o locale.o mntent.o netdb.o net_if.o netinet_in.o poll.o pthread.o pwd.o regex.o sched.o semaphore.o $(ARCH)/setjmp.o signal2.o stdio2.o stdlib2.o string2.o sys_ioctl.o sys_mman.o sys_resource.o sys_select.o sys_socket.o sys_stat.o sys_statvfs.o sys_time.o sys_times.o sys_uio.o sys_utsname.o sys_wait.o syslog.o termios.o time2.o unistd.o utime.o wchar.o wctype.o crt0.o)
 
 KERNEL_OBJS=$(addprefix kernel/,$(ARCH)/start2.o $(ARCH)/common.o ata.o dev.o ext2.o fb.o kb.o loop.o main.o mem.o ne2k.o pci.o pipe.o power.o proc.o serial.o textmode.o tty.o vfs.o) $(LIBC_COMMON_OBJS)
 kernel.bin: kernel/linker.ld kernel/multiboot.o $(KERNEL_OBJS) .toolchain-$(ARCH)-stage1
@@ -165,7 +165,7 @@ gdb: kernel.bin
 	gdb $< -ex 'target remote localhost:1234'
 
 clean:
-	rm -f kernel.bin kernel.linux* kernel.map $(KERNEL_OBJS) kernel/multiboot.o kernel/linux32.o cdrom.iso iso/boot/kernel.bin initrd iso/boot/initrd disk_image disk_image.vdi hd/boot/kernel.bin hd/boot/initrd $(TFTP_FILES) programs/*.o libc/*.o libdl/*.o libg/*.o libm/*.o $(shell echo $(PROGRAMS)) libc.a libdl.a libg.a libm.a $(TEST_BIN) $(DUMPELF_BIN) $(DUMPEXT2_BIN) $(EXT2TEST_BIN) .sysroot
+	rm -f kernel.bin kernel.linux* kernel.map $(KERNEL_OBJS) kernel/multiboot.o kernel/linux32.o cdrom.iso iso/boot/kernel.bin initrd iso/boot/initrd disk_image disk_image.vdi hd/boot/kernel.bin hd/boot/initrd $(TFTP_FILES) programs/*.o libc/*.o libc/$(ARCH)/*.o libdl/*.o libg/*.o libm/*.o $(shell echo $(PROGRAMS)) libc.a libdl.a libg.a libm.a $(TEST_BIN) $(DUMPELF_BIN) $(DUMPEXT2_BIN) $(EXT2TEST_BIN) .sysroot
 	rm -rf sysroot
 
 initrd: $(shell echo $(PROGRAMS)) README.md
