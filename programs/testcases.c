@@ -53,6 +53,12 @@ void alarm_handler(int sig)
     signal_fired = 1;
 }
 
+static int trap_fired = 0;
+static void trap_handler(int sig)
+{
+    trap_fired = 1;
+}
+
 #define TESTCASE(x) do { if (!(x)) printf("FAILED %d\n", __LINE__); } while(0)
 
 int main(int argc, char **argv, char ** envp)
@@ -405,6 +411,10 @@ int main(int argc, char **argv, char ** envp)
     signal(SIGALRM, alarm_handler);
     kill(getpid(), SIGALRM);
     while(!signal_fired) ;
+
+    signal(SIGTRAP, trap_handler);
+    asm("int3");
+    while(!trap_fired);
 
     TESTCASE(system("true") == 0);
     TESTCASE(system("false") != 0);
