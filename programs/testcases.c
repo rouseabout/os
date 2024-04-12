@@ -11,6 +11,7 @@
 #include <math.h>
 #include <pthread.h>
 #include <signal.h>
+#include <setjmp.h>
 
 static int test_dirname(const char * path, const char * expect)
 {
@@ -380,6 +381,17 @@ int main(int argc, char **argv, char ** envp)
 {
     TESTCASE(fabs(log2(1024) - 10.0) < 0.00001);
     TESTCASE(fabs(log2f(1024) - 10.0) < 0.00001);
+}
+
+{
+    jmp_buf a;
+    int expect = 0;
+    int ret = setjmp(a);
+    TESTCASE(ret == expect);
+    if (!ret) {
+        expect = 1;
+        longjmp(a, expect);
+    }
 }
 
 {
