@@ -40,7 +40,7 @@ extern void (*__init_array_end [])(void) __attribute__((weak));
 extern void (*__fini_array_start [])(void) __attribute__((weak));
 extern void (*__fini_array_end [])(void) __attribute__((weak));
 
-extern char end;
+extern char _end;
 int main(int argc, char **argv, char ** envp);
 int _libc_main(int argc, char **argv, char ** envp);
 int _libc_main(int argc, char **argv, char ** envp)
@@ -54,7 +54,7 @@ int _libc_main(int argc, char **argv, char ** envp)
 
     void *cur;
     brk(NULL, &cur);
-    halloc_init(&uheap, &end, (char *)cur - &end);
+    halloc_init(&uheap, &_end, (char *)cur - &_end);
 
     for (size_t i = 0; i < __init_array_end - __init_array_start; i++)
         __init_array_start[i]();
