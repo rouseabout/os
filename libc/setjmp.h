@@ -5,8 +5,8 @@
 extern "C" {
 #endif
 
-typedef struct { int reg[6]; } jmp_buf[1];
-typedef struct { int reg[6]; } sigjmp_buf[1];
+typedef int jmp_buf[6];
+typedef int sigjmp_buf[6];
 
 void longjmp(jmp_buf, int);
 int setjmp(jmp_buf);
