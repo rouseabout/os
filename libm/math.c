@@ -175,8 +175,19 @@ float nearbyintf(float x) { return rintf(x); } //FIXME:
 double nextafter(double x, double y) { return x; } //FIXME:
 float nextafterf(float x, float y) { return x; } //FIXME:
 
-MK2(double, pow, "fyl2x; fld %%st(0); frndint; fsub %%st,%%st(1); fxch; fchs; f2xm1; fld1; faddp; fxch; fld1; fscale; fstp %%st(1); fmulp",)
-MK2(float, powf, "fyl2x; fld %%st(0); frndint; fsub %%st,%%st(1); fxch; fchs; f2xm1; fld1; faddp; fxch; fld1; fscale; fstp %%st(1); fmulp",)
+double pow(double x, double y)
+{
+    if (x == 0) return 0;
+    if (y == 0) return 1;
+    return exp2(y * log2(x));
+}
+
+float powf(float x, float y)
+{
+    if (x == 0) return 0;
+    if (y == 0) return 1;
+    return exp2f(y * log2f(x));
+}
 
 MK1(double, rint, "frndint")
 MK1(float, rintf, "frndint")

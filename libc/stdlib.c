@@ -62,14 +62,23 @@ int mbtowc(wchar_t * pwc, const char * s, size_t n)
     return n;
 }
 
-#define MK2(type, name, instruction, ...) \
-type name(type x, type y) \
+#define MK1(type, name, instruction) \
+type name(type v) \
 { \
     double ret; \
-    asm (instruction : "=t"(ret) : "0"(x), "u"(y) : __VA_ARGS__); \
+    asm (instruction : "=t"(ret) : "0"(v)); \
     return ret; \
 }
-static MK2(double, pow, "fyl2x; fld %%st(0); frndint; fsub %%st,%%st(1); fxch; fchs; f2xm1; fld1; faddp; fxch; fld1; fscale; fstp %%st(1); fmulp",)
+
+static MK1(double, exp2, "fld1; fld %%st(1); fprem; f2xm1; faddp; fscale; fstp %%st(1)")
+static MK1(double, log2, "fld1; fxch %%st(1); fyl2x")
+
+static double pow(double x, double y)
+{
+    if (x == 0) return 0;
+    if (y == 0) return 1;
+    return exp2(y * log2(x));
+}
 
 #include <strings.h>
 double strtod(const char * str, char ** endptr)
