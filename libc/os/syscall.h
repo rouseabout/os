@@ -70,22 +70,22 @@ enum {
 };
 
 #define os_syscall0(result, syscall) \
-    asm volatile ("int $0x80" : "=a"(result) : "a"(syscall));
+    asm volatile ("int $0x80" : "=a"(result) : "a"(syscall) : "memory");
 
 #define os_syscall1(result, syscall, a1) \
-    asm volatile ("int $0x80" : "=a"(result) : "a"(syscall), "b"(a1));
+    asm volatile ("int $0x80" : "=a"(result) : "a"(syscall), "b"(a1) : "memory");
 
 #define os_syscall2(result, syscall, a1, a2) \
-    asm volatile ("int $0x80" : "=a"(result) : "a"(syscall), "b"(a1), "c"(a2));
+    asm volatile ("int $0x80" : "=a"(result) : "a"(syscall), "b"(a1), "c"(a2) : "memory");
 
 #define os_syscall3(result, syscall, a1, a2, a3) \
-    asm volatile ("int $0x80" : "=a"(result) : "a"(syscall), "b"(a1), "c"(a2), "d"(a3));
+    asm volatile ("int $0x80" : "=a"(result) : "a"(syscall), "b"(a1), "c"(a2), "d"(a3) : "memory");
 
 #define os_syscall4(result, syscall, a1, a2, a3, a4) \
-    asm volatile ("int $0x80" : "=a"(result) : "a"(syscall), "b"(a1), "c"(a2), "d"(a3), "S"(a4));
+    asm volatile ("int $0x80" : "=a"(result) : "a"(syscall), "b"(a1), "c"(a2), "d"(a3), "S"(a4) : "memory");
 
 #define os_syscall5(result, syscall, a1, a2, a3, a4, a5) \
-    asm volatile ("int $0x80" : "=a"(result) : "a"(syscall), "b"(a1), "c"(a2), "d"(a3), "S"(a4), "D"(a5));
+    asm volatile ("int $0x80" : "=a"(result) : "a"(syscall), "b"(a1), "c"(a2), "d"(a3), "S"(a4), "D"(a5) : "memory");
 
 #define RET_ERRNO(ret_type) \
     if (ret < 0) { \
