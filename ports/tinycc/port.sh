@@ -18,7 +18,8 @@ cd host
     --cpu=${ARCH} \
     --targetos=os \
     --config-bcheck=no \
-    --config-backtrace=no
+    --config-backtrace=no \
+    --config-predefs=no
 make libtcc1.a -j$(nproc)
 cp libtcc1.a ${SYSROOT}/usr/lib
 cd ..
@@ -34,7 +35,8 @@ cd target
     --cpu=${ARCH} \
     --targetos=os \
     --config-bcheck=no \
-    --config-backtrace=no
+    --config-backtrace=no \
+    --config-predefs=no
 make tcc -j$(nproc)
 make DESTDIR=$SYSROOT install
 cd ..
