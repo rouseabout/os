@@ -8,7 +8,7 @@ static struct statvfs * mntbuf = NULL;
 #include <syslog.h>
 int fstatvfs(int fildes, struct statvfs * buf)
 {
-    syslog(LOG_DEBUG, "fstatvfs: fd=%d", fildes);
+    syslog(LOG_DEBUG, "libc: fstatvfs: fd=%d", fildes);
     memset(buf, 0, sizeof(*buf));
     return 0;
 }

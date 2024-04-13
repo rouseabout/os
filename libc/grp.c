@@ -8,21 +8,21 @@ void endgrent()
 
 struct group * getgrent()
 {
-    syslog(LOG_DEBUG, "getgrent");
+    syslog(LOG_DEBUG, "libc: getgrent");
     errno = ENOSYS;
     return NULL;
 }
 
 struct group * getgrgid(gid_t gid)
 {
-    syslog(LOG_DEBUG, "getgrgid");
+    syslog(LOG_DEBUG, "libc: getgrgid");
     errno = ENOSYS;
     return NULL;
 }
 
 struct group * getgrnam(const char * name)
 {
-    syslog(LOG_DEBUG, "getgrgid");
+    syslog(LOG_DEBUG, "libc: getgrgid");
     errno = ENOSYS;
     return NULL;
 }

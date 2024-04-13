@@ -1,6 +1,7 @@
 #include <sys/mman.h>
 #include <os/syscall.h>
 #include <stdlib.h>
+#include <syslog.h>
 
 #include <unistd.h>
 static MK_SYSCALL1(int, sys_mmap, OS_MMAP, struct os_mmap_request *)
@@ -31,6 +32,7 @@ void * mmap(void * addr, size_t len, int prot, int flags, int fildes, off_t off)
 
 int mprotect(void * addr, size_t len, int prot)
 {
+    syslog(LOG_DEBUG, "libc: mprotect: addr=%p, len=0x%x, prot=0x%x\n", addr, len, prot);
     errno = ENOSYS;
     return -1;
 }

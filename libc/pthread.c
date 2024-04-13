@@ -74,13 +74,13 @@ MK_SYSCALL2(int, pthread_join, OS_PTHREAD_JOIN, pthread_t, void **)
 
 int pthread_key_create(pthread_key_t * key, void (*destructor)(void*))
 {
-    syslog(LOG_DEBUG, "pthread_key_create");
+    syslog(LOG_DEBUG, "libc: pthread_key_create");
     return 0; //FIXME:
 }
 
 int pthread_key_delete(pthread_key_t key)
 {
-    syslog(LOG_DEBUG, "pthread_key_delete");
+    syslog(LOG_DEBUG, "libc: pthread_key_delete");
     return 0; //FIXME:
 }
 
