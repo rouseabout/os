@@ -8,11 +8,12 @@ AR=$(TOOLCHAIN)/bin/$(ARCH)-pc-elf-ar
 STRIP=$(TOOLCHAIN)/bin/$(ARCH)-pc-elf-strip
 READELF=$(TOOLCHAIN)/bin/$(ARCH)-pc-elf-readelf
 OBJDUMP=$(TOOLCHAIN)/bin/$(ARCH)-pc-elf-objdump
-CFLAGS=-ffreestanding -Wall -pedantic -Wshadow -Wextra -Werror=format-security -Werror=implicit-function-declaration -Werror=missing-prototypes -Werror=pointer-arith -Werror=return-type -Werror=vla -Werror=logical-op -g -Ilibc -Ilibdl -Ilibm -Wno-unused-parameter -Wno-sign-compare -DARCH_$(ARCH)
+CFLAGS=-O3 -Wall -pedantic -Wshadow -Wextra -Werror=format-security -Werror=implicit-function-declaration -Werror=missing-prototypes -Werror=pointer-arith -Werror=return-type -Werror=vla -Werror=logical-op -Wno-unused-parameter -Wno-sign-compare -g -DARCH_$(ARCH)
+KERNELCFLAGS=-ffreestanding -Ilibc -Ilibdl -Ilibm
 ifeq ($(ARCH),x86_64)
-CFLAGS+=-mcmodel=large
+KERNELCFLAGS+=-mcmodel=large
 endif
-CXXFLAGS=
+CXXFLAGS=-O3
 LD=$(CC)
 LDFLAGS=-ffreestanding -nostdlib -g -Lsysroot/usr/lib
 QEMU=qemu-system-$(QEMUARCH)
@@ -130,10 +131,10 @@ libg.a: libg/dummy.o .toolchain-$(ARCH)-stage1
 	$(AR) rcs $@ $^
 
 programs/%.o: programs/%.c .toolchain-$(ARCH)-stage2 .sysroot
-	$(CC) -o $@ -c $<
+	$(CC) -o $@ -c $< $(CFLAGS)
 
 programs/%++.o: programs/%++.cc .toolchain-$(ARCH)-stage2 .sysroot
-	$(CXX) -o $@ -c $<
+	$(CXX) -o $@ -c $< $(CXXFLAGS)
 
 crash: programs/crash.o .toolchain-$(ARCH)-stage2 .sysroot
 	$(LD) $(LDFLAGS) -o $@ $<
@@ -153,7 +154,7 @@ hello: programs/hello.o .toolchain-$(ARCH)-stage2 .sysroot
 	$(CXX) -o $@ -c $< $(CXXFLAGS)
 
 %.o: %.c .toolchain-$(ARCH)-stage1
-	$(CC) -o $@ -c $< $(CFLAGS)
+	$(CC) -o $@ -c $< $(CFLAGS) $(KERNELCFLAGS)
 
 d-%: %
 	($(READELF) -h $<; $(OBJDUMP) -h $<;  $(OBJDUMP) -d -l $<) | less
