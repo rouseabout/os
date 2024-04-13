@@ -155,9 +155,6 @@ hello: programs/hello.o .toolchain-$(ARCH)-stage2 .sysroot
 %.o: %.c .toolchain-$(ARCH)-stage1
 	$(CC) -o $@ -c $< $(CFLAGS)
 
-%.o: %.S .toolchain-$(ARCH)-stage1
-	$(CC) -o $@ -c $< $(CFLAGS)
-
 d-%: %
 	($(READELF) -h $<; $(OBJDUMP) -h $<;  $(OBJDUMP) -d -l $<) | less
 
