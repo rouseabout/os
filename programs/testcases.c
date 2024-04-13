@@ -48,7 +48,7 @@ static void * thread_func(void * v)
 }
 
 static int signal_fired = 0;
-void alarm_handler(int sig)
+static void alarm_handler(int sig)
 {
     signal_fired = 1;
 }
@@ -358,7 +358,7 @@ int main(int argc, char **argv, char ** envp)
 }
 
 {
-    ref_entry entries[3] = {"bisect", "heads", "tags"};
+    ref_entry entries[3] = {{"bisect"}, {"heads"}, {"tags"}};
     char * key = "worktree";
     TESTCASE(bsearch(key, entries, 3, sizeof(ref_entry), cmp) == NULL);
 }
@@ -391,7 +391,7 @@ int main(int argc, char **argv, char ** envp)
 
 {
     jmp_buf a;
-    int expect = 0;
+    volatile int expect = 0;
     int ret = setjmp(a);
     TESTCASE(ret == expect);
     if (!ret) {
