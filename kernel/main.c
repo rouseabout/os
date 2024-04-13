@@ -1071,6 +1071,7 @@ static void load_user_pages(const page_directory * src)
         kernel_directory->tables_physical[i] = src->tables_physical[i];
         kernel_directory->tables[i] = src->tables[i];
     }
+    switch_page_directory(kernel_directory);
 }
 
 static void clear_user_pages()
