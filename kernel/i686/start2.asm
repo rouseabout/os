@@ -64,6 +64,7 @@ start2:
     pop ebx ; info
     mov esp, kernel_stack.bottom
     xor ebp, ebp
+    sub esp, 8 ; for 16-byte alignment
     push dword ebx ; info
     push dword eax ; magic
     push dword $
