@@ -149,8 +149,8 @@ int main(int argc, char ** argv)
             } else if (!pid) {
                 if (background) {
                      fprintf(stderr, "[1] %d\n", getpid());
-                     if (!do_pipe)
-                         close(STDIN_FILENO);
+                     if (!do_pipe && !input_path)
+                         input_path = "/dev/null";
                      setpgrp();
                 }
                 if (input_path) {
