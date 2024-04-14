@@ -310,14 +310,24 @@ static void cpu_init()
 
     if (edx & (1 << 25)) { //SSE
         uint32_t cr0 = get_cr0();
-        cr0 &= ~4; // EM
-        cr0 |= 2; // MP
+        cr0 &= ~(1<<2); // EM
+        cr0 |= (1<<1); // MP
         set_cr0(cr0);
 
         uint32_t cr4 = get_cr4();
         cr4 |= (1<<9); // OSFXSR
         cr4 |= (1<<10); // OSXMMEXCPT
         set_cr4(cr4);
+    }
+
+    if (ecx & (1 << 26) && ecx & (1 << 28)) { //XSAVE,AVX
+        uint32_t cr4 = get_cr4();
+        cr4 |= (1<<18); //OXSAVE
+        set_cr4(cr4);
+
+        asm volatile("xgetbv" : "=a"(eax), "=d"(edx) : "c"(0));
+        eax |= 7; //AVX,SSE,X87
+        asm volatile("xsetbv" : : "a"(eax), "c"(0), "d"(edx));
     }
 }
 
