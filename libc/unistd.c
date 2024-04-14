@@ -54,6 +54,24 @@ int execl(const char * path, const char * arg0, ...)
     return -1;
 }
 
+static int execve_internal(const char * path, char * const * argv, char * const * envp)
+{
+    char path2[PATH_MAX];
+    int fd = open(path, O_RDONLY);
+    if (fd == -1)
+        return -1;
+    char shebang[2];
+    if (read(fd, shebang, sizeof(shebang)) == sizeof(shebang) && shebang[0] == '#' && shebang[1]) {
+        int i;
+        for (i = 0; i < PATH_MAX - 1 && read(fd, &path2[i], sizeof(char)) == sizeof(char) && path2[i] != '\n'; i++) ;
+        path2[i] = 0;
+        dup2(fd, STDIN_FILENO);
+        path = path2; //FIXME: split path2 and prepend argv
+    }
+    close(fd);
+    return execve(path, argv, envp);
+}
+
 int execle(const char *path, const char *arg0, ... /*, (char *)0, char *const envp[]*/)
 {
     if (!arg0) {
@@ -86,7 +104,7 @@ int execle(const char *path, const char *arg0, ... /*, (char *)0, char *const en
     char ** envp = va_arg(ap, char **);
     va_end(ap);
 
-    int ret = execve(path, argv, envp);
+    int ret = execve_internal(path, argv, envp);
     free(argv);
     return ret;
 }
@@ -102,7 +120,7 @@ extern char **environ;
 
 int execv(const char * path, char * const argv[])
 {
-    return execve(path, argv, environ);
+    return execve_internal(path, argv, environ);
 }
 
 MK_SYSCALL3(int, execve, OS_EXECVE, const char *, char * const *, char * const *)
@@ -142,7 +160,7 @@ int execvp(const char * pathname, char * const argv[])
     if ((ret = find_in_path(abspath, sizeof(abspath), pathname) < 0))
         return ret;
 
-    return execve(abspath, argv, environ);
+    return execve_internal(abspath, argv, environ);
 }
 
 void _exit(int status)
