@@ -48,6 +48,7 @@ int main(int argc, char ** argv)
 
         char * p = cmdline;
         int pipe0 = -1;
+        int first_pid = -1;
         while (*p) {
             char * newargv[16];
             int newargc = 0;
@@ -181,21 +182,26 @@ int main(int argc, char ** argv)
                 execvp(newargv[0], newargv);
                 fprintf(stderr, "%s: %s: command not found\n", argv[0], cmdline);
                 return EXIT_FAILURE;
-            } else if (!background) {
-                setpgid(pid, pid);
-                tcsetpgrp(STDIN_FILENO, pid);
+            } else {
+                if (first_pid < 0)
+                    first_pid = pid;
 
-                if (pipe0 >= 0)
-                    close(pipe0);
+                setpgid(pid, first_pid);
+                if (!background) {
+                    tcsetpgrp(STDIN_FILENO, first_pid);
 
-                int wpid, status;
-                do {
-                    wpid = waitpid(pid, &status, 0);
-                } while (wpid >= 0 && wpid != pid);
-                ret = WEXITSTATUS(status);
+                    if (pipe0 >= 0)
+                        close(pipe0);
 
-                signal(SIGTTOU, SIG_IGN);
-                tcsetpgrp(STDIN_FILENO, getpgrp());
+                    int wpid, status;
+                    do {
+                        wpid = waitpid(pid, &status, 0);
+                    } while (wpid >= 0 && wpid != pid);
+                    ret = WEXITSTATUS(status);
+
+                    signal(SIGTTOU, SIG_IGN);
+                    tcsetpgrp(STDIN_FILENO, getpgrp());
+                }
             }
             if (do_pipe) {
                 pipe0 = pfds[0];
