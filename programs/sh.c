@@ -64,21 +64,21 @@ int main(int argc, char ** argv)
                 if (p[0] == '<') {
                     input = 1;
                     output = 0;
-                    p++;
+                    *p++ = 0;
                     continue;
                 } else if (p[0] == '>') {
                     input = 0;
                     output = 1;
-                    p++;
+                    *p++ = 0;
                     continue;
                 } else if (p[0] == '&') {
                     background = 1;
-                    p++;
+                    *p++ = 0;
                     continue;
                 } else if (p[0] == '|') {
                     background = 1;
                     do_pipe = 1;
-                    p++;
+                    *p++ = 0;
                     break; /* stop */
                 } else if (input == 1) {
                     input_path = p;
@@ -91,7 +91,7 @@ int main(int argc, char ** argv)
                     *p = 0;
                 } else
                     newargv[newargc++] = p;
-                while(*p!=' ' && *p) p++;
+                while(!strchr(" <>&|", *p) && *p) p++;
             }
 
             if (!newargc)
