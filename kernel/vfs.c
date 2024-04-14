@@ -414,7 +414,7 @@ int vfs_pipe(FileDescriptor ** rfd_ptr, FileDescriptor ** wfd_ptr)
     rfd->pos = 0;
     rfd->flags = 0;
     rfd->fd_flags = 0;
-    rfd->isatty = 1;
+    rfd->isatty = 0;
     snprintf(rfd->path, sizeof(rfd->path), "(pipe-%p-read)", pipe);
 
     FileDescriptor * wfd = kmalloc(sizeof(FileDescriptor), "fd-w-pipe");
@@ -426,7 +426,7 @@ int vfs_pipe(FileDescriptor ** rfd_ptr, FileDescriptor ** wfd_ptr)
     wfd->pos = 0;
     wfd->flags = 0;
     wfd->fd_flags = 0;
-    wfd->isatty = 1;
+    wfd->isatty = 0;
     snprintf(wfd->path, sizeof(wfd->path), "(pipe-%p-write)", pipe);
 
     *rfd_ptr = rfd;
