@@ -439,6 +439,11 @@ int vfs_isatty(const FileDescriptor * fd)
     return fd->isatty;
 }
 
+int vfs_direct(const FileDescriptor * fd)
+{
+    return fd->isatty || fd->ops == &pipe_reader_dio;
+}
+
 int vfs_utime(const char * path, const struct utimbuf * times)
 {
     Mount * mount;

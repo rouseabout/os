@@ -1689,7 +1689,7 @@ static int task_ready(Task * t)
         if (ret > 0)
             t->u.read.pos += ret;
 
-        if (ret == -EAGAIN || (ret > 0 && (ret < sz && !vfs_isatty(t->u.read.fd)))) {
+        if (ret == -EAGAIN || (ret > 0 && (ret < sz && !vfs_direct(t->u.read.fd)))) {
             /* go again */
         } else if (ret < 0) {
             t->reg.eax = ret;
@@ -2139,7 +2139,7 @@ static int sys_read(registers * reg, int fd, void * buf, size_t size)
 
     int ret = vfs_read(current_task->proc->fd[fd], buf, size);
 
-    if (!(current_task->proc->fd[fd]->flags & O_NONBLOCK) && (ret == -EAGAIN || (ret > 0 && ret < size && !vfs_isatty(current_task->proc->fd[fd]) ))) {
+    if (!(current_task->proc->fd[fd]->flags & O_NONBLOCK) && (ret == -EAGAIN || (ret > 0 && ret < size && !vfs_direct(current_task->proc->fd[fd]) ))) {
         current_task->state = STATE_READ;
         current_task->u.read.fd = current_task->proc->fd[fd];
         current_task->u.read.buf = buf;
