@@ -143,7 +143,7 @@ ldiv_t ldiv(long numer, long denom)
 
 void * malloc(size_t size)
 {
-    void * ret = halloc(&uheap, size, 4, 0, "stdlib");
+    void * ret = halloc(&uheap, size ? size : 1, 4, 0, "stdlib");
     if (!ret)
         errno = ENOMEM;
     return ret;
