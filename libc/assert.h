@@ -1,6 +1,6 @@
 #ifndef ASSERT_H
 #define ASSERT_H
 
-#define assert(ignore) ((void) 0)
+#define assert(expr) do { if (expr) {} } while(0)
 
 #endif /* ASSERT_H */
