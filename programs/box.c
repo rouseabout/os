@@ -25,6 +25,7 @@
 #include "box_touch.c"
 #include "box_true.c"
 #include "box_uname.c"
+#include "box_vi.c"
 #include "box_wc.c"
 
 static const struct {
@@ -52,6 +53,7 @@ static const struct {
     {"touch", touch_main},
     {"true", true_main},
     {"uname", uname_main},
+    {"vi", vi_main},
     {"wc", wc_main},
 };
 

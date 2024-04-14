@@ -209,6 +209,7 @@ To use the text mode console, it is neccessary to first set the `MULTIBOOT_VIDEO
 |uname |print system information |
 |unixping |ping the unixserver |
 |unixserver |unix sockets demonstration server |
+|vi |vi |
 |wc |word count |
 
 There is no `cp` program; use `cat source > dest` instead.
