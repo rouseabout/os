@@ -10,12 +10,14 @@
 
 int main(int argc, char ** argv)
 {
-    int interactive = 1;
+    int interactive = isatty(STDIN_FILENO);
+    int single_command = 0;
     int ret = 0;
 
-    if (argc >= 3 && !strcmp(argv[1], "-c"))
+    if (argc >= 3 && !strcmp(argv[1], "-c")) {
         interactive = 0;
-    else if (argc > 1) {
+        single_command = 1;
+    } else if (argc > 1) {
         fprintf(stderr, "usage: %s [-c command]\n", argv[0]);
         return EXIT_FAILURE;
     }
@@ -30,7 +32,7 @@ int main(int argc, char ** argv)
 
         char cmdline[1024];
 
-        if (interactive) {
+        if (!single_command) {
             do {
                 int c = getchar();
                 if (c == EOF) return 0;
@@ -203,7 +205,7 @@ int main(int argc, char ** argv)
         if (pipe0 >= 0)
             close(pipe0);
 
-        if (!interactive)
+        if (single_command)
             break;
     }
 
