@@ -1047,7 +1047,7 @@ static void dump_directory_r(const page_directory * dir, const page_directory * 
         uintptr_t base2 = base | (uintptr_t)i << (12 + (level-1)*BITS_PER_TABLE);
 
         if (dir->tables_physical[i].present) {
-            indent(level); kprintf("tables_physical[%d] = %p phy (<- %p virt)\n", i, dir->tables_physical[i], base2);
+            indent(level); kprintf("tables_physical[%d] = %p phy (<- %p virt) user:%d, rw:%d\n", i, dir->tables_physical[i], base2, dir->tables_physical[i].user, dir->tables_physical[i].rw);
         }
         if (level >= 2 && dir->tables[i]) {
             indent(level); kprintf("tables[%d] = %p (<- %p virt) %s\n", i, dir->tables[i], base2, kd && (dir->tables[i] == kd->tables[i]) ? "*" : "");
