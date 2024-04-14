@@ -80,9 +80,9 @@ gdt_ptr:
 
 section .boot.bss
 
-pml2: dd 1024 dup (0)
-pml1_0: dd 1024 dup (0)
-pml1_1: dd 1024 dup (0)
+pml2: times 1024 dd 0
+pml1_0: times 1024 dd 0
+pml1_1: times 1024 dd 0
 
 section .data
 

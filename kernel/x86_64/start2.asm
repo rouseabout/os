@@ -155,7 +155,7 @@ gdt64:
 .end:
 
 align 8
-    dw 3 dup (0)
+    times 3 dw 0
 gdt64_ptr:
     dw gdt64.end - gdt64 - 1
     dq gdt64
