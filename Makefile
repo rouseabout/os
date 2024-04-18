@@ -130,6 +130,8 @@ libm.a: libm/math.o .toolchain-$(ARCH)-stage1
 libg.a: libg/dummy.o .toolchain-$(ARCH)-stage1
 	$(AR) rcs $@ $^
 
+programs/box.o: $(wildcard programs/box_*.c)
+
 programs/%.o: programs/%.c .toolchain-$(ARCH)-stage2 .sysroot
 	$(CC) -o $@ -c $< $(CFLAGS)
 
