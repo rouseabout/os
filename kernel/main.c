@@ -341,12 +341,12 @@ typedef struct {
     uint32_t base_high2;
     uint32_t reserved;
 #endif
-} __attribute((packed)) idt_entry;
+} __attribute__((packed)) idt_entry;
 
 typedef struct {
     uint16_t limit;
     uintptr_t base;
-} __attribute((packed)) idt_pointer;
+} __attribute__((packed)) idt_pointer;
 
 static idt_entry idt[256];
 static idt_pointer idt_ptr;
