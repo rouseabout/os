@@ -2,7 +2,7 @@
 #include "utils.h"
 #include "tty.h"
 
-static int power_write(__attribute((unused)) FileDescriptor * fd, const void * buf_, int size)
+static int power_write(FileDescriptor * fd, const void * buf_, int size)
 {
     outw(0xB004, 0x2000); // Bochs
     outw(0x604, 0x2000); // QEMU
@@ -13,7 +13,7 @@ static int power_write(__attribute((unused)) FileDescriptor * fd, const void * b
 
 const DeviceOperations power_dio = {.write = power_write};
 
-static int reboot_write(__attribute((unused)) FileDescriptor * fd, const void * buf_, int size)
+static int reboot_write(FileDescriptor * fd, const void * buf_, int size)
 {
     int status;
     do {

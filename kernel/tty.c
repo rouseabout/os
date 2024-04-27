@@ -218,7 +218,7 @@ static void tty_process(int c)
     tty->putc(c);
 }
 
-static int tty_write(__attribute((unused)) FileDescriptor * fd, const void * buf_, int size)
+static int tty_write(FileDescriptor * fd, const void * buf_, int size)
 {
     const uint8_t * buf = buf_;
     for (int i = 0; i < size; i++)
@@ -280,7 +280,7 @@ static int cooked_read(char * buf, int size)
 
 }
 
-static int tty_read(__attribute((unused)) FileDescriptor * fd, void * buf, int size)
+static int tty_read(FileDescriptor * fd, void * buf, int size)
 {
     if ((tty_lflag & ICANON)) {
         drain();
@@ -289,7 +289,7 @@ static int tty_read(__attribute((unused)) FileDescriptor * fd, void * buf, int s
     return kb_read(buf, size, 1);
 }
 
-static int tty_read_available(__attribute((unused)) const FileDescriptor * fd)
+static int tty_read_available(const FileDescriptor * fd)
 {
     if ((tty_lflag & ICANON)) {
         drain();
@@ -298,12 +298,12 @@ static int tty_read_available(__attribute((unused)) const FileDescriptor * fd)
     return kb_available();
 }
 
-static int tty_tcgetpgrp(__attribute((unused)) FileDescriptor * fd)
+static int tty_tcgetpgrp(FileDescriptor * fd)
 {
     return tty_foreground_pgrp;
 }
 
-static int tty_tcsetpgrp(__attribute((unused)) FileDescriptor * fd, pid_t pgrp)
+static int tty_tcsetpgrp(FileDescriptor * fd, pid_t pgrp)
 {
     tty_foreground_pgrp = pgrp;
     return 0;

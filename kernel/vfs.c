@@ -762,7 +762,7 @@ static long random()
     return g_seed & 0x7fffffff;
 }
 
-static int urandom_read(__attribute((unused)) FileDescriptor * fd, void * buf_, int size)
+static int urandom_read(FileDescriptor * fd, void * buf_, int size)
 {
     uint8_t * buf = buf_;
     for (int i = 0; i < size; i++)

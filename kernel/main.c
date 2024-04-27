@@ -47,7 +47,7 @@ void panic(const char * reason)
     for (;;) ;
 }
 
-static void kputc(__attribute((unused)) void *cntx, int c)
+static void kputc(void *cntx, int c)
 {
     outb(0xE9, c);
 }
@@ -3401,7 +3401,7 @@ void start3(int magic, const void * info)
     /* never reach here */
 }
 
-static void idle(__attribute((unused)) int param)
+static void idle(int param)
 {
     for (;;) asm("hlt");
 }

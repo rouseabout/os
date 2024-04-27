@@ -26,7 +26,7 @@ static void putc(int ch)
 #if 0
 #include <stdarg.h>
 #include "generic_printf.h"
-static void serputc(__attribute((unused)) void *cntx, int c)
+static void serputc(void *cntx, int c)
 {
     tty->putc(c);
 }
@@ -100,7 +100,7 @@ static int serial_write(FileDescriptor * fd, const void * buf, int size)
     return size;
 }
 
-static int serial_read(__attribute((unused)) FileDescriptor * fd, void * buf, int size)
+static int serial_read(FileDescriptor * fd, void * buf, int size)
 {
     uint8_t * buf8 = buf;
     int i;
@@ -114,17 +114,17 @@ static int serial_read(__attribute((unused)) FileDescriptor * fd, void * buf, in
     return i;
 }
 
-static int serial_read_available(__attribute((unused)) const FileDescriptor * fd)
+static int serial_read_available(const FileDescriptor * fd)
 {
     return ringbuffer_read_available(&rb);
 }
 
-static int serial_tcgetpgrp(__attribute((unused)) FileDescriptor * fd)
+static int serial_tcgetpgrp(FileDescriptor * fd)
 {
     return serial_foreground_pgrp;
 }
 
-static int serial_tcsetpgrp(__attribute((unused)) FileDescriptor * fd, pid_t pgrp)
+static int serial_tcsetpgrp(FileDescriptor * fd, pid_t pgrp)
 {
     serial_foreground_pgrp = pgrp;
     return 0;
