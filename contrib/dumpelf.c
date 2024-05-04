@@ -18,6 +18,18 @@ static void dump_hex(const void * ptr, unsigned int size)
      }
 }
 
+static int fdump(FILE * f, int offset, int size)
+{
+    void * buf = malloc(size);
+    if (!buf)
+        return -1;
+    fseek(f, offset, SEEK_SET);
+    fread(buf, size, 1, f);
+    dump_hex(buf, size);
+    free(buf);
+    return 0;
+}
+
 int main(int argc, char ** argv)
 {
     if (argc != 2) {
@@ -50,7 +62,7 @@ int main(int argc, char ** argv)
     printf("e_phnum: %d\n", e.e_phnum);
     printf("e_shentsize: %d bytes (expect %d)\n", e.e_shentsize, sizeof(ElfSHeader));
     printf("e_shnum: %d\n", e.e_shnum);
-    printf("e_shstrndx: %d bytes\n", e.e_shstrndx);
+    printf("e_shstrndx: %d\n", e.e_shstrndx);
     //printf("sizeof(ElfHeader): %d\n", sizeof(ElfHeader));
     printf("\n");
 
@@ -78,18 +90,11 @@ int main(int argc, char ** argv)
         printf("p_flags: 0x%x\n", p.p_flags);
         printf("p_align: 0x%x\n", p.p_align);
         printf("\n");
-
-        void * buf = malloc(p.p_filesz);
-        if (!buf)
-            return -1;
-        fseek(f, p.p_offset, SEEK_SET);
-        fread(buf, p.p_filesz, 1, f);
-        dump_hex(buf, p.p_filesz);
-        free(buf);
+        fdump(f, p.p_offset, p.p_filesz);
     }
 
-    fseek(f, e.e_shoff, SEEK_SET);
     for (int i = 0; i < e.e_shnum; i++) {
+        fseek(f, e.e_shoff + i * sizeof(ElfSHeader), SEEK_SET);
         ElfSHeader s;
         printf("---Section Header %d---\n", i);
         if (fread(&s, sizeof(s), 1, f) != 1)
@@ -100,8 +105,10 @@ int main(int argc, char ** argv)
         switch (s.sh_type) {
         case SHT_NULL: printf("NULL"); break;
         case SHT_PROGBITS: printf("PROGBITS"); break;
+        case SHT_SYMTAB: printf("SYMTAB"); break;
         case SHT_NOBITS: printf("NOBITS"); break;
         case SHT_STRTAB: printf("STRTAB"); break;
+        case SHT_REL: printf("REL"); break;
         default: printf("(unknown)"); break;
         }
         printf("\n");
@@ -120,6 +127,7 @@ int main(int argc, char ** argv)
         printf("sh_addralign: 0x%x\n", s.sh_addralign);
         printf("sh_entsize: 0x%x\n", s.sh_entsize);
         printf("\n");
+        fdump(f, s.sh_offset, s.sh_size);
     }
 
     fclose(f);

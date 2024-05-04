@@ -62,8 +62,10 @@ typedef struct {
 
 #define SHT_NULL 0x0
 #define SHT_PROGBITS 0x1
+#define SHT_SYMTAB 0x2
 #define SHT_STRTAB 0x3
 #define SHT_NOBITS 0x8
+#define SHT_REL 0x9
 
 #define SHF_WRITE 0x1
 #define SHF_ALLOC 0x2
