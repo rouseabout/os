@@ -279,8 +279,8 @@ sysroot/usr/lib/%: libc/% # needed for crt0.o
 	touch $@
 
 CACHE=.cache
-BINUTILSVER=2.41
-GCCVER=13.2.0
+BINUTILSVER=2.42
+GCCVER=14.1.0
 SYSLINUXVER=6.03
 $(CACHE)/binutils-$(BINUTILSVER).tar.xz:
 	curl https://ftp.gnu.org/gnu/binutils/binutils-$(BINUTILSVER).tar.xz -o $@
