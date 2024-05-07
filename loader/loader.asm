@@ -154,8 +154,6 @@ dap:
 
 align 4
 gdt:
-align 4
-gdt:
     GDT_ENTRY32 0, 0, 0, 0
     GDT_ENTRY32 0, 0xFFFFFFFF, 0x92, GRAN_32_BIT_MODE | GRAN_4KIB_BLOCKS
 .end:
