@@ -529,7 +529,7 @@ static int vi_main(int argc, char ** argv, char ** envp)
         } else if (st.mode == PROMPT) {
             if (c == 27) {
                 st.mode = COMMAND;
-            } else if (c == 127) {
+            } else if (c == '\b' || c == 127) { //backspace
                 if (strlen(st.prompt) > 0)
                     st.prompt[strlen(st.prompt) - 1] = 0;
             } else if (c == '\n') {
