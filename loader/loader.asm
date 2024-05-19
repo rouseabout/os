@@ -82,9 +82,9 @@ read_sectors_high:
 
     mov esi, 0x9000
     mov edi, ebx
-    mov ecx, 512
+    mov ecx, 512 / 4
 
-    rep o32 a32 movsb
+    rep o32 a32 movsd
 
     mov eax, cr0
     and al, 0xFE
