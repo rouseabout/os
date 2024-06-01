@@ -55,7 +55,7 @@ int munmap(void * addr, size_t len)
         free(addr);
         return 0;
     }
-    
+
     errno = ENOSYS;
     return -1;
 }

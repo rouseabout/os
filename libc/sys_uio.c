@@ -6,7 +6,7 @@ ssize_t readv(int fildes, const struct iovec * iov, int iovcnt)
 {
     ssize_t total = 0;
     for (int i = 0; i < iovcnt; i++) {
-        int ret = read(fildes, iov[i].iov_base, iov[i].iov_len); 
+        int ret = read(fildes, iov[i].iov_base, iov[i].iov_len);
         if (ret < 0)
             return ret;
         total += ret;
@@ -20,7 +20,7 @@ ssize_t writev(int fildes, const struct iovec * iov, int iovcnt)
 {
     ssize_t total = 0;
     for (int i = 0; i < iovcnt; i++) {
-        int ret = write(fildes, iov[i].iov_base, iov[i].iov_len); 
+        int ret = write(fildes, iov[i].iov_base, iov[i].iov_len);
         if (ret < 0)
             return ret;
         total += ret;

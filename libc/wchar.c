@@ -78,18 +78,18 @@ int wcsncmp(const wchar_t * ws1, const wchar_t * ws2, size_t n)
      while (n && *ws1 && *ws1 == *ws2) {
           ws1++;
           ws2++;
-          n--; 
+          n--;
       }
       return n ? *ws1 - *ws2 : 0;
 }
 
 wchar_t * wcsncpy(wchar_t * ws1, const wchar_t * ws2, size_t n)
 {
-    size_t i; 
+    size_t i;
     for (i = 0; i < n && ws2[i]; i++)
         ws1[i] = ws2[i];
     wchar_t * tail = ws1 + i;
-    for ( ; i < n; i++) 
+    for ( ; i < n; i++)
         ws1[i] = 0;
     return tail;
 }

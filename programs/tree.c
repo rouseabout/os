@@ -23,7 +23,7 @@ static void tree(const char * path)
         perror("opendir");
         return;
     }
-     
+
     struct dirent * de;
     while ((de = readdir(dir))) {
         if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, ".."))

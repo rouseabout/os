@@ -18,7 +18,7 @@ int main(int argc, char ** argv)
     dup2(fd, STDIN_FILENO);
     dup2(fd, STDOUT_FILENO);
     dup2(fd, STDERR_FILENO);
-    
+
     system("sh");
     return EXIT_SUCCESS;
 }
