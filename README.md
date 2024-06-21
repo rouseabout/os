@@ -168,6 +168,7 @@ To use the text mode console, it is neccessary to first set the `MULTIBOOT_VIDEO
 
 | Name | Description |
 |---|---|
+|alloc |allocate memory |
 |box |tiny version of many commands |
 |cat |concatenate files |
 |chat |real-time file descriptor chat |
