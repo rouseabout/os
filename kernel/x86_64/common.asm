@@ -109,7 +109,10 @@ isr_common:
 
     xor rbp, rbp
     mov rdi, rsp
+
+    sub rsp, 8
     call interrupt_handler
+    add rsp, 8
 
     pop rbp ; restore user-space data segment
     mov ds, rbp
