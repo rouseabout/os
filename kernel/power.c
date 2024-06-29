@@ -17,7 +17,7 @@ static int reboot_write(FileDescriptor * fd, const void * buf_, int size)
 {
     int status;
     do {
-       status = inb(0x64);
+        status = inb(0x64);
     } while(status & 2);
     outb(0x64, 0xfe);
     return 0;

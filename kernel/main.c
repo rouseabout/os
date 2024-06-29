@@ -69,18 +69,18 @@ int kprintf(const char * fmt, ...)
 
 void khexdump(const void * ptr, unsigned int size)
 {
-     const uint8_t * buf = ptr;
-     for (unsigned i = 0 ; i < size; i += 16) {
-         kprintf("%5x:", i);
-         for (unsigned int j = i; j < size && j < i + 16; j++) {
-             kprintf(" %02x", buf[j]);
-         }
-         kprintf(" | ");
-         for (unsigned int j = i; j < size && j < i + 16; j++) {
-             kprintf("%c", buf[j] >= 32 && buf[j] <= 127 ? buf[j] : '.');
-         }
-         kprintf("\n");
-     }
+    const uint8_t * buf = ptr;
+    for (unsigned i = 0 ; i < size; i += 16) {
+        kprintf("%5x:", i);
+        for (unsigned int j = i; j < size && j < i + 16; j++) {
+            kprintf(" %02x", buf[j]);
+        }
+        kprintf(" | ");
+        for (unsigned int j = i; j < size && j < i + 16; j++) {
+            kprintf("%c", buf[j] >= 32 && buf[j] <= 127 ? buf[j] : '.');
+        }
+        kprintf("\n");
+    }
 }
 
 extern uintptr_t boot_end;
@@ -332,11 +332,11 @@ static void cpu_init()
 }
 
 typedef struct {
-   uint16_t base_low;
-   uint16_t selector;
-   uint8_t zero;
-   uint8_t flags;
-   uint16_t base_high;
+    uint16_t base_low;
+    uint16_t selector;
+    uint8_t zero;
+    uint8_t flags;
+    uint16_t base_high;
 #if defined(ARCH_x86_64)
     uint32_t base_high2;
     uint32_t reserved;
@@ -1392,17 +1392,17 @@ static void clean_directory(page_directory * dir, int free_all)
 
 static int alloc_frames(uintptr_t start, uintptr_t size, page_directory * directory, int flags, int use_reserve)
 {
-      int called_alloc = 0;
-      if (nframes - count_used_frames() < (size + 0xFFF) / 0x1000)
-          return -ENOMEM;
+    int called_alloc = 0;
+    if (nframes - count_used_frames() < (size + 0xFFF) / 0x1000)
+        return -ENOMEM;
 
-      for (uintptr_t i = start; i < start + size; i += 0x1000) {
-          page_entry * pe = get_page_entry(i, 1, directory, &called_alloc, use_reserve);
-          if (!use_reserve)
-              alloc_frame(pe, flags);
-      }
+    for (uintptr_t i = start; i < start + size; i += 0x1000) {
+        page_entry * pe = get_page_entry(i, 1, directory, &called_alloc, use_reserve);
+        if (!use_reserve)
+            alloc_frame(pe, flags);
+    }
 
-      return called_alloc ? -EAGAIN : 0;
+    return called_alloc ? -EAGAIN : 0;
 }
 
 static int grow_cb(Halloc * cntx, unsigned int extra)
@@ -1648,8 +1648,8 @@ static Task ** find_zombie_pp(int ppid)
 {
     Task ** pp;
     for (pp = &zombie_queue; *pp; pp = &(*pp)->next)
-       if ((*pp)->ppid == ppid)
-           return pp;
+        if ((*pp)->ppid == ppid)
+            return pp;
     return NULL;
 }
 
@@ -2033,11 +2033,11 @@ static Task ** find_pp(Task *t)
 {
     Task ** pp;
     for (pp = &ready_queue; *pp; pp = &(*pp)->next)
-       if (*pp == t)
-           return pp;
+        if (*pp == t)
+            return pp;
     for (pp = &wait_queue; *pp; pp = &(*pp)->next)
-       if (*pp == t)
-           return pp;
+        if (*pp == t)
+            return pp;
     return NULL;
 }
 
@@ -2674,8 +2674,8 @@ static struct timespec timespec_add(const struct timespec a, const struct timesp
     v.tv_sec = a.tv_sec + b.tv_sec;
     v.tv_nsec = a.tv_nsec + b.tv_nsec;
     if (v.tv_nsec > 1000000000) {
-       v.tv_sec++;
-       v.tv_nsec -= 1000000000;
+        v.tv_sec++;
+        v.tv_nsec -= 1000000000;
     }
 
     return v;
@@ -2906,7 +2906,7 @@ static int sys_sigaction(int sig, const struct sigaction * act, struct sigaction
 {
     kprintf("sys_sigaction %d\n", sig);
     if (sig <= 0 || sig >= NSIG)
-       return -EINVAL;
+        return -EINVAL;
     if (oact)
         *oact = current_task->proc->act[sig];
     if (act) {
@@ -3365,7 +3365,7 @@ void start3(int magic, const void * info)
 
     void * ext2 = ext2_init(root_dev);
     if (!ext2)
-       panic("ext2_init failed");
+        panic("ext2_init failed");
     vfs_register_mount_point2(1, "", &ext2_io, ext2, 2);
 
     static char tty_dev[128];

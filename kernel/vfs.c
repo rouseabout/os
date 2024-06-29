@@ -143,7 +143,7 @@ static int resolve_inode2(int initial_inode, int make_abs, const char * path, in
 
 static int resolve_inode(const char * path, int resolve_basename, Mount ** mount_ptr, int * dinode_ptr, char * rpath)
 {
-     return resolve_inode2(2, 1, path, resolve_basename, mount_ptr, dinode_ptr, rpath);
+    return resolve_inode2(2, 1, path, resolve_basename, mount_ptr, dinode_ptr, rpath);
 }
 
 static int vfs_inode_creat(const char * path, mode_t mode, const char * symbolic_link, Mount ** mount_ptr, int * dinode_ptr, char * rpath)
@@ -173,9 +173,9 @@ static int vfs_inode_creat(const char * path, mode_t mode, const char * symbolic
 static int flags2fmt(int flags)
 {
     if ((flags & O_DIRECTORY))
-       return S_IFDIR;
+        return S_IFDIR;
     else
-       return S_IFREG;
+        return S_IFREG;
 }
 
 FileDescriptor * vfs_open(const char * path, int flags, mode_t mode)
@@ -516,11 +516,11 @@ int vfs_rename(const char * old, const char * new)
 
     ret = oldmount->ops->inode_unpopulate_dir(oldmount->priv_data, olddinode, inode, is_dir, 0);
     if (ret < 0)
-       return -EIO; //FIXME: no rollback
+        return -EIO; //FIXME: no rollback
 
     ret = oldmount->ops->inode_append_dir(oldmount->priv_data, newdinode, inode, newbase, is_dir);
     if (ret < 0)
-       return -EIO; //FIXME: no rollback
+        return -EIO; //FIXME: no rollback
 
     return 0;
 }

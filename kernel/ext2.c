@@ -73,7 +73,7 @@ void * ext2_init(const char * path)
     vfs_read(s->fd, &s->super, sizeof(struct ext2_super_block));
 
     if (s->super.s_magic != EXT2_SUPER_MAGIC)
-       panic("ext2: !EXT2_SUPER_MAGIC");
+        panic("ext2: !EXT2_SUPER_MAGIC");
 
     s->block_size = 1024 << s->super.s_log_block_size;
     kprintf("ext2: block_size=%d\n", s->block_size);

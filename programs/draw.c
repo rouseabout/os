@@ -20,8 +20,8 @@ static void draw_box(int xx, int yy, int width, int height, int color)
                 else
                     fb_addr[j * fb_stride + i/8] |= 1 << (7 - (i & 7));
     } else {
-    for (int j = yy; j < yy + height && j < fb_height; j++)
-        for (int i = xx; i < xx + width && i < fb_width; i++)
+        for (int j = yy; j < yy + height && j < fb_height; j++)
+            for (int i = xx; i < xx + width && i < fb_width; i++)
                 for (unsigned int k = 0; k < fb_bpp/8; k++)
                     fb_addr[j * fb_stride + i * fb_bpp/8 + k] = color;
     }

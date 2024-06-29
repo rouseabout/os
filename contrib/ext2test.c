@@ -23,18 +23,18 @@ int kprintf(const char * fmt, ...)
 
 void khexdump(const void * ptr, unsigned int size)
 {
-     const uint8_t * buf = ptr;
-     for (unsigned i = 0 ; i < size; i += 16) {
-         kprintf("%5x:", i);
-         for (unsigned int j = i; j < size && j < i + 16; j++) {
-             kprintf(" %02x", buf[j]);
-         }
-         kprintf(" | ");
-         for (unsigned int j = i; j < size && j < i + 16; j++) {
-             kprintf("%c", buf[j] >= 32 && buf[j] <= 127 ? buf[j] : '.');
-         }
-         kprintf("\n");
-     }
+    const uint8_t * buf = ptr;
+    for (unsigned i = 0 ; i < size; i += 16) {
+        kprintf("%5x:", i);
+        for (unsigned int j = i; j < size && j < i + 16; j++) {
+            kprintf(" %02x", buf[j]);
+        }
+        kprintf(" | ");
+        for (unsigned int j = i; j < size && j < i + 16; j++) {
+            kprintf("%c", buf[j] >= 32 && buf[j] <= 127 ? buf[j] : '.');
+        }
+        kprintf("\n");
+    }
 }
 
 void panic(const char * reason)

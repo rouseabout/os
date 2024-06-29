@@ -80,8 +80,8 @@ void serial_init()
     outb(PORT + 4, 0x1E);
     outb(PORT + 0, 0xAE);
     if (inb(PORT + 0) != 0xAE) {
-       kprintf("serial_init: error\n");
-       return;
+        kprintf("serial_init: error\n");
+        return;
     }
     outb(PORT + 4, 0x0F);
 

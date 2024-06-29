@@ -41,13 +41,13 @@ static int args_index;
 
 static void rendition(int x)
 {
-     //kprintf("tty: rendition %d\n", x);
-     if (x == 0)
-         tty_inverse = 0;
-     else if (x == 7)
-         tty_inverse = 0xFF;
-     else
-         kprintf("tty: command m: %d\n", x);
+    //kprintf("tty: rendition %d\n", x);
+    if (x == 0)
+        tty_inverse = 0;
+    else if (x == 7)
+        tty_inverse = 0xFF;
+    else
+        kprintf("tty: command m: %d\n", x);
 }
 
 static void tty_process(int c)
@@ -129,7 +129,7 @@ static void tty_process(int c)
             if (args_index != -1)
                 args_index++;
             if (args_index > 1)
-                 kprintf("tty: multiple j commands\n");
+                kprintf("tty: multiple j commands\n");
             if (args[0] == 1)
                 tty_kbmode = 1; /* ascii set */
             else if (args[0] == 7)
@@ -169,7 +169,7 @@ static void tty_process(int c)
             else if (args[0] == 2)
                 tty->clear(TTY_PAGE);
             else {
-                 kprintf("tty: unsupported J mode %d\n", args[0]);
+                kprintf("tty: unsupported J mode %d\n", args[0]);
             }
         } else if (c == 'K') {
             if (args[0] == 0)
@@ -206,8 +206,8 @@ static void tty_process(int c)
     }
 
     if (c == 27) {
-       esc_mode = STATE_ESCAPE;
-       return;
+        esc_mode = STATE_ESCAPE;
+        return;
     }
 
     if (c == 7) {
@@ -240,17 +240,17 @@ static void drain()
     if (size <= 0)
         return;
     for (int i = 0; i < size; i++) {
-         int c = buf[i];
-         if (c == '\b') {
-             if (linepos > 0)
-                 linepos--;
-         } else {
-             linebuf[linepos++] = c;
-             if (c == 0x4 || c == '\n') {
-                 ringbuffer_write(&cookedrb, linebuf, linepos);
-                 linepos = 0;
-             }
-         }
+        int c = buf[i];
+        if (c == '\b') {
+            if (linepos > 0)
+                linepos--;
+        } else {
+            linebuf[linepos++] = c;
+            if (c == 0x4 || c == '\n') {
+                ringbuffer_write(&cookedrb, linebuf, linepos);
+                linepos = 0;
+            }
+        }
     }
 }
 

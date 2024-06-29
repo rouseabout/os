@@ -38,7 +38,7 @@ void * memmove(void * s1, const void * s2, size_t n)
         memcpy(dst, src, n);
     else
         for (unsigned int i = 0; i < n; i++)
-           dst[n - i - 1] = src[n - i - 1];
+            dst[n - i - 1] = src[n - i - 1];
     return dst;
 }
 

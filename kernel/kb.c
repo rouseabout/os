@@ -159,10 +159,10 @@ static int toupper(int c)
 
 static void arrow(int c)
 {
-     kb_put('\033');
-     if (tty_kbmode != 2)
-         kb_puts(!tty_kbmode ? (lcontrol ? "[1;5" : (alt ? "[1;3" : "[")) : "O");
-     kb_put(c);
+    kb_put('\033');
+    if (tty_kbmode != 2)
+        kb_puts(!tty_kbmode ? (lcontrol ? "[1;5" : (alt ? "[1;3" : "[")) : "O");
+    kb_put(c);
 }
 
 static void process_scancode(unsigned int scancode)

@@ -79,14 +79,14 @@ static int ls_main(int argc, char ** argv, char ** envp)
     while ((opt = getopt(argc, argv, "al")) != -1) {
         switch (opt) {
         case 'a':
-           a = 1;
-           break;
+            a = 1;
+            break;
         case 'l':
-           l = 1;
-           break;
+            l = 1;
+            break;
         default:
-           fprintf(stderr, "usage: %s [-a] [-l] [path]\n", argv[0]);
-           return EXIT_FAILURE;
+            fprintf(stderr, "usage: %s [-a] [-l] [path]\n", argv[0]);
+            return EXIT_FAILURE;
         }
     }
 

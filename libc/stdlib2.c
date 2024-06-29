@@ -236,9 +236,9 @@ static int realpath2(const char * file_name, char * resolved_name)
             return -1;
         tmp[size] = 0;
         return realpath2(tmp, resolved_name);
-     }
-     strlcpy(resolved_name, file_name, PATH_MAX);
-     return 0;
+    }
+    strlcpy(resolved_name, file_name, PATH_MAX);
+    return 0;
 }
 
 

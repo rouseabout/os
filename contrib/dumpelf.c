@@ -4,18 +4,18 @@
 
 static void dump_hex(const void * ptr, unsigned int size)
 {
-     const uint8_t * buf = ptr;
-     for (unsigned i = 0 ; i < size; i += 16) {
-         printf("%5x:", i);
-         for (unsigned int j = i; j < size && j < i + 16; j++) {
-             printf(" %02x", buf[j]);
-         }
-         printf(" | ");
-         for (unsigned int j = i; j < size && j < i + 16; j++) {
-             printf("%c", buf[j] >= 32 && buf[j] <= 127 ? buf[j] : '.');
-         }
-         printf("\n");
-     }
+    const uint8_t * buf = ptr;
+    for (unsigned i = 0 ; i < size; i += 16) {
+        printf("%5x:", i);
+        for (unsigned int j = i; j < size && j < i + 16; j++) {
+            printf(" %02x", buf[j]);
+        }
+        printf(" | ");
+        for (unsigned int j = i; j < size && j < i + 16; j++) {
+            printf("%c", buf[j] >= 32 && buf[j] <= 127 ? buf[j] : '.');
+        }
+        printf("\n");
+    }
 }
 
 static int fdump(FILE * f, int offset, int size)
@@ -47,7 +47,7 @@ int main(int argc, char ** argv)
 
     printf("e_ident:");
     for (int i = 0; i < sizeof(e.e_ident); i++)
-       printf(" %c (%d)", e.e_ident[i], e.e_ident[i]);
+        printf(" %c (%d)", e.e_ident[i], e.e_ident[i]);
     printf("\n");
 
     printf("e_type: %d\n", e.e_type);

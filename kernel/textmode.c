@@ -92,9 +92,9 @@ static void textmode_clear(int what)
 
 static void textmode_set_pos(int xx, int yy)
 {
-     x = MAX(0, MIN(79, xx));
-     y = MAX(0, MIN(24, yy));
-     update_cursor();
+    x = MAX(0, MIN(79, xx));
+    y = MAX(0, MIN(24, yy));
+    update_cursor();
 }
 
 static void check_scroll_down()

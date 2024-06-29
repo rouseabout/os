@@ -61,8 +61,8 @@ int main(int argc, char ** argv, char ** envp)
 {
     const char * name = basename(argv[0]);
     for (int i = 0 ; i < sizeof(programs)/sizeof(programs[0]); i++)
-       if (!strcmp(programs[i].name, name))
-           return programs[i].main(argc, argv, envp);
+        if (!strcmp(programs[i].name, name))
+            return programs[i].main(argc, argv, envp);
     fprintf(stderr, "known commands:");
     for (int i = 0 ; i < sizeof(programs)/sizeof(programs[0]); i++)
         fprintf(stderr, " %s", programs[i].name);

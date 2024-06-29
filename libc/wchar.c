@@ -75,12 +75,12 @@ size_t wcslen(const wchar_t * ws)
 
 int wcsncmp(const wchar_t * ws1, const wchar_t * ws2, size_t n)
 {
-     while (n && *ws1 && *ws1 == *ws2) {
-          ws1++;
-          ws2++;
-          n--;
-      }
-      return n ? *ws1 - *ws2 : 0;
+    while (n && *ws1 && *ws1 == *ws2) {
+        ws1++;
+        ws2++;
+        n--;
+    }
+    return n ? *ws1 - *ws2 : 0;
 }
 
 wchar_t * wcsncpy(wchar_t * ws1, const wchar_t * ws2, size_t n)

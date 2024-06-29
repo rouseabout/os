@@ -350,42 +350,42 @@ repeat:
     if (h0->size - size > sizeof(Head) + sizeof(Tail) + 0) {
 
 
-       /* from:  [h0]..............[t1]  */
-       /*   to:  [h0]xxx[t0][h1]...[t1] */
+        /* from:  [h0]..............[t1]  */
+        /*   to:  [h0]xxx[t0][h1]...[t1] */
 
-       /* nuke the original tail, for sanity checking */
-       Tail * t1 = head_tail(h0);
+        /* nuke the original tail, for sanity checking */
+        Tail * t1 = head_tail(h0);
 #if VALIDATE
-       ASSERT(t1->magic == TAIL_MAGIC);
-       t1->magic = 0;
+        ASSERT(t1->magic == TAIL_MAGIC);
+        t1->magic = 0;
 #endif
 
-       /* adjust h0 */
-       int original_size = h0->size;
-       h0->size  = size;
+        /* adjust h0 */
+        int original_size = h0->size;
+        h0->size  = size;
 
-       /* install t0 */
-       Tail * t0 = head_tail(h0);
+        /* install t0 */
+        Tail * t0 = head_tail(h0);
 #if VALIDATE
-       t0->magic = TAIL_MAGIC;
+        t0->magic = TAIL_MAGIC;
 #endif
-       t0->size  = size;
+        t0->size  = size;
 
-       /* install h1 */
-       Head * h1 = head_next(h0);
+        /* install h1 */
+        Head * h1 = head_next(h0);
 #if VALIDATE
-       t0->magic = TAIL_MAGIC;
-       h1->magic = HEAD_MAGIC;
+        t0->magic = TAIL_MAGIC;
+        h1->magic = HEAD_MAGIC;
 #endif
-       h1->size  = original_size - (size + sizeof(Head) + sizeof(Tail));
-       h1->used  = 0;
+        h1->size  = original_size - (size + sizeof(Head) + sizeof(Tail));
+        h1->used  = 0;
 
-       ASSERT(head_tail(h1) == t1);
+        ASSERT(head_tail(h1) == t1);
 
 #if VALIDATE
-       t1->magic = TAIL_MAGIC;
+        t1->magic = TAIL_MAGIC;
 #endif
-       t1->size  = h1->size;
+        t1->size  = h1->size;
     }
 
     h0->align = page_align ? log2int(page_align) : 0;
@@ -559,56 +559,54 @@ static int grow_cb(Halloc * cntx, unsigned int extra)
 
 int main()
 {
-     void * store = malloc(MEMORY_SIZE);
+    void * store = malloc(MEMORY_SIZE);
 
-     Halloc cntx;
-     halloc_init(&cntx, store, 8192*2);
-     cntx.reserve_size = 8192;
-     cntx.grow_cb = grow_cb;
-     cntx.shrink_cb = 0;
-     cntx.dump_cb = 0;
-     cntx.printf = printf;
-     halloc_dump(&cntx);
+    Halloc cntx;
+    halloc_init(&cntx, store, 8192*2);
+    cntx.reserve_size = 8192;
+    cntx.grow_cb = grow_cb;
+    cntx.shrink_cb = 0;
+    cntx.dump_cb = 0;
+    cntx.printf = printf;
+    halloc_dump(&cntx);
 
 #if 1
-     /* grinder */
+    /* grinder */
 
 #define NB 256
-     unsigned char * array[NB] = { 0 };
-     unsigned int sizes[NB];
-     srand(0);
-     for (unsigned int i = 1; i < 1000000; i++) {
-         int idx = random() % NB;
-  //   halloc_dump();
-         if (array[idx]) {
-             if (check(array[idx], idx, sizes[idx]) < 0) {
-                 printf("integrity check failed: %d\n", idx);
-                 for (unsigned int i = 0; i < sizes[idx]; i++) {
-                     printf(" %02x", array[idx][i]);
-                 }
-                 exit(1);
-             }
-             hfree(&cntx, array[idx]);
-             array[idx] = NULL;
-         } else {
-             sizes[idx] = random() % 10000;
-             array[idx] = halloc(&cntx, sizes[idx], random() ? 4 : 4096, 0, "stdlib");
-             if (array[idx])
-                 memset(array[idx], idx, sizes[idx]);
-         }
+    unsigned char * array[NB] = { 0 };
+    unsigned int sizes[NB];
+    srand(0);
+    for (unsigned int i = 1; i < 1000000; i++) {
+        int idx = random() % NB;
+ //   halloc_dump();
+        if (array[idx]) {
+            if (check(array[idx], idx, sizes[idx]) < 0) {
+                printf("integrity check failed: %d\n", idx);
+                for (unsigned int i = 0; i < sizes[idx]; i++) {
+                    printf(" %02x", array[idx][i]);
+                }
+                exit(1);
+            }
+            hfree(&cntx, array[idx]);
+            array[idx] = NULL;
+        } else {
+            sizes[idx] = random() % 10000;
+            array[idx] = halloc(&cntx, sizes[idx], random() ? 4 : 4096, 0, "stdlib");
+            if (array[idx])
+                memset(array[idx], idx, sizes[idx]);
+        }
  //    halloc_dump();
-     }
-     halloc_dump(&cntx);
-     printf("PASS\n");
-
+    }
+    halloc_dump(&cntx);
+    printf("PASS\n");
 #else
-
-     void *p = halloc(&cntx, 25, 0, "p");
-     void *q = halloc(&cntx, 30, 0, "q");
-     halloc_dump(&cntx);
-     hfree(&cntx, q);
-     hfree(&cntx, p);
-     halloc_dump(&cntx);
+    void *p = halloc(&cntx, 25, 0, "p");
+    void *q = halloc(&cntx, 30, 0, "q");
+    halloc_dump(&cntx);
+    hfree(&cntx, q);
+    hfree(&cntx, p);
+    halloc_dump(&cntx);
 #endif
 }
 #endif /* TEST */

@@ -162,10 +162,10 @@ static size_t partition(void * base, size_t l, size_t r, size_t width, int (*com
     size_t rr = r;
 #define ADDR(x) ((char *)base + (x) * width)
     while (ll < rr) {
-       while (ll <= rr && compar(ADDR(ll), ADDR(p)) <= 0) ll++;
-       while (compar(ADDR(rr), ADDR(p)) > 0) rr--;
-       if (ll < rr)
-           swap2(ADDR(ll), ADDR(rr), width);
+        while (ll <= rr && compar(ADDR(ll), ADDR(p)) <= 0) ll++;
+        while (compar(ADDR(rr), ADDR(p)) > 0) rr--;
+        if (ll < rr)
+            swap2(ADDR(ll), ADDR(rr), width);
     }
     swap2(ADDR(p), ADDR(rr), width);
 #undef ADDR

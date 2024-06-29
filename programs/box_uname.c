@@ -16,13 +16,13 @@ static int uname_main(int argc, char ** argv, char ** envp)
         case 's': s = 1; break;
         case 'v': v = 1; break;
         default:
-           fprintf(stderr, "usage: %s [-amnrsv]\n", argv[0]);
-           return EXIT_FAILURE;
+            fprintf(stderr, "usage: %s [-amnrsv]\n", argv[0]);
+            return EXIT_FAILURE;
         }
     }
 
     if (!m && !n && !r && !s && !v)
-       s = 1;
+        s = 1;
 
     struct utsname un;
     uname(&un);

@@ -424,8 +424,8 @@ int puts(const char *s)
 int remove(const char * path)
 {
     if (rmdir(path) < 0)
-       if (unlink(path) < 0)
-           return -1;
+        if (unlink(path) < 0)
+            return -1;
     return 0;
 }
 

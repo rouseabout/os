@@ -37,9 +37,9 @@ typedef struct  {
 
 static int cmp(const void * key_, const void * ent_)
 {
-     const char * key = key_;
-     const ref_entry * ent = ent_;
-     return strcmp(key, ent->name);
+    const char * key = key_;
+    const ref_entry * ent = ent_;
+    return strcmp(key, ent->name);
 }
 
 static void * thread_func(void * v)

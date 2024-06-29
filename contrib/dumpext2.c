@@ -11,18 +11,18 @@
 
 void hexdump(const void * ptr, unsigned int size)
 {
-     const uint8_t * buf = ptr;
-     for (unsigned i = 0 ; i < size; i += 16) {
-         printf("%5x:", i);
-         for (unsigned int j = i; j < size && j < i + 16; j++) {
-             printf(" %02x", buf[j]);
-         }
-         printf(" | ");
-         for (unsigned int j = i; j < size && j < i + 16; j++) {
-             printf("%c", buf[j] >= 32 && buf[j] <= 127 ? buf[j] : '.');
-         }
-         printf("\n");
-     }
+    const uint8_t * buf = ptr;
+    for (unsigned i = 0 ; i < size; i += 16) {
+        printf("%5x:", i);
+        for (unsigned int j = i; j < size && j < i + 16; j++) {
+            printf(" %02x", buf[j]);
+        }
+        printf(" | ");
+        for (unsigned int j = i; j < size && j < i + 16; j++) {
+            printf("%c", buf[j] >= 32 && buf[j] <= 127 ? buf[j] : '.');
+        }
+        printf("\n");
+    }
 }
 
 #define MIN(a,b) ((a) < (b) ? (a) : (b))

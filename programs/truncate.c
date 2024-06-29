@@ -12,11 +12,11 @@ int main(int argc, char ** argv)
     while ((opt = getopt(argc, argv, "s:")) != -1) {
         switch (opt) {
         case 's':
-           size = atoi(optarg);
-           break;
+            size = atoi(optarg);
+            break;
         default:
-           USAGE
-           return EXIT_FAILURE;
+            USAGE
+            return EXIT_FAILURE;
         }
     }
 
