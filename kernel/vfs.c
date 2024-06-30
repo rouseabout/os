@@ -194,6 +194,10 @@ FileDescriptor * vfs_open(const char * path, int flags, mode_t mode)
             return NULL;
     }
 
+    struct stat st;
+    if (mount->ops->inode_stat && mount->ops->inode_stat(mount->priv_data, inode, &st) == 0 && !!(st.st_mode & S_IFDIR) != !!(flags & O_DIRECTORY))
+        return NULL;
+
     FileDescriptor * fd = kmalloc(sizeof(FileDescriptor), "fd");
     fd->refcount = 1;
     fd->mount = mount;
