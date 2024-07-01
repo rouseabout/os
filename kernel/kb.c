@@ -205,13 +205,13 @@ static void process_scancode(unsigned int scancode)
                 c = toupper(c);
                 if (tty_lflag & ISIG) {
                     if (c == 'C') {
-                        deliver_signal(tty_foreground_pgrp, SIGINT);
+                        deliver_signal_pgrp(tty_foreground_pgrp, SIGINT);
                         return;
                     } else if (c == 'Z') {
-                        deliver_signal(tty_foreground_pgrp, SIGTSTP);
+                        deliver_signal_pgrp(tty_foreground_pgrp, SIGTSTP);
                         return;
                     } else if (c == '\\' || c == '/') {
-                        deliver_signal(tty_foreground_pgrp, SIGQUIT);
+                        deliver_signal_pgrp(tty_foreground_pgrp, SIGQUIT);
                         return;
                     }
                 }

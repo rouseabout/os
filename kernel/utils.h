@@ -64,7 +64,7 @@ void * krealloc(void * buf, unsigned int size);
 
 void get_absolute_path(char * abspath, int size, const char * path);
 
-void deliver_signal(int pgrp, int signal);
+void deliver_signal_pgrp(int pgrp, int signal);
 
 extern struct timespec tnow;
 

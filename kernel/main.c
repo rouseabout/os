@@ -1911,18 +1911,6 @@ static void switch_task(registers * reg)
     clear_user_pages();
 }
 
-void deliver_signal(int pgrp, int signal)
-{
-    kprintf("deliver signal %d to pgrp=%d\n", signal, pgrp);
-    for (Task * t = ready_queue; t; t = t->next)
-        if (t->proc->pgrp == pgrp)
-            sigaddset(&t->proc->signal, signal);
-
-    for (Task * t = wait_queue; t; t = t->next)
-        if (t->proc->pgrp == pgrp)
-            sigaddset(&t->proc->signal, signal);
-}
-
 static void deliver_signal_pid(int pid, int signal)
 {
     kprintf("deliver signal %d to pid=%d\n", signal, pid);
@@ -1935,7 +1923,7 @@ static void deliver_signal_pid(int pid, int signal)
             sigaddset(&t->proc->signal, signal);
 }
 
-static void deliver_signal_pgrp(int pgrp, int signal)
+void deliver_signal_pgrp(int pgrp, int signal)
 {
     kprintf("deliver signal %d to pgrp=%d\n", signal, pgrp);
     for (Task * t = ready_queue; t; t = t->next)
