@@ -30,7 +30,7 @@ static void print_mode(mode_t m)
     if (m & S_IXUSR) printf("x"); else printf("-");
 }
 
-static void ls(const char * dir_name, int a, int l)
+static void ls(const char * dir_name, int a, int sep, int l)
 {
     DIR * dir = opendir(dir_name);
     if (!dir) {
@@ -66,30 +66,38 @@ static void ls(const char * dir_name, int a, int l)
                 printf(" -> %s", symlink);
             }
         }
-        printf("\n");
+        printf("%c", sep);
     }
+
+    if (sep == '\t')
+        printf("\n");
 
     closedir(dir);
 }
 
 static int ls_main(int argc, char ** argv, char ** envp)
 {
-    int a = 0, l = 0;
+    int a = 0, sep = '\t', l = 0;
     int opt;
-    while ((opt = getopt(argc, argv, "al")) != -1) {
+    while ((opt = getopt(argc, argv, "1al")) != -1) {
         switch (opt) {
+        case '1':
+            sep = '\n';
+            l = 0;
+            break;
         case 'a':
             a = 1;
             break;
         case 'l':
+            sep = '\n';
             l = 1;
             break;
         default:
-            fprintf(stderr, "usage: %s [-a] [-l] [path]\n", argv[0]);
+            fprintf(stderr, "usage: %s [-1] [-a] [-l] [path]\n", argv[0]);
             return EXIT_FAILURE;
         }
     }
 
-    ls(optind < argc ? argv[optind] : ".", a, l);
+    ls(optind < argc ? argv[optind] : ".", a, sep, l);
     return EXIT_SUCCESS;
 }
