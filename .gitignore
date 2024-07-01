@@ -15,6 +15,7 @@ libc.a
 libdl.a
 libg.a
 libm.a
+alloc
 box
 chat
 crash
