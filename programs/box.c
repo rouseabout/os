@@ -23,6 +23,7 @@
 #include "box_rmdir.c"
 #include "box_sleep.c"
 #include "box_touch.c"
+#include "box_tr.c"
 #include "box_true.c"
 #include "box_uname.c"
 #include "box_vi.c"
@@ -51,6 +52,7 @@ static const struct {
     {"rmdir", rmdir_main},
     {"sleep", sleep_main},
     {"touch", touch_main},
+    {"tr", tr_main},
     {"true", true_main},
     {"uname", uname_main},
     {"vi", vi_main},

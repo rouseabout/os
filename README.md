@@ -204,6 +204,7 @@ To use the text mode console, it is neccessary to first set the `MULTIBOOT_VIDEO
 |testcases |execute standard library test cases |
 |tolower |change text to lower case |
 |touch |change file timestamp |
+|tr |translate characters |
 |tree |walk directory tree |
 |true |return successful (0) error code |
 |truncate |truncate a file |
