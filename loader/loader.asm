@@ -133,9 +133,9 @@ printz:
 .ret:
     ret
 
-zsetup: db "setup...", 0, 0
-zkernel: db 0xd, 0xa, "kernel...", 0, 0
-zinitrd: db 0xd, 0xa, "initrd...", 0, 0
+zsetup: db "setup...", 0
+zkernel: db 0xd, 0xa, "kernel...", 0
+zinitrd: db 0xd, 0xa, "initrd...", 0
 znewline: db 0xd, 0xa, 0
 zerror: db " error", 0xd, 0xa, 0
 
