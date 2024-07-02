@@ -1,5 +1,6 @@
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 static int cmp_main(int argc, char ** argv, char ** envp)
@@ -7,19 +8,19 @@ static int cmp_main(int argc, char ** argv, char ** envp)
     int fda, fdb;
     if (argc != 3) {
         printf("cmp file1 file2\n");
-        return -1;
+        return EXIT_FAILURE;
     }
 
     fda = open(argv[1], O_RDONLY);
     if (fda < 0) {
-        printf("open '%s' failed\n", argv[1]);
-        return -1;
+        perror(argv[1]);
+        return EXIT_FAILURE;
     }
 
     fdb = open(argv[2], O_RDONLY);
     if (fdb < 0) {
-        printf("open '%s' failed\n", argv[2]);
-        return -1;
+        perror(argv[2]);
+        return EXIT_FAILURE;
     }
 
     int pos = 1;
@@ -31,7 +32,7 @@ static int cmp_main(int argc, char ** argv, char ** envp)
 
         if (reta < 0 || retb < 0) {
             printf("i/o error\n");
-            return -1;
+            return EXIT_FAILURE;
         }
 
         if (reta == 0 && retb == 0)
@@ -39,7 +40,7 @@ static int cmp_main(int argc, char ** argv, char ** envp)
 
         if (a != b) {
             printf("%s %s differ: char %d, line %d\n", argv[1], argv[2], pos, line);
-            return -1;
+            return EXIT_FAILURE;
         }
 
         if (a == '\n')
@@ -50,5 +51,5 @@ static int cmp_main(int argc, char ** argv, char ** envp)
     close(fda);
     close(fdb);
 
-    return 0;
+    return EXIT_SUCCESS;
 }
