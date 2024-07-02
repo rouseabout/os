@@ -32,17 +32,17 @@ int main(int argc, char ** argv)
     int fd = open("/dev/fb0", O_RDWR);
     if (fd < 0) {
         perror("open");
-        return -1;
+        return EXIT_FAILURE;
     }
 
     struct fb_fix_screeninfo fixinfo;
     struct fb_var_screeninfo varinfo;
 
     if (ioctl(fd, FBIOGET_FSCREENINFO, &fixinfo) < 0)
-        return -1;
+        return EXIT_FAILURE;
 
     if (ioctl(fd, FBIOGET_VSCREENINFO, &varinfo) < 0)
-        return -1;
+        return EXIT_FAILURE;
 
     fb_stride = fixinfo.line_length;
     fb_width = varinfo.xres;
@@ -52,7 +52,7 @@ int main(int argc, char ** argv)
     fb_addr = mmap(NULL, fixinfo.smem_len, PROT_WRITE, MAP_SHARED, fd, 0);
     if (fb_addr == MAP_FAILED) {
         perror("mmap\n");
-        return -1;
+        return EXIT_FAILURE;
     }
 
     int size = 64;
@@ -64,4 +64,6 @@ int main(int argc, char ** argv)
 
     munmap(fb_addr, fixinfo.smem_len);
     close(fd);
+
+    return EXIT_SUCCESS;
 }
