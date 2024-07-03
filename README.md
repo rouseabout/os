@@ -184,6 +184,7 @@ To use the text mode console, it is neccessary to first set the `MULTIBOOT_VIDEO
 |flash |flash the screen |
 |forkbomb |fork bomb |
 |getty |open tty port with interactive sh |
+|grep |print lines matching pattern |
 |hello |hello world (assembly) |
 |hello++ |hello world (C++) |
 |hexdump |hexadecimal dumper |

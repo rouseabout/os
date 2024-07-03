@@ -11,6 +11,7 @@
 #include "box_echo.c"
 #include "box_env.c"
 #include "box_false.c"
+#include "box_grep.c"
 #include "box_kill.c"
 #include "box_ln.c"
 #include "box_ls.c"
@@ -40,6 +41,7 @@ static const struct {
     {"echo", echo_main},
     {"env", env_main},
     {"false", false_main},
+    {"grep", grep_main},
     {"kill", kill_main},
     {"ln", ln_main},
     {"ls", ls_main},
