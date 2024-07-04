@@ -162,10 +162,23 @@ static int proc_open2(FileDescriptor * fd)
 
 static int proc_read(FileDescriptor * fd, void * buf, int size)
 {
-    size = MIN(size, fd->buf_size - fd->pos);
+    size = MAX(MIN(size, fd->buf_size - fd->pos), 0);
     memcpy(buf, fd->buf + fd->pos, size);
     fd->pos += size;
     return size;
+}
+
+static off_t proc_lseek(FileDescriptor * fd, off_t offset, int whence)
+{
+    if (whence == SEEK_END)
+        fd->pos = MAX(0, fd->buf_size + offset);
+    else if (whence == SEEK_CUR)
+        fd->pos = MAX(0, fd->pos + offset);
+    else if (whence == SEEK_SET)
+        fd->pos = MAX(0, offset);
+    else
+        return -EINVAL;
+    return fd->pos;
 }
 
 const FileOperations proc_io = {
@@ -177,6 +190,7 @@ const FileOperations proc_io = {
     .open2 = proc_open2,
     .file = {
         .read = proc_read,
+        .lseek = proc_lseek,
     },
     .getdents = proc_getdents,
 };
