@@ -6,7 +6,7 @@
 
 static int memfind(const char * hay, int haysize, const char * needle, int needlesize)
 {
-    for (int i = 0; i < haysize - needlesize; i++)
+    for (int i = 0; i < haysize - needlesize + 1; i++)
         if (!memcmp(hay + i, needle, needlesize))
             return 0;
     return 1;
