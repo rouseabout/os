@@ -1,5 +1,6 @@
 #include <bsd/string.h>
 #include <ctype.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <signal.h>
@@ -313,10 +314,14 @@ static int save_file(State * st, const char * path)
 {
     int fd = open(path, O_WRONLY|O_CREAT, 0666);
     if (fd == -1) {
-        snprintf(st->message, sizeof(st->message), "\"%s\" write error", path);
+        snprintf(st->message, sizeof(st->message), "\"%s\" write error: %s", path, strerror(errno));
         return -1;
     }
-    write(fd, st->buf, st->size);
+    if (write(fd, st->buf, st->size) == -1) {
+        snprintf(st->message, sizeof(st->message), "\"%s\" write error: %s", path, strerror(errno));
+        close(fd);
+        return -1;
+    }
     close(fd);
 
     snprintf(st->message, sizeof(st->message), "\"%s\" written", path);
