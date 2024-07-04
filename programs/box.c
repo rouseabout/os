@@ -8,6 +8,7 @@
 #include "box_clear.c"
 #include "box_cmp.c"
 #include "box_date.c"
+#include "box_dd.c"
 #include "box_echo.c"
 #include "box_env.c"
 #include "box_false.c"
@@ -38,6 +39,7 @@ static const struct {
     {"clear", clear_main},
     {"cmp", cmp_main},
     {"date", date_main},
+    {"dd", dd_main},
     {"echo", echo_main},
     {"env", env_main},
     {"false", false_main},

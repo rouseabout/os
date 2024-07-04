@@ -176,6 +176,7 @@ To use the text mode console, it is neccessary to first set the `MULTIBOOT_VIDEO
 |cmp |compare files |
 |crash |deliberately cause memory access violation |
 |date |print date time |
+|dd |duplicate data |
 |df |print device names and mount points |
 |draw |draw random graphics (requires framebuffer) |
 |echo |echo |
