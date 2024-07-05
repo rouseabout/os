@@ -104,7 +104,6 @@ int main(int argc, char ** argv)
                 printf("newargv[%d]='%s'\n", i, newargv[i]);
             }
 #endif
-
             if (!strcmp(newargv[0], "exit"))
                 break;
             if (!strcmp(newargv[0], "cd")) {
@@ -124,6 +123,10 @@ int main(int argc, char ** argv)
                 }
                 if (ret < 0)
                     fprintf(stderr, "chdir failed\n");
+                continue;
+            }
+            if (!strcmp(newargv[0], "help")) {
+                fprintf(stderr, "sh built-in commands: cd exit help setenv\n");
                 continue;
             }
             if (!strcmp(newargv[0], "setenv")) {
