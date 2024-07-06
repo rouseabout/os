@@ -177,7 +177,6 @@ To use the text mode console, it is neccessary to first set the `MULTIBOOT_VIDEO
 |crash |deliberately cause memory access violation |
 |date |print date time |
 |dd |duplicate data |
-|df |print device names and mount points |
 |draw |draw random graphics (requires framebuffer) |
 |echo |echo |
 |env |print environment  |
@@ -197,6 +196,7 @@ To use the text mode console, it is neccessary to first set the `MULTIBOOT_VIDEO
 |ls |list contents of directory |
 |mkdir |make directory |
 |more |more |
+|mount |print mount points |
 |mv |rename files |
 |pwd |print current working directory |
 |reset |reset console |
