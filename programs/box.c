@@ -11,6 +11,7 @@
 #include "box_dd.c"
 #include "box_echo.c"
 #include "box_env.c"
+#include "box_expr.c"
 #include "box_false.c"
 #include "box_grep.c"
 #include "box_kill.c"
@@ -42,6 +43,7 @@ static const struct {
     {"dd", dd_main},
     {"echo", echo_main},
     {"env", env_main},
+    {"expr", expr_main},
     {"false", false_main},
     {"grep", grep_main},
     {"kill", kill_main},

@@ -181,6 +181,7 @@ To use the text mode console, it is neccessary to first set the `MULTIBOOT_VIDEO
 |draw |draw random graphics (requires framebuffer) |
 |echo |echo |
 |env |print environment  |
+|expr |evaluate expression |
 |false |return failure (1) error code |
 |flash |flash the screen |
 |forkbomb |fork bomb |
