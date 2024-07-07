@@ -104,7 +104,11 @@ static int expr_main(int argc, char ** argv, char ** envp)
         fprintf(stderr, "%s EXPRESSION\n", argv[0]);
         return EXIT_FAILURE;
     }
-    int i;
-    printf("%d\n", equality(argc, argv, 1, &i));
+    int i, v = equality(argc, argv, 1, &i);
+    if (i != argc) {
+        fprintf(stderr, "error\n");
+        exit(EXIT_FAILURE);
+    }
+    printf("%d\n", v);
     return EXIT_SUCCESS;
 }
