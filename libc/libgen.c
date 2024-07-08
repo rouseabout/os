@@ -18,7 +18,6 @@ char * basename(char * path)
     return p ? p + 1 : s;
 }
 
-
 char * dirname(char * path)
 {
     static char s[PATH_MAX];

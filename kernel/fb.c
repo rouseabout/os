@@ -324,7 +324,6 @@ const TTYCommands fb_commands = {
     .columns = fb_columns,
 };
 
-
 /* linux fb api */
 
 #include <linux/fb.h>

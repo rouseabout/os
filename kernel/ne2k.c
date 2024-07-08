@@ -211,7 +211,6 @@ void * ne2k_init()
     outb(cntx->io_base + EN0_STOPPG, NE2K_RAM_RECV_END >> 8);
     outb(cntx->io_base + EN0_BOUNDARY, NE2K_RAM_RECV_BEGIN >> 8);
 
-
     outb(cntx->io_base + ENX_CMD, E8390_PAGE1 | E8390_NODMA | E8390_STOP);
     outb(cntx->io_base + EN1_CURPAG, (NE2K_RAM_RECV_BEGIN >> 8) + 1);  //is this right?
 

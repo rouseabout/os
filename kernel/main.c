@@ -1035,7 +1035,6 @@ void kfree(void * ptr)
         hfree(&kheap, ptr);
 }
 
-
 /* paging */
 
 page_directory *kernel_directory;

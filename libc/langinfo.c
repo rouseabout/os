@@ -51,7 +51,6 @@ char * nl_langinfo(nl_item item)
     case AM_STR: return "AM";
     case PM_STR: return "PM";
     case CRNCYSTR: return "-";
-
     }
     return NULL;
 }

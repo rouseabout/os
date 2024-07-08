@@ -156,7 +156,6 @@ size_t mbstowcs(wchar_t * pwcs, const char * s, size_t n)
     return (size_t)-1;
 }
 
-
 #include <fcntl.h>
 #include <sys/stat.h>
 char * mkdtemp(char * template)
@@ -240,7 +239,6 @@ static int realpath2(const char * file_name, char * resolved_name)
     strlcpy(resolved_name, file_name, PATH_MAX);
     return 0;
 }
-
 
 char * realpath(const char * file_name, char * resolved_name)
 {

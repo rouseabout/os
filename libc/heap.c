@@ -237,7 +237,6 @@ static void shrink(Halloc * cntx)
     if (size <= sizeof(Head) + sizeof(Tail))
         return;
 
-
     /*  [h].........[t] */
     /*  [h]...[t]ffffff */
     /*           |<- page boundary */
@@ -348,7 +347,6 @@ repeat:
 
     /* if the h0 candidate block is large, split it */
     if (h0->size - size > sizeof(Head) + sizeof(Tail) + 0) {
-
 
         /* from:  [h0]..............[t1]  */
         /*   to:  [h0]xxx[t0][h1]...[t1] */

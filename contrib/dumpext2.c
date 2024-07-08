@@ -129,7 +129,6 @@ int main(int argc, char ** argv)
     int nb_groups =  1 + (s.s_blocks_count - 1) / s.s_blocks_per_group;
     printf(">> nb_groups: %d\n", nb_groups);
 
-
     for (int i = 0; i < nb_groups; i++) {
         printf("--- Group %d ---\n", i);
 
