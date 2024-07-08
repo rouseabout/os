@@ -126,7 +126,7 @@ int main(int argc, char ** argv)
                 continue;
             }
             if (!strcmp(newargv[0], "help")) {
-                fprintf(stderr, "sh built-in commands: cd exit help setenv\n");
+                fprintf(stderr, "sh built-in commands: cd exit help setenv wait\n");
                 continue;
             }
             if (!strcmp(newargv[0], "setenv")) {
@@ -136,6 +136,15 @@ int main(int argc, char ** argv)
                 }
                 if (setenv(newargv[1], newargc > 2 ? newargv[2] : NULL, 1) < 0)
                     perror("setenv");
+                continue;
+            }
+            if (!strcmp(newargv[0], "wait")) {
+                if (newargc != 2) {
+                    fprintf(stderr, "expect two arguments\n");
+                    continue;
+                }
+                if (waitpid(atoi(newargv[1]), NULL, 0) == -1)
+                    perror("waitpid");
                 continue;
             }
 
