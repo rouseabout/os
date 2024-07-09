@@ -609,6 +609,7 @@ int sys_connect(int socket, const struct sockaddr * address, socklen_t address_l
 
 #define TICKS_PER_SECOND 100
 /* monotonic counter */
+time_t tstartup;
 struct timespec tnow = {.tv_sec = 0, .tv_nsec = 0};
 
 static int cmos_read(int reg)
@@ -654,7 +655,7 @@ static void rtc_init()
 
     kprintf("rtc_init: %s\n", asctime(&tm));
 
-    tnow.tv_sec = mktime(&tm);
+    tstartup = tnow.tv_sec = mktime(&tm);
 
     /* reconstruct, should match earlier asctime */
     kprintf("rtc_init: %s\n", ctime(&tnow.tv_sec));
@@ -3209,6 +3210,11 @@ static void proc_psinfo(FileDescriptor * fd)
     print_process_queue(fd, wait_queue, "wait_queue");
     print_process_queue(fd, zombie_queue, "zombie_queue");
 }
+
+static void proc_uptime(FileDescriptor * fd)
+{
+    printf("%d\n", tnow.tv_sec - tstartup);
+}
 #undef printf
 
 typedef struct {
@@ -3348,6 +3354,7 @@ void start3(int magic, const void * info)
     proc_init();
     proc_register_file("meminfo", proc_meminfo);
     proc_register_file("psinfo", proc_psinfo);
+    proc_register_file("uptime", proc_uptime);
     vfs_register_mount_point2(2, "proc", &proc_io, NULL, PROC_INODE_MIN);
 
     void * ext2 = ext2_init(root_dev);
