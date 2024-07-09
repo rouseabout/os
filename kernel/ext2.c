@@ -707,6 +707,20 @@ static int ext2_inode_utime(void * priv_data, int inode, const struct utimbuf * 
     return 0;
 }
 
+static int ext2_inode_chmod(void * priv_data, int inode, mode_t mode)
+{
+    Ext2Context * s = priv_data;
+    int ret;
+    struct ext2_inode i;
+    if ((ret = read_inode(s, inode, &i)) < 0)
+        return ret;
+    i.i_mode &= S_IFMT;
+    i.i_mode |= mode & ~S_IFMT;
+    if ((ret = write_inode(s, inode, &i)) < 0)
+        return ret;
+    return 0;
+}
+
 static void clear_block(Ext2Context * s, int block)
 {
     block--;
@@ -1077,6 +1091,7 @@ const FileOperations ext2_io = {
     .inode_append_dir = ext2_inode_append_dir,
     .inode_increment_links_count = ext2_inode_increment_links_count,
     .inode_utime = ext2_inode_utime,
+    .inode_chmod = ext2_inode_chmod,
     .open2 = ext2_open2,
     .file = {
         .close = ext2_close,

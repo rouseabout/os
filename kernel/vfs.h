@@ -49,6 +49,7 @@ typedef struct {
     int (*inode_increment_links_count)(void * priv_data, int inode);
     int (*inode_append_dir)(void * priv_data, int dinode, int inode, const char * new_name, int is_dir);
     int (*inode_utime)(void * priv_data, int inode, const struct utimbuf * times);
+    int (*inode_chmod)(void * priv_data, int inode, mode_t mode);
 
     int (*open2)(FileDescriptor *);
     DeviceOperations file;
@@ -112,6 +113,7 @@ int vfs_pipe(FileDescriptor ** rfd_ptr, FileDescriptor ** wfd_ptr);
 int vfs_isatty(const FileDescriptor * fd);
 int vfs_direct(const FileDescriptor * fd);
 int vfs_utime(const char * path, const struct utimbuf * times);
+int vfs_chmod(const char * path, mode_t mode);
 int vfs_rename(const char * old, const char * new);
 int vfs_getmntinfo(struct statvfs * mntbufp, int size);
 ssize_t vfs_readlink(const char * path, char * buf, size_t bufsize);

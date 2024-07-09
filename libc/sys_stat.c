@@ -2,11 +2,7 @@
 #include <os/syscall.h>
 #include <syslog.h>
 
-int chmod(const char *path, mode_t mode)
-{
-    syslog(LOG_DEBUG, "libc: chmod");
-    return 0;
-}
+MK_SYSCALL2(int, chmod, OS_CHMOD, const char *, mode_t)
 
 int fchmod(int fildes, mode_t mode)
 {

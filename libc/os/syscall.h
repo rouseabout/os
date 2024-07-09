@@ -66,6 +66,7 @@ enum {
     OS_BIND,
     OS_ACCEPT,
     OS_CONNECT,
+    OS_CHMOD,
     OS_NB_SYSCALLS
 };
 

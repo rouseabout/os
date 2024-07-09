@@ -458,6 +458,15 @@ int vfs_utime(const char * path, const struct utimbuf * times)
     return mount->ops->inode_utime ? mount->ops->inode_utime(mount->priv_data, inode, times) : -ENOSYS;
 }
 
+int vfs_chmod(const char * path, mode_t mode)
+{
+    Mount * mount;
+    int inode = resolve_inode(path, 1, &mount, NULL, NULL);
+    if (inode < 0)
+        return inode;
+    return mount->ops->inode_chmod ? mount->ops->inode_chmod(mount->priv_data, inode, mode) : -ENOSYS;
+}
+
 static int unlink_if_file(Mount * mount, int inode, const char * path)
 {
     int ret;

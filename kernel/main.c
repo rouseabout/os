@@ -606,6 +606,7 @@ int sys_socket(int domain, int type, int protocol);
 int sys_bind(int socket, const struct sockaddr * address, socklen_t address_len);
 int sys_accept(registers * reg, int socket, struct sockaddr * address, socklen_t * address_len);
 int sys_connect(int socket, const struct sockaddr * address, socklen_t address_len);
+static int sys_chmod(const char * path, mode_t mode);
 
 #define TICKS_PER_SECOND 100
 /* monotonic counter */
@@ -892,6 +893,7 @@ void interrupt_handler(registers * regs)
         SYSCALL3 (OS_BIND, sys_bind, int, const struct sockaddr *, socklen_t)
         SYSCALL3R(OS_ACCEPT, sys_accept, int, struct sockaddr *, socklen_t *)
         SYSCALL3 (OS_CONNECT, sys_connect, int, const struct sockaddr *, socklen_t)
+        SYSCALL2 (OS_CHMOD, sys_chmod, const char *, mode_t)
 #undef SYSCALL0
 #undef SYSCALL0R
 #undef SYSCALL1
@@ -3126,6 +3128,11 @@ int sys_connect(int socket, const struct sockaddr * address, socklen_t address_l
     const struct sockaddr_un * sun = (const struct sockaddr_un *)address;
     kprintf("connect[%d] socket=%d, path='%s'\n", current_task->id, socket, sun->sun_path);
     return vfs_connect(current_task->proc->fd[socket], sun->sun_path);
+}
+
+static int sys_chmod(const char * path, mode_t mode)
+{
+    return vfs_chmod(path, mode);
 }
 
 static void dump_task(Task * t, int dump_fds)
