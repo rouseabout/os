@@ -131,7 +131,7 @@ int main(int argc, char ** argv)
             }
             if (!strcmp(newargv[0], "setenv")) {
                 if (newargc < 2 || newargc > 3) {
-                    fprintf(stderr, "expect three arguments\n");
+                    fprintf(stderr, "expect one or two arguments\n");
                     continue;
                 }
                 if (setenv(newargv[1], newargc > 2 ? newargv[2] : NULL, 1) < 0)
@@ -140,7 +140,7 @@ int main(int argc, char ** argv)
             }
             if (!strcmp(newargv[0], "wait")) {
                 if (newargc != 2) {
-                    fprintf(stderr, "expect two arguments\n");
+                    fprintf(stderr, "expect one arguments\n");
                     continue;
                 }
                 if (waitpid(atoi(newargv[1]), NULL, 0) == -1)
