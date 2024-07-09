@@ -119,9 +119,9 @@ int vsscanf(const char * s, const char * fmt, va_list args)
                 state = 0;
                 if (!suppress)
                     count++;
-            } else if (*fmt == 'd') {
+            } else if (*fmt == 'd' || *fmt == 'o') {
                 const char * orig_s = s;
-                long long v = strtoll(s, (char **)&s, 10);
+                long long v = strtoll(s, (char **)&s, *fmt == 'f' ? 10 : 8);
                 if (s == orig_s)
                     return EOF;
                 if (!suppress) {
