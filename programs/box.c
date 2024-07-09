@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "box_cat.c"
+#include "box_chmod.c"
 #include "box_clear.c"
 #include "box_cmp.c"
 #include "box_date.c"
@@ -37,6 +38,7 @@ static const struct {
     int (*main)(int, char **, char **);
 } programs[] = {
     {"cat", cat_main},
+    {"chmod", chmod_main},
     {"clear", clear_main},
     {"cmp", cmp_main},
     {"date", date_main},

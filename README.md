@@ -172,6 +172,7 @@ To use the text mode console, it is neccessary to first set the `MULTIBOOT_VIDEO
 |box |tiny version of many commands |
 |cat |concatenate files |
 |chat |real-time file descriptor chat |
+|chmod |change file mode |
 |clear |clear the screen |
 |cmp |compare files |
 |crash |deliberately cause memory access violation |
