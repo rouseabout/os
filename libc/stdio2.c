@@ -181,6 +181,7 @@ void flockfile(FILE *file)
 static FILE * fopen2(FILE * stream, int free_on_error, const char * pathname, const char * mode)
 {
     int flags = 0;
+    mode_t mode2 = 0666;
     while (*mode) {
              if (*mode == 'r') flags |= O_RDONLY;
         else if (*mode == 'w') flags |= O_WRONLY | O_CREAT;
@@ -189,7 +190,7 @@ static FILE * fopen2(FILE * stream, int free_on_error, const char * pathname, co
     }
 
     stream->type = TYPE_FD;
-    stream->u.fd = open(pathname, flags);
+    stream->u.fd = open(pathname, flags, mode2);
     if (stream->u.fd < 0) {
         if (free_on_error)
             free(stream);
