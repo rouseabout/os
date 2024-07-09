@@ -1,0 +1,12 @@
+diff --git a/fbdoom/i_video.h b/fbdoom/i_video.h
+index 3c7db19..3a07fbc 100644
+--- a/fbdoom/i_video.h
++++ b/fbdoom/i_video.h
+@@ -110,6 +110,7 @@ void I_FinishUpdate (void);
+ void I_ReadScreen (byte* scr);
+ 
+ void I_BeginRead (void);
++void I_EndRead (void);
+ 
+ void I_SetWindowTitle(char *title);
+ 
