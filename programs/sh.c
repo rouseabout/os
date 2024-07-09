@@ -88,7 +88,7 @@ int main(int argc, char ** argv)
                     p++;
                     newargv[newargc++] = p;
                     while(*p != '\'' && *p) p++;
-                    *p = 0;
+                    *p++ = 0;
                 } else
                     newargv[newargc++] = p;
                 while(!strchr(" <>&|", *p) && *p) p++;
