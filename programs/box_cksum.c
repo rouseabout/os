@@ -38,25 +38,9 @@ static int cksum_main(int argc, char ** argv, char ** envp)
         fprintf(stderr, "usage: %s FILE\n", argv[0]);
         return EXIT_FAILURE;
     }
-    int fd = open(argv[1], O_RDONLY);
-    if (fd == -1) {
-        perror("open");
-        return EXIT_FAILURE;
-    }
-    size_t size = lseek(fd, 0, SEEK_END);
-    uint8_t * buf = malloc(size + 1);
-    if (!buf) {
-        perror("malloc");
-        return EXIT_FAILURE;
-    }
-    lseek(fd, 0, SEEK_SET);
-    size = read(fd, buf, size);
-    if (size == -1) {
-        perror("read");
-        return EXIT_FAILURE;
-    }
-    close(fd);
+    READ_FILE(uint8_t, buf, size, argv[1])
     cksum_init();
     printf("%u %ld %s\n", cksum(buf, size), size, argv[1]);
+    free(buf);
     return EXIT_SUCCESS;
 }

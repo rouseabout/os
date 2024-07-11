@@ -18,24 +18,7 @@ static int grep_main(int argc, char ** argv, char ** envp)
         fprintf(stderr, "usage: %s PATTERN FILE\n", argv[0]);
         return EXIT_FAILURE;
     }
-    int fd = open(argv[2], O_RDONLY);
-    if (fd == -1) {
-        perror("open");
-        return EXIT_FAILURE;
-    }
-    size_t size = lseek(fd, 0, SEEK_END);
-    char * buf = malloc(size + 1);
-    if (!buf) {
-        perror("malloc");
-        return EXIT_FAILURE;
-    }   
-    lseek(fd, 0, SEEK_SET);
-    size = read(fd, buf, size);
-    if (size == -1) {
-        perror("read");
-        return EXIT_FAILURE;
-    }
-    close(fd);
+    READ_FILE(char, buf, size, argv[2])
     int found = 0;
     char * s = buf, * p;
     while ((p = memchr(s, '\n', size))) {

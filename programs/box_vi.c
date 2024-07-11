@@ -368,20 +368,9 @@ static int vi_main(int argc, char ** argv, char ** envp)
     State st;
     if (argc > 1) {
         strlcpy(st.orig_path, argv[1], sizeof(st.orig_path));
-        int fd = open(argv[1], O_RDONLY);
-        if (fd == -1) {
-            perror("open");
-            return -1;
-        }
-        st.size = lseek(fd, 0, SEEK_END);
-        st.buf = malloc(st.size);
-        if (!st.buf) {
-            perror("malloc");
-            return EXIT_FAILURE;
-        }
-        lseek(fd, 0, SEEK_SET);
-        read(fd, st.buf, st.size);
-        close(fd);
+        READ_FILE(char, buf, size, argv[1]);
+        st.buf = buf;
+        st.size = size;
     } else {
         st.orig_path[0] = 0;
         st.size = 0;
