@@ -170,6 +170,7 @@ To use the text mode console, it is neccessary to first set the `MULTIBOOT_VIDEO
 |---|---|
 |alloc |allocate memory |
 |box |tiny version of many commands |
+|cal |display calendar |
 |cat |concatenate files |
 |chat |real-time file descriptor chat |
 |chmod |change file mode |

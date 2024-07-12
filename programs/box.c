@@ -24,6 +24,7 @@
     } \
     close(fd); \
 
+#include "box_cal.c"
 #include "box_cat.c"
 #include "box_chmod.c"
 #include "box_cksum.c"
@@ -58,6 +59,7 @@ static const struct {
     const char * name;
     int (*main)(int, char **, char **);
 } programs[] = {
+    {"cal", cal_main},
     {"cat", cat_main},
     {"chmod", chmod_main},
     {"cksum", cksum_main},
