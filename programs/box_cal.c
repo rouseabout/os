@@ -19,6 +19,7 @@ static int cal_main(int argc, char ** argv, char ** envp)
     struct tm tm;
     t = time(NULL);
     localtime_r(&t, &tm);
+    int today = tm.tm_mday;
     tm.tm_mday = 1;
     t = mktime(&tm);
     localtime_r(&t, &tm);
@@ -28,7 +29,7 @@ static int cal_main(int argc, char ** argv, char ** envp)
     for (int i = 0; i < wday; i++)
         printf("   ");
     for (int i = 1; i <= mdays(1900 + tm.tm_year, tm.tm_mon); i++) {
-        printf("%2d ", i);
+        printf("%s%2d%s ", i == today ? "\033[7m" : "", i, i == today ? "\033[0m" : "");
         wday++;
         if (wday >= 7) {wday = 0; printf("\n");}
     }
