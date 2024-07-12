@@ -10,6 +10,7 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/select.h>
+#include <sys/stat.h>
 #include <termios.h>
 #include <unistd.h>
 #define MIN(a,b) ((a)<(b)?(a):(b))
@@ -366,13 +367,16 @@ static void search(State * st, int endp)
 static int vi_main(int argc, char ** argv, char ** envp)
 {
     State st;
-    if (argc > 1) {
+    if (argc > 1)
         strlcpy(st.orig_path, argv[1], sizeof(st.orig_path));
+    else
+        st.orig_path[0] = 0;
+    struct stat st1;
+    if (argc > 1 && !stat(argv[1], &st1)) {
         READ_FILE(char, buf, size, argv[1]);
         st.buf = buf;
         st.size = size;
     } else {
-        st.orig_path[0] = 0;
         st.size = 0;
         st.buf = malloc(0);
         if (!st.buf) {
