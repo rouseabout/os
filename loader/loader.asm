@@ -46,6 +46,41 @@ start:
     mov ebx, INITRD_SECTORS * 512
     mov [0x7c00 + 0x21c], ebx
 
+%if 0 ; mode 0x13 framebuffer
+    mov ax, 0x13
+    int 0x10
+
+    mov dx, 0x3c6
+    mov al, 0xff
+    out dx, al
+
+    mov dx, 0x3c8
+    mov al, 0x0
+    out dx, al
+
+    mov dx, 0x3c9
+    mov ax, 0xff
+    out dx, al
+    out dx, al
+    out dx, al
+
+    mov al, 0x23
+    mov [0x7c00 + 0xf], al
+
+    mov eax, 0xa0000
+    mov [0x7c00 + 0x18], eax
+
+    mov ax, 320
+    mov [0x7c00 + 0x12], ax
+    mov [0x7c00 + 0x24], ax
+
+    mov ax, 200
+    mov [0x7c00 + 0x14], ax
+
+    mov ax, 8
+    mov [0x7c00 + 0x16], ax
+%endif
+
     mov ax, 0x7c0
     mov ds, ax
     mov es, ax
