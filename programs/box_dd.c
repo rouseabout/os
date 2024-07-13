@@ -35,7 +35,13 @@ static int dd_main(int argc, char ** argv, char ** envp)
                 seek = atoi(eq);
             } else if (!strcmp(argv[i], "skip")) {
                 skip = atoi(eq);
+            } else {
+                fprintf(stderr, "error\n");
+                return EXIT_FAILURE;
             }
+        } else {
+            fprintf(stderr, "error\n");
+            return EXIT_FAILURE;
         }
     }
     if (seek)
