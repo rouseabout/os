@@ -207,6 +207,7 @@ To use the text mode console, it is neccessary to first set the `MULTIBOOT_VIDEO
 |rmdir |remove directory |
 |sh |shell interpreter |
 |sleep |sleep for duration |
+|strings |print string sequences |
 |testcases |execute standard library test cases |
 |tolower |change text to lower case |
 |touch |change file timestamp |

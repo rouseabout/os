@@ -48,6 +48,7 @@
 #include "box_rm.c"
 #include "box_rmdir.c"
 #include "box_sleep.c"
+#include "box_strings.c"
 #include "box_touch.c"
 #include "box_tr.c"
 #include "box_true.c"
@@ -83,6 +84,7 @@ static const struct {
     {"rm", rm_main},
     {"rmdir", rmdir_main},
     {"sleep", sleep_main},
+    {"strings", strings_main},
     {"touch", touch_main},
     {"tr", tr_main},
     {"true", true_main},
