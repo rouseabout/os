@@ -55,6 +55,7 @@
 #include "box_uname.c"
 #include "box_vi.c"
 #include "box_wc.c"
+#include "box_xargs.c"
 
 static const struct {
     const char * name;
@@ -91,6 +92,7 @@ static const struct {
     {"uname", uname_main},
     {"vi", vi_main},
     {"wc", wc_main},
+    {"xargs", xargs_main},
 };
 
 int main(int argc, char ** argv, char ** envp)
