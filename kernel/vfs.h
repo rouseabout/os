@@ -38,6 +38,7 @@ typedef struct {
 
 typedef struct {
     const char * name;
+    void (*usage)(void * priv_data, unsigned long * block_size_ptr, unsigned long * total_ptr, unsigned long * free_ptr);
     int (*inode_range)(void * priv_data, int * min_inode, int * max_inode);
     int (*inode_resolve)(void * priv_data, int dinode, const char * target);
     int (*inode_info)(void * priv_data, int inode);

@@ -399,6 +399,25 @@ static void flush(Ext2Context * s)
     }
 }
 
+static void ext2_usage(void * priv_data, unsigned long * block_size_ptr, unsigned long * total_ptr, unsigned long * free_ptr)
+{
+    Ext2Context * s = priv_data;
+    int total = 0;
+    int free = 0;
+    for (int g = 0; g < s->nb_groups && total < s->super.s_blocks_count; g++) {
+        for (int i = 0; i < s->super.s_blocks_per_group / 8 && total < s->super.s_blocks_count; i++) {
+            for (int j = 0; j < 8 && total < s->super.s_blocks_count; j++) {
+                free += !(s->block_bitmap[g * s->block_size + i] & (1 << j));
+                total++;
+            }
+        }
+    }
+
+    *block_size_ptr = s->block_size;
+    *total_ptr = s->super.s_blocks_count;
+    *free_ptr = free;
+}
+
 static int allocate_block(Ext2Context * s)
 {
     for (int g = 0; g < s->nb_groups; g++) {
@@ -1081,6 +1100,7 @@ static int ext2_inode_increment_links_count(void * priv_data, int inode)
 
 const FileOperations ext2_io = {
     .name = "ext2",
+    .usage = ext2_usage,
     .inode_range = ext2_inode_range,
     .inode_resolve = ext2_inode_resolve,
     .inode_symlink = ext2_inode_symlink,

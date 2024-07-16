@@ -550,6 +550,13 @@ int vfs_getmntinfo(struct statvfs * mntbufp, int size)
             strlcpy(mntbufp[i].f_fstypename, d->ops->name, sizeof(mntbufp[i].f_fstypename));
             strlcpy(mntbufp[i].f_mntfromname, d->ops->name, sizeof(mntbufp[i].f_mntfromname));
             snprintf(mntbufp[i].f_mntonname, sizeof(mntbufp[i].f_mntonname), "/%s", d->name);
+            if (d->ops->usage) {
+                d->ops->usage(d->priv_data, &mntbufp[i].f_bsize, &mntbufp[i].f_blocks, &mntbufp[i].f_bfree);
+            } else {
+                mntbufp[i].f_bsize = 0;
+                mntbufp[i].f_blocks = 0;
+                mntbufp[i].f_bfree = 0;
+            }
         }
     }
     return i;
