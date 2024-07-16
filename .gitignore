@@ -28,7 +28,6 @@ hello++
 hexdump
 hostname
 init
-mount
 sh
 testcases
 tolower

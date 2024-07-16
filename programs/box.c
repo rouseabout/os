@@ -32,6 +32,7 @@
 #include "box_cmp.c"
 #include "box_date.c"
 #include "box_dd.c"
+#include "box_df.c"
 #include "box_echo.c"
 #include "box_env.c"
 #include "box_expr.c"
@@ -69,6 +70,7 @@ static const struct {
     {"cmp", cmp_main},
     {"date", date_main},
     {"dd", dd_main},
+    {"df", df_main},
     {"echo", echo_main},
     {"env", env_main},
     {"expr", expr_main},
