@@ -3198,6 +3198,11 @@ static void bprintf(char ** buf, ssize_t * size, const char * fmt, ...)
 }
 
 #define printf(...) bprintf(&fd->buf, &fd->buf_size, __VA_ARGS__)
+static void proc_cmdline(FileDescriptor * fd)
+{
+    printf("%s\n", cmdline);
+}
+
 static void proc_meminfo(FileDescriptor * fd)
 {
     printf("%d/%d KiB in use\n", count_used_frames()*4, nframes*4);
@@ -3359,6 +3364,7 @@ void start3(int magic, const void * info)
         dev_register_device("net", &ne2k_dio, 1, NULL, ne2k);
 
     proc_init();
+    proc_register_file("cmdline", proc_cmdline);
     proc_register_file("meminfo", proc_meminfo);
     proc_register_file("psinfo", proc_psinfo);
     proc_register_file("uptime", proc_uptime);
