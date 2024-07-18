@@ -12,226 +12,226 @@ static int eval(char * argv0, char * cmdline, char * buf, size_t buf_size)
 {
     int ret;
 
-        pid_t pid;
-        while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) fprintf(stderr, "[1] Done\n");
+    pid_t pid;
+    while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) fprintf(stderr, "[1] Done\n");
 
-        char * p = cmdline;
-        int pipe0 = -1;
-        int first_pid = -1;
-        while (*p) {
-            char * newargv[16];
-            int newargc = 0;
-            int input = 0, output = 0;
-            char * input_path = NULL;
-            char * output_path = NULL;
-            int background = 0;
-            int do_pipe = 0;
+    char * p = cmdline;
+    int pipe0 = -1;
+    int first_pid = -1;
+    while (*p) {
+        char * newargv[16];
+        int newargc = 0;
+        int input = 0, output = 0;
+        char * input_path = NULL;
+        char * output_path = NULL;
+        int background = 0;
+        int do_pipe = 0;
 
-            while(*p && newargc + 1 < sizeof(newargv)/sizeof(newargv[0])) {
-                while(*p==' ' && *p) *p++ = 0;
-                if (!*p) break;
-                if (p[0] == '<') {
-                    input = 1;
-                    output = 0;
-                    *p++ = 0;
-                    continue;
-                } else if (p[0] == '>') {
-                    input = 0;
-                    output = 1;
-                    *p++ = 0;
-                    continue;
-                } else if (p[0] == '&') {
-                    background = 1;
-                    *p++ = 0;
-                    continue;
-                } else if (p[0] == '|') {
-                    background = 1;
-                    do_pipe = 1;
-                    *p++ = 0;
-                    break; /* stop */
-                } else if (input == 1) {
-                    input_path = p;
-                } else if (output == 1) {
-                    output_path = p;
-                } else if (p[0] == '\'') {
-                    p++;
-                    newargv[newargc++] = p;
-                    while(*p != '\'' && *p) p++;
-                    *p++ = 0;
-                } else if (p[0] == '$') {
-                    p++;
-                    if (*p == '(') {
-                        p++;
-                        char * next = strchr(p, ')');
-                        if (!next) {
-                            fprintf(stderr, "unmatched (\n");
-                            return EXIT_FAILURE;
-                        }
-                        *next = 0;
-                        char * buf = malloc(1024);
-                        if (!buf) {
-                            perror("malloc");
-                            return EXIT_FAILURE;
-                        }
-                        buf[0] = 0;
-                        eval(argv0, p, buf, 1024);
-                        newargv[newargc++] = buf; //FIXME: free
-                        p = next + 1;
-                    } else {
-                        char * start = p;
-                        while(!strchr(" <>&|", *p) && *p) p++;
-                        char varname[32];
-                        snprintf(varname, sizeof(varname), "%.*s", (int)(p - start), start);
-                        newargv[newargc++] = getenv(varname) ? getenv(varname) : "";
-                        continue;
-                    }
-                } else {
-                    char * eq;
-                    if (!newargc && (eq = strchr(p, '='))) {
-                        newargv[newargc++] = "setenv";
-                        newargv[newargc++] = p;
-                        *eq = 0;
-                        p = eq + 1;
-                        continue;
-                    }
-                    newargv[newargc++] = p;
-                }
-                while(!strchr(" <>&|", *p) && *p) p++;
-            }
-
-            if (!newargc)
+        while(*p && newargc + 1 < sizeof(newargv)/sizeof(newargv[0])) {
+            while(*p==' ' && *p) *p++ = 0;
+            if (!*p) break;
+            if (p[0] == '<') {
+                input = 1;
+                output = 0;
+                *p++ = 0;
                 continue;
+            } else if (p[0] == '>') {
+                input = 0;
+                output = 1;
+                *p++ = 0;
+                continue;
+            } else if (p[0] == '&') {
+                background = 1;
+                *p++ = 0;
+                continue;
+            } else if (p[0] == '|') {
+                background = 1;
+                do_pipe = 1;
+                *p++ = 0;
+                break; /* stop */
+            } else if (input == 1) {
+                input_path = p;
+            } else if (output == 1) {
+                output_path = p;
+            } else if (p[0] == '\'') {
+                p++;
+                newargv[newargc++] = p;
+                while(*p != '\'' && *p) p++;
+                *p++ = 0;
+            } else if (p[0] == '$') {
+                p++;
+                if (*p == '(') {
+                    p++;
+                    char * next = strchr(p, ')');
+                    if (!next) {
+                        fprintf(stderr, "unmatched (\n");
+                        return EXIT_FAILURE;
+                    }
+                    *next = 0;
+                    char * buf = malloc(1024);
+                    if (!buf) {
+                        perror("malloc");
+                        return EXIT_FAILURE;
+                    }
+                    buf[0] = 0;
+                    eval(argv0, p, buf, 1024);
+                    newargv[newargc++] = buf; //FIXME: free
+                    p = next + 1;
+                } else {
+                    char * start = p;
+                    while(!strchr(" <>&|", *p) && *p) p++;
+                    char varname[32];
+                    snprintf(varname, sizeof(varname), "%.*s", (int)(p - start), start);
+                    newargv[newargc++] = getenv(varname) ? getenv(varname) : "";
+                    continue;
+                }
+            } else {
+                char * eq;
+                if (!newargc && (eq = strchr(p, '='))) {
+                    newargv[newargc++] = "setenv";
+                    newargv[newargc++] = p;
+                    *eq = 0;
+                    p = eq + 1;
+                    continue;
+                }
+                newargv[newargc++] = p;
+            }
+            while(!strchr(" <>&|", *p) && *p) p++;
+        }
 
-            newargv[newargc] = NULL;
+        if (!newargc)
+            continue;
+
+        newargv[newargc] = NULL;
 
 #if 0
-            for (int i = 0;i < newargc; i++) {
-                printf("newargv[%d]='%s'\n", i, newargv[i]);
-            }
+        for (int i = 0;i < newargc; i++) {
+            printf("newargv[%d]='%s'\n", i, newargv[i]);
+        }
 #endif
-            if (!strcmp(newargv[0], "exit"))
-                break;
-            if (!strcmp(newargv[0], "cd")) {
-                if (newargc > 2) {
-                    fprintf(stderr, "too many arguments\n");
-                    continue;
-                }
-                if (newargc == 2) {
-                    ret = chdir(newargv[1]);
-                } else {
-                    char * home = getenv("HOME");
-                    if (!home) {
-                        fprintf(stderr, "HOME variable not set\n");
-                        continue;
-                    }
-                    ret = chdir(home);
-                }
-                if (ret < 0)
-                    fprintf(stderr, "chdir failed\n");
+        if (!strcmp(newargv[0], "exit"))
+            break;
+        if (!strcmp(newargv[0], "cd")) {
+            if (newargc > 2) {
+                fprintf(stderr, "too many arguments\n");
                 continue;
             }
-            if (!strcmp(newargv[0], "help")) {
-                fprintf(stderr, "sh built-in commands: cd exit help setenv wait\n");
-                continue;
-            }
-            if (!strcmp(newargv[0], "setenv")) {
-                if (newargc < 2 || newargc > 3) {
-                    fprintf(stderr, "expect one or two arguments\n");
-                    continue;
-                }
-                if (setenv(newargv[1], newargc > 2 ? newargv[2] : NULL, 1) < 0)
-                    perror("setenv");
-                continue;
-            }
-            if (!strcmp(newargv[0], "wait")) {
-                if (newargc != 2) {
-                    fprintf(stderr, "expect one arguments\n");
-                    continue;
-                }
-                if (waitpid(atoi(newargv[1]), NULL, 0) == -1)
-                    perror("waitpid");
-                continue;
-            }
-
-            int pfds[2];
-            if (do_pipe || buf) {
-                if (pipe(pfds) < 0) {
-                    perror("pipe");
-                    return EXIT_FAILURE;
-                }
-            }
-
-            pid = fork();
-            if (pid < 0) {
-                perror("fork");
-            } else if (!pid) {
-                if (background) {
-                     fprintf(stderr, "[1] %d\n", getpid());
-                     if (!do_pipe && !input_path)
-                         input_path = "/dev/null";
-                     setpgrp();
-                }
-                if (input_path) {
-                    int fd = open(input_path, O_RDONLY);
-                    if (fd < 0) {
-                        perror(input_path);
-                        return EXIT_FAILURE;
-                    }
-                    dup2(fd, STDIN_FILENO);
-                } else if (pipe0 >= 0) {
-                    dup2(pipe0, STDIN_FILENO);
-                    close(pipe0);
-                }
-
-                if (output_path) {
-                    int fd = open(output_path, O_WRONLY|O_CREAT, 0666);
-                    if (fd < 0) {
-                        perror(output_path);
-                        return EXIT_FAILURE;
-                    }
-                    dup2(fd, STDOUT_FILENO);
-                } else if (do_pipe || buf) {
-                    dup2(pfds[1], STDOUT_FILENO);
-                    close(pfds[1]);
-                }
-
-                //printf("(as pid %d) exec: %s\n", getpid(), newargv[0]);
-                execvp(newargv[0], newargv);
-                fprintf(stderr, "%s: %s: command not found\n", argv0, cmdline);
-                return EXIT_FAILURE;
+            if (newargc == 2) {
+                ret = chdir(newargv[1]);
             } else {
-                if (first_pid < 0)
-                    first_pid = pid;
-
-                setpgid(pid, first_pid);
-                if (!background) {
-                    tcsetpgrp(STDIN_FILENO, first_pid);
-
-                    if (pipe0 >= 0)
-                        close(pipe0);
-
-                    int wpid, status;
-                    do {
-                        wpid = waitpid(pid, &status, 0);
-                    } while (wpid >= 0 && wpid != pid);
-                    ret = WEXITSTATUS(status);
-                    if (buf) {
-                        int n = read(pfds[0], buf, buf_size - 1);
-                        buf[n] = 0;
-                        for (char * p = buf; (p = strchr(p, '\n')); *p = ' ') ;
-                    }
-                    signal(SIGTTOU, SIG_IGN);
-                    tcsetpgrp(STDIN_FILENO, getpgrp());
+                char * home = getenv("HOME");
+                if (!home) {
+                    fprintf(stderr, "HOME variable not set\n");
+                    continue;
                 }
+                ret = chdir(home);
             }
-            if (do_pipe) {
-                pipe0 = pfds[0];
-                close(pfds[1]);
+            if (ret < 0)
+                fprintf(stderr, "chdir failed\n");
+            continue;
+        }
+        if (!strcmp(newargv[0], "help")) {
+            fprintf(stderr, "sh built-in commands: cd exit help setenv wait\n");
+            continue;
+        }
+        if (!strcmp(newargv[0], "setenv")) {
+            if (newargc < 2 || newargc > 3) {
+                fprintf(stderr, "expect one or two arguments\n");
+                continue;
+            }
+            if (setenv(newargv[1], newargc > 2 ? newargv[2] : NULL, 1) < 0)
+                perror("setenv");
+            continue;
+        }
+        if (!strcmp(newargv[0], "wait")) {
+            if (newargc != 2) {
+                fprintf(stderr, "expect one arguments\n");
+                continue;
+            }
+            if (waitpid(atoi(newargv[1]), NULL, 0) == -1)
+                perror("waitpid");
+            continue;
+        }
+
+        int pfds[2];
+        if (do_pipe || buf) {
+            if (pipe(pfds) < 0) {
+                perror("pipe");
+                return EXIT_FAILURE;
             }
         }
 
-        if (pipe0 >= 0)
-            close(pipe0);
+        pid = fork();
+        if (pid < 0) {
+            perror("fork");
+        } else if (!pid) {
+            if (background) {
+                 fprintf(stderr, "[1] %d\n", getpid());
+                 if (!do_pipe && !input_path)
+                     input_path = "/dev/null";
+                 setpgrp();
+            }
+            if (input_path) {
+                int fd = open(input_path, O_RDONLY);
+                if (fd < 0) {
+                    perror(input_path);
+                    return EXIT_FAILURE;
+                }
+                dup2(fd, STDIN_FILENO);
+            } else if (pipe0 >= 0) {
+                dup2(pipe0, STDIN_FILENO);
+                close(pipe0);
+            }
+
+            if (output_path) {
+                int fd = open(output_path, O_WRONLY|O_CREAT, 0666);
+                if (fd < 0) {
+                    perror(output_path);
+                    return EXIT_FAILURE;
+                }
+                dup2(fd, STDOUT_FILENO);
+            } else if (do_pipe || buf) {
+                dup2(pfds[1], STDOUT_FILENO);
+                close(pfds[1]);
+            }
+
+            //printf("(as pid %d) exec: %s\n", getpid(), newargv[0]);
+            execvp(newargv[0], newargv);
+            fprintf(stderr, "%s: %s: command not found\n", argv0, cmdline);
+            return EXIT_FAILURE;
+        } else {
+            if (first_pid < 0)
+                first_pid = pid;
+
+            setpgid(pid, first_pid);
+            if (!background) {
+                tcsetpgrp(STDIN_FILENO, first_pid);
+
+                if (pipe0 >= 0)
+                    close(pipe0);
+
+                int wpid, status;
+                do {
+                    wpid = waitpid(pid, &status, 0);
+                } while (wpid >= 0 && wpid != pid);
+                ret = WEXITSTATUS(status);
+                if (buf) {
+                    int n = read(pfds[0], buf, buf_size - 1);
+                    buf[n] = 0;
+                    for (char * p = buf; (p = strchr(p, '\n')); *p = ' ') ;
+                }
+                signal(SIGTTOU, SIG_IGN);
+                tcsetpgrp(STDIN_FILENO, getpgrp());
+            }
+        }
+        if (do_pipe) {
+            pipe0 = pfds[0];
+            close(pfds[1]);
+        }
+    }
+
+    if (pipe0 >= 0)
+        close(pipe0);
 
     return ret;
 }
