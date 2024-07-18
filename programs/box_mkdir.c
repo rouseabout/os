@@ -1,13 +1,14 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 
 static int mkdir_main(int argc, char ** argv, char ** envp)
 {
     for (int i = 1; i < argc; i++) {
-        if (mkdir(argv[i], 0666) < 0) {
-            printf("cannot create directory '%s'\n", argv[i]);
-            return -1;
+        if (mkdir(argv[i], 0666) == -1) {
+            perror(argv[i]);
+            return EXIT_FAILURE;
         }
     }
-    return 0;
+    return EXIT_SUCCESS;
 }
