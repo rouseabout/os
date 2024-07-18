@@ -132,5 +132,6 @@ extern const DeviceOperations null_dio;
 extern const DeviceOperations urandom_dio;
 extern const DeviceOperations power_dio;
 extern const DeviceOperations reboot_dio;
+extern const DeviceOperations zero_dio;
 
 #endif /* VFS_H */

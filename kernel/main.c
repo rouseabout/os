@@ -3329,6 +3329,7 @@ void start3(int magic, const void * info)
     dev_register_device("urandom", &urandom_dio, 0, NULL, NULL);
     dev_register_device("power", &power_dio, 0, NULL, NULL);
     dev_register_device("reboot", &reboot_dio, 0, NULL, NULL);
+    dev_register_device("zero", &zero_dio, 0, NULL, NULL);
 
     if (mod_size) {
         void * module = mem_init((void *)mod_start, mod_size);

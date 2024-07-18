@@ -774,6 +774,14 @@ void vfs_dump_sockets(void)
 
 const DeviceOperations null_dio = {0};
 
+static int zero_read(FileDescriptor * fd, void * buf, int size)
+{
+    memset(buf, 0, size);
+    return size;
+}
+
+const DeviceOperations zero_dio = {.read = zero_read};
+
 static unsigned int g_seed = 123456789;
 
 static long random()
