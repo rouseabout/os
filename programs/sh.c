@@ -8,40 +8,9 @@
 #include <signal.h>
 #include <errno.h>
 
-int main(int argc, char ** argv)
+static int eval(char * argv0, char * cmdline, char * buf, size_t buf_size)
 {
-    int interactive = isatty(STDIN_FILENO);
-    int single_command = 0;
-    int ret = 0;
-
-    if (argc >= 3 && !strcmp(argv[1], "-c")) {
-        interactive = 0;
-        single_command = 1;
-    } else if (argc > 1) {
-        fprintf(stderr, "usage: %s [-c command]\n", argv[0]);
-        return EXIT_FAILURE;
-    }
-
-    while(1) {
-        int pos = 0;
-
-        if (interactive) {
-            printf("%s", getenv("PS1") ? getenv("PS1") : "$ ");
-            fflush(stdout);
-        }
-
-        char cmdline[1024];
-
-        if (!single_command) {
-            do {
-                int c = getchar();
-                if (c == EOF) return 0;
-                if (c == '\n') break;
-                cmdline[pos++] = c;
-            } while(pos < sizeof(cmdline) - 1);
-            cmdline[pos] = 0;
-        } else
-            strlcpy(cmdline, argv[2], sizeof(cmdline));
+    int ret;
 
         pid_t pid;
         while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) fprintf(stderr, "[1] Done\n");
@@ -89,8 +58,44 @@ int main(int argc, char ** argv)
                     newargv[newargc++] = p;
                     while(*p != '\'' && *p) p++;
                     *p++ = 0;
-                } else
+                } else if (p[0] == '$') {
+                    p++;
+                    if (*p == '(') {
+                        p++;
+                        char * next = strchr(p, ')');
+                        if (!next) {
+                            fprintf(stderr, "unmatched (\n");
+                            return EXIT_FAILURE;
+                        }
+                        *next = 0;
+                        char * buf = malloc(1024);
+                        if (!buf) {
+                            perror("malloc");
+                            return EXIT_FAILURE;
+                        }
+                        buf[0] = 0;
+                        eval(argv0, p, buf, 1024);
+                        newargv[newargc++] = buf; //FIXME: free
+                        p = next + 1;
+                    } else {
+                        char * start = p;
+                        while(!strchr(" <>&|", *p) && *p) p++;
+                        char varname[32];
+                        snprintf(varname, sizeof(varname), "%.*s", (int)(p - start), start);
+                        newargv[newargc++] = getenv(varname) ? getenv(varname) : "";
+                        continue;
+                    }
+                } else {
+                    char * eq;
+                    if (!newargc && (eq = strchr(p, '='))) {
+                        newargv[newargc++] = "setenv";
+                        newargv[newargc++] = p;
+                        *eq = 0;
+                        p = eq + 1;
+                        continue;
+                    }
                     newargv[newargc++] = p;
+                }
                 while(!strchr(" <>&|", *p) && *p) p++;
             }
 
@@ -149,7 +154,7 @@ int main(int argc, char ** argv)
             }
 
             int pfds[2];
-            if (do_pipe) {
+            if (do_pipe || buf) {
                 if (pipe(pfds) < 0) {
                     perror("pipe");
                     return EXIT_FAILURE;
@@ -185,14 +190,14 @@ int main(int argc, char ** argv)
                         return EXIT_FAILURE;
                     }
                     dup2(fd, STDOUT_FILENO);
-                } else if (do_pipe) {
+                } else if (do_pipe || buf) {
                     dup2(pfds[1], STDOUT_FILENO);
                     close(pfds[1]);
                 }
 
                 //printf("(as pid %d) exec: %s\n", getpid(), newargv[0]);
                 execvp(newargv[0], newargv);
-                fprintf(stderr, "%s: %s: command not found\n", argv[0], cmdline);
+                fprintf(stderr, "%s: %s: command not found\n", argv0, cmdline);
                 return EXIT_FAILURE;
             } else {
                 if (first_pid < 0)
@@ -210,7 +215,11 @@ int main(int argc, char ** argv)
                         wpid = waitpid(pid, &status, 0);
                     } while (wpid >= 0 && wpid != pid);
                     ret = WEXITSTATUS(status);
-
+                    if (buf) {
+                        int n = read(pfds[0], buf, buf_size - 1);
+                        buf[n] = 0;
+                        for (char * p = buf; (p = strchr(p, '\n')); *p = ' ') ;
+                    }
                     signal(SIGTTOU, SIG_IGN);
                     tcsetpgrp(STDIN_FILENO, getpgrp());
                 }
@@ -223,6 +232,46 @@ int main(int argc, char ** argv)
 
         if (pipe0 >= 0)
             close(pipe0);
+
+    return ret;
+}
+
+int main(int argc, char ** argv)
+{
+    int interactive = isatty(STDIN_FILENO);
+    int single_command = 0;
+    int ret = 0;
+
+    if (argc >= 3 && !strcmp(argv[1], "-c")) {
+        interactive = 0;
+        single_command = 1;
+    } else if (argc > 1) {
+        fprintf(stderr, "usage: %s [-c command]\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    while(1) {
+        int pos = 0;
+
+        if (interactive) {
+            printf("%s", getenv("PS1") ? getenv("PS1") : "$ ");
+            fflush(stdout);
+        }
+
+        char cmdline[1024];
+
+        if (!single_command) {
+            do {
+                int c = getchar();
+                if (c == EOF) return 0;
+                if (c == '\n') break;
+                cmdline[pos++] = c;
+            } while(pos < sizeof(cmdline) - 1);
+            cmdline[pos] = 0;
+        } else
+            strlcpy(cmdline, argv[2], sizeof(cmdline));
+
+        ret = eval(argv[0], cmdline, NULL, 0);
 
         if (single_command)
             break;
