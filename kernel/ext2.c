@@ -435,14 +435,14 @@ static int allocate_block(Ext2Context * s)
     return 0;
 }
 
-static void allocate_blocks(Ext2Context * s, struct ext2_inode * i, size_t size)
+static int allocate_blocks(Ext2Context * s, struct ext2_inode * i, size_t size)
 {
     size_t pos = 0;
     for (int j = 0; j < EXT2_IND_BLOCK && pos < size; j++) {
         if (!i->i_block[j]) {
             i->i_block[j] = allocate_block(s);
             if (!i->i_block[j])
-                return; //FIXME: error
+                return -1; //FIXME: error
             kprintf(" allocated block %d\n", i->i_block[j]);
         }
         pos += s->block_size;
@@ -451,7 +451,7 @@ static void allocate_blocks(Ext2Context * s, struct ext2_inode * i, size_t size)
     if (pos < size) {
         uint32_t * tab = kmalloc(s->block_size, "ext2-alloc-blks");
         if (!tab)
-            return; //FIXME: error
+            return -1; //FIXME: error
 
         if (i->i_block[EXT2_IND_BLOCK]) {
             vfs_lseek(s->fd, BLOCK_OFFSET(i->i_block[EXT2_IND_BLOCK]), SEEK_SET);
@@ -459,7 +459,7 @@ static void allocate_blocks(Ext2Context * s, struct ext2_inode * i, size_t size)
         } else {
             i->i_block[EXT2_IND_BLOCK] = allocate_block(s);
             if (!i->i_block[EXT2_IND_BLOCK])
-                return; //FIXME: error
+                return -1; //FIXME: error
             kprintf(" allocated indirect block %d\n", i->i_block[EXT2_IND_BLOCK]);
             memset(tab, 0, s->block_size);
         }
@@ -468,7 +468,7 @@ static void allocate_blocks(Ext2Context * s, struct ext2_inode * i, size_t size)
             if (!tab[j]) {
                 tab[j] = allocate_block(s);
                 if (!tab[j])
-                    return; //FIXME: error
+                    return -1; //FIXME: error
                 kprintf(" allocated level2 block %d\n", tab[j]);
             }
             pos += s->block_size;
@@ -483,6 +483,7 @@ static void allocate_blocks(Ext2Context * s, struct ext2_inode * i, size_t size)
 
     i->i_size = size;
     i->i_blocks = (size + 511) / 512;
+    return 0;
 }
 
 static void ext2_close(FileDescriptor * fd)
@@ -495,7 +496,10 @@ static void ext2_close(FileDescriptor * fd)
             if (read_inode(s, fd->inode, &i) < 0)
                 return;
 
-            allocate_blocks(s, &i, fd->buf_size);
+            if (allocate_blocks(s, &i, fd->buf_size) < 0) {
+                kprintf("allocate_blocks failed\n");
+                return;
+            }
 
             write_inode_data(s, fd->inode, &i, fd->buf, fd->buf_size);
 
@@ -941,7 +945,8 @@ static int ext2_inode_populate_dir(void * priv_data, int dinode, int inode)
     if ((ret = read_inode(s, inode, &i)) < 0)
         return ret;
 
-    allocate_blocks(s, &i, s->block_size); // 1 block
+    if (allocate_blocks(s, &i, s->block_size) < 0) // 1 block
+        return -ENOSPC;
 
     void * dir = kmalloc(s->block_size, "ext2-mkdir");
     if (!dir)
