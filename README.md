@@ -190,6 +190,7 @@ To use the text mode console, it is neccessary to first set the `MULTIBOOT_VIDEO
 |forkbomb |fork bomb |
 |getty |open tty port with interactive sh |
 |grep |print lines matching pattern |
+|head |copy the first n-lines of input |
 |hello |hello world (assembly) |
 |hello++ |hello world (C++) |
 |hexdump |hexadecimal dumper |

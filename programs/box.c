@@ -38,6 +38,7 @@
 #include "box_expr.c"
 #include "box_false.c"
 #include "box_grep.c"
+#include "box_head.c"
 #include "box_kill.c"
 #include "box_ln.c"
 #include "box_ls.c"
@@ -77,6 +78,7 @@ static const struct {
     {"expr", expr_main},
     {"false", false_main},
     {"grep", grep_main},
+    {"head", head_main},
     {"kill", kill_main},
     {"ln", ln_main},
     {"ls", ls_main},
