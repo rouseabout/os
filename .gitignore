@@ -31,7 +31,6 @@ init
 sh
 testcases
 tolower
-tree
 truncate
 unixping
 unixserver
