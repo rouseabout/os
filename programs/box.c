@@ -37,6 +37,7 @@
 #include "box_env.c"
 #include "box_expr.c"
 #include "box_false.c"
+#include "box_find.c"
 #include "box_grep.c"
 #include "box_head.c"
 #include "box_kill.c"
@@ -77,6 +78,7 @@ static const struct {
     {"env", env_main},
     {"expr", expr_main},
     {"false", false_main},
+    {"find", find_main},
     {"grep", grep_main},
     {"head", head_main},
     {"kill", kill_main},

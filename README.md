@@ -186,6 +186,7 @@ To use the text mode console, it is neccessary to first set the `MULTIBOOT_VIDEO
 |env |print environment  |
 |expr |evaluate expression |
 |false |return failure (1) error code |
+|find |walk directory tree |
 |flash |flash the screen |
 |forkbomb |fork bomb |
 |getty |open tty port with interactive sh |
@@ -214,7 +215,6 @@ To use the text mode console, it is neccessary to first set the `MULTIBOOT_VIDEO
 |tolower |change text to lower case |
 |touch |change file timestamp |
 |tr |translate characters |
-|tree |walk directory tree |
 |true |return successful (0) error code |
 |truncate |truncate a file |
 |uname |print system information |
