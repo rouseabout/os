@@ -374,7 +374,7 @@ static int vi_main(int argc, char ** argv, char ** envp)
     else
         st.orig_path[0] = 0;
     struct stat st1;
-    if (argc > 1 && !stat(argv[1], &st1)) {
+    if (argc > 1 && (!strcmp(argv[1], "-") || !stat(argv[1], &st1))) {
         READ_FILE(char, buf, size, argv[1]);
         st.buf = buf;
         st.size = size;

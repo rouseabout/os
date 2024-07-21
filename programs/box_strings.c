@@ -4,11 +4,7 @@
 
 static int strings_main(int argc, char ** argv, char ** envp)
 {
-    if (argc != 2) {
-        fprintf(stderr, "usage: %s FILE\n", argv[0]);
-        return EXIT_FAILURE;
-    }
-    READ_FILE(char, buf, size, argv[1]);
+    READ_FILE(char, buf, size, argc == 1 ? "-" : argv[1]);
     int state = 0, start;
     for (int i = 0; i < size; i++) {
         if (buf[i] >= 32 && buf[i] < 127) {

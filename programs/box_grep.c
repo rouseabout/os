@@ -14,11 +14,11 @@ static int memfind(const char * hay, int haysize, const char * needle, int needl
 
 static int grep_main(int argc, char ** argv, char ** envp)
 {
-    if (argc != 3) {
+    if (argc < 2 || argc > 3) {
         fprintf(stderr, "usage: %s PATTERN FILE\n", argv[0]);
         return EXIT_FAILURE;
     }
-    READ_FILE(char, buf, size, argv[2])
+    READ_FILE(char, buf, size, argc == 2 ? "-" : argv[2])
     int found = 0;
     char * s = buf, * p;
     while ((p = memchr(s, '\n', size))) {

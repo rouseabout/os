@@ -5,24 +5,41 @@
 #include <string.h>
 
 #define READ_FILE(buftype, buf, size, path) \
-    int fd = open(path, O_RDONLY); \
-    if (fd == -1) { \
-        perror("open"); \
-        return EXIT_FAILURE; \
+    size_t size; \
+    buftype * buf; \
+    if (!strcmp(path, "-")) { \
+        size = 0; \
+        buf = NULL; \
+        buftype tmp[1024]; \
+        for (int n; (n = read(STDIN_FILENO, tmp, sizeof(tmp))); ) { \
+            buf = realloc(buf, size + n); \
+            if (!buf) { \
+                perror("realloc"); \
+                return EXIT_FAILURE; \
+            } \
+            memcpy(buf + size, tmp, n); \
+            size += n; \
+        } \
+    } else { \
+        int fd = open(path, O_RDONLY); \
+        if (fd == -1) { \
+            perror("open"); \
+            return EXIT_FAILURE; \
+        } \
+        size = lseek(fd, 0, SEEK_END); \
+        buf = malloc(size + 1); \
+        if (!buf) { \
+            perror("malloc"); \
+            return EXIT_FAILURE; \
+        } \
+        lseek(fd, 0, SEEK_SET); \
+        size = read(fd, buf, size); \
+        if (size == -1) { \
+            perror("read"); \
+            return EXIT_FAILURE; \
+        } \
+        close(fd); \
     } \
-    size_t size = lseek(fd, 0, SEEK_END); \
-    buftype * buf = malloc(size + 1); \
-    if (!buf) { \
-        perror("malloc"); \
-        return EXIT_FAILURE; \
-    } \
-    lseek(fd, 0, SEEK_SET); \
-    size = read(fd, buf, size); \
-    if (size == -1) { \
-        perror("read"); \
-        return EXIT_FAILURE; \
-    } \
-    close(fd); \
 
 #include "box_cal.c"
 #include "box_cat.c"

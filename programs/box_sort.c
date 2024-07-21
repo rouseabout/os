@@ -11,12 +11,7 @@ static int compar(const void * a, const void * b)
 
 static int sort_main(int argc, char ** argv, char ** envp)
 {
-    if (argc != 2) {
-        fprintf(stderr, "usage: %s FILE\n", argv[0]);
-        return EXIT_FAILURE;
-    }
-
-    READ_FILE(char, buf, size, argv[1]);
+    READ_FILE(char, buf, size, argc == 1 ? "-" : argv[1]);
     if (!size)
         return EXIT_SUCCESS;
 

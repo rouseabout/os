@@ -34,13 +34,10 @@ static uint32_t cksum(uint8_t *data, size_t len)
 
 static int cksum_main(int argc, char ** argv, char ** envp)
 {
-    if (argc != 2) {
-        fprintf(stderr, "usage: %s FILE\n", argv[0]);
-        return EXIT_FAILURE;
-    }
-    READ_FILE(uint8_t, buf, size, argv[1])
+    char * path = argc == 1 ? "-" : argv[1];
+    READ_FILE(uint8_t, buf, size, path)
     cksum_init();
-    printf("%u %ld %s\n", cksum(buf, size), size, argv[1]);
+    printf("%u %ld %s\n", cksum(buf, size), size, path);
     free(buf);
     return EXIT_SUCCESS;
 }
