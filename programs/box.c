@@ -51,6 +51,7 @@
 #include "box_rm.c"
 #include "box_rmdir.c"
 #include "box_sleep.c"
+#include "box_sort.c"
 #include "box_strings.c"
 #include "box_tee.c"
 #include "box_touch.c"
@@ -92,6 +93,7 @@ static const struct {
     {"rm", rm_main},
     {"rmdir", rmdir_main},
     {"sleep", sleep_main},
+    {"sort", sort_main},
     {"strings", strings_main},
     {"tee", tee_main},
     {"touch", touch_main},
