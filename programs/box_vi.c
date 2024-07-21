@@ -16,6 +16,8 @@
 #define MIN(a,b) ((a)<(b)?(a):(b))
 #define MAX(a,b) ((a)>(b)?(a):(b))
 
+static int tty_fd;
+
 static void vi_signal_handler(int sig) { }
 
 enum { COMMAND = 0, INPUT, PROMPT };
@@ -262,9 +264,9 @@ static int getchar_escape()
     while(1) {
         fd_set rfds;
         FD_ZERO(&rfds);
-        FD_SET(STDIN_FILENO, &rfds);
+        FD_SET(tty_fd, &rfds);
         struct timeval timeout = {0, 100000};
-        int n = select(STDIN_FILENO + 1, &rfds, NULL, NULL, escape ? &timeout : NULL);
+        int n = select(tty_fd + 1, &rfds, NULL, NULL, escape ? &timeout : NULL);
         if (n == -1) {
             perror("select");
             continue;
@@ -274,7 +276,7 @@ static int getchar_escape()
                 return 27; //escape
         } else {
             char c;
-            read(STDIN_FILENO, &c, 1);
+            read(tty_fd, &c, 1);
             if (escape) {
                 modify++;
                 if (modify == 1) {
@@ -385,13 +387,19 @@ static int vi_main(int argc, char ** argv, char ** envp)
         }
     }
 
+    tty_fd = open("/dev/tty", O_RDONLY);
+    if (tty_fd < 0) {
+        perror("/dev/tty");
+        return -1;
+    }
+
     struct termios old, raw;
-    tcgetattr(STDIN_FILENO, &old);
+    tcgetattr(tty_fd, &old);
     signal(SIGINT, vi_signal_handler);
     raw = old;
     raw.c_lflag &= ~(ECHO|ICANON);
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
-    ioctl(STDIN_FILENO, TIOCGWINSZ, &st.ws);
+    tcsetattr(tty_fd, TCSAFLUSH, &raw);
+    ioctl(tty_fd, TIOCGWINSZ, &st.ws);
 
     st.origin = 0;
     st.cursor = 0;
@@ -574,7 +582,7 @@ static int vi_main(int argc, char ** argv, char ** envp)
     }
 
 quit:
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &old);
+    tcsetattr(tty_fd, TCSAFLUSH, &old);
     printf("\33[2J\033[1;1H");
     fflush(stdout);
     return EXIT_SUCCESS;
