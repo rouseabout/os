@@ -36,7 +36,7 @@ mount ${dev}p1 mnt/
 cp -r hd/* mnt/
 
 mkdir mnt/bin
-cp $PROGRAMS mnt/bin
+cp $PROGRAMS scripts/* mnt/bin
 (cd mnt/bin; for x in $BOXPROGRAMS; do ln -s box $x; done)
 cp README.md mnt/
 mkdir mnt/tmp

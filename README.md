@@ -203,11 +203,13 @@ To use the text mode console, it is neccessary to first set the `MULTIBOOT_VIDEO
 |mkdir |make directory |
 |more |more |
 |mv |rename files |
+|ps |list processes |
 |pwd |print current working directory |
 |reset |reset console |
 |rm |remove file |
 |rmdir |remove directory |
 |sh |shell interpreter |
+|shutdown |shutdown computer |
 |sleep |sleep for duration |
 |sort |sort lines of text |
 |strings |print string sequences |
@@ -226,8 +228,6 @@ To use the text mode console, it is neccessary to first set the `MULTIBOOT_VIDEO
 |xargs |run program with arguments from standard input |
 
 There is no `cp` program; use `cat source > dest` instead.
-There is no `ps` program; use `cat /proc/psinfo` instead.
-There is no `shutdown` program; use `echo 0 > /dev/power` instead.
 The `sh` program supports running programs, pipes, redirection and background processes, but little else.
 
 
