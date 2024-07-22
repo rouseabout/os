@@ -3,21 +3,27 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-static int cat_main(int argc, char ** argv, char ** envp)
+static void cat2(int fd)
 {
-    int fd;
-    if (argc == 2) {
-        fd = open(argv[1], O_RDONLY);
-        if (fd < 0) {
-            perror(argv[1]);
-            return EXIT_FAILURE;
-        }
-    } else
-        fd = STDIN_FILENO;
     char block[1024];
     int size;
     while ((size = read(fd, block, sizeof(block))) > 0)
         write(STDOUT_FILENO, block, size);
-    close(fd);
+}
+
+static int cat_main(int argc, char ** argv, char ** envp)
+{
+    if (argc == 1)
+        cat2(STDIN_FILENO);
+    else
+        for (int i = 1; i < argc; i++) {
+            int fd = open(argv[i], O_RDONLY);
+            if (fd == -1) {
+                perror(argv[i]);
+                continue;
+            }
+            cat2(fd);
+            close(fd);
+    }
     return EXIT_SUCCESS;
 }

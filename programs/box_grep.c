@@ -12,18 +12,14 @@ static int memfind(const char * hay, int haysize, const char * needle, int needl
     return 1;
 }
 
-static int grep_main(int argc, char ** argv, char ** envp)
+static int grep(const char * pat, const char * path)
 {
-    if (argc < 2 || argc > 3) {
-        fprintf(stderr, "usage: %s PATTERN FILE\n", argv[0]);
-        return EXIT_FAILURE;
-    }
-    READ_FILE(char, buf, size, argc == 2 ? "-" : argv[2])
+    READ_FILE(char, buf, size, path)
     int found = 0;
     char * s = buf, * p;
     while ((p = memchr(s, '\n', size))) {
         int len = p - s;
-        if (!memfind(s, len, argv[1], strlen(argv[1]))) {
+        if (!memfind(s, len, pat, strlen(pat))) {
             printf("%.*s\n", len, s);
             found = 1;
         }
@@ -31,5 +27,20 @@ static int grep_main(int argc, char ** argv, char ** envp)
         size -= len + 1;
     }
     free(buf);
+    return found;
+}
+
+static int grep_main(int argc, char ** argv, char ** envp)
+{
+    if (argc < 2) {
+        fprintf(stderr, "usage: %s PATTERN FILE...\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+    int found = 0;
+    if (argc == 1)
+        found = grep(argv[1], "-");
+    else
+        for (int i = 2; i < argc; i++)
+            found |= grep(argv[1], argv[i]);
     return found ? EXIT_SUCCESS : EXIT_FAILURE;
 }

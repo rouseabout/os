@@ -32,12 +32,21 @@ static uint32_t cksum(uint8_t *data, size_t len)
     return ~crc;
 }
 
-static int cksum_main(int argc, char ** argv, char ** envp)
+static int cksum2(const char * path)
 {
-    char * path = argc == 1 ? "-" : argv[1];
     READ_FILE(uint8_t, buf, size, path)
-    cksum_init();
     printf("%u %ld %s\n", cksum(buf, size), size, path);
     free(buf);
+    return EXIT_SUCCESS;
+}
+
+static int cksum_main(int argc, char ** argv, char ** envp)
+{
+    cksum_init();
+    if (argc == 1)
+        cksum2("-");
+    else
+        for (int i = 1; i < argc; i++)
+            cksum2(argv[i]);
     return EXIT_SUCCESS;
 }
