@@ -8,7 +8,7 @@
 #include <signal.h>
 #include <errno.h>
 
-static int eval(char * argv0, char * cmdline, char * buf, size_t buf_size)
+static int eval(int argc, char ** argv, char * cmdline, char * buf, size_t buf_size)
 {
     int ret;
 
@@ -74,7 +74,7 @@ static int eval(char * argv0, char * cmdline, char * buf, size_t buf_size)
                         return EXIT_FAILURE;
                     }
                     buf[0] = 0;
-                    eval(argv0, p, buf, 1024);
+                    eval(argc, argv, p, buf, 1024);
                     newargv[newargc++] = buf; //FIXME: free
                     p = next + 1;
                 } else {
@@ -82,7 +82,12 @@ static int eval(char * argv0, char * cmdline, char * buf, size_t buf_size)
                     while(!strchr(" <>&|", *p) && *p) p++;
                     char varname[32];
                     snprintf(varname, sizeof(varname), "%.*s", (int)(p - start), start);
-                    newargv[newargc++] = getenv(varname) ? getenv(varname) : "";
+                    char * end;
+                    int index = strtol(varname, &end, 10);
+                    if (end == varname + strlen(varname) && index < argc)
+                        newargv[newargc++] = argv[index];
+                    else
+                        newargv[newargc++] = getenv(varname) ? getenv(varname) : "";
                     continue;
                 }
             } else {
@@ -197,7 +202,7 @@ static int eval(char * argv0, char * cmdline, char * buf, size_t buf_size)
 
             //printf("(as pid %d) exec: %s\n", getpid(), newargv[0]);
             execvp(newargv[0], newargv);
-            fprintf(stderr, "%s: %s: command not found\n", argv0, cmdline);
+            fprintf(stderr, "%s: %s: command not found\n", argv[0], cmdline);
             return EXIT_FAILURE;
         } else {
             if (first_pid < 0)
@@ -245,9 +250,6 @@ int main(int argc, char ** argv)
     if (argc >= 3 && !strcmp(argv[1], "-c")) {
         interactive = 0;
         single_command = 1;
-    } else if (argc > 1) {
-        fprintf(stderr, "usage: %s [-c command]\n", argv[0]);
-        return EXIT_FAILURE;
     }
 
     while(1) {
@@ -271,7 +273,7 @@ int main(int argc, char ** argv)
         } else
             strlcpy(cmdline, argv[2], sizeof(cmdline));
 
-        ret = eval(argv[0], cmdline, NULL, 0);
+        ret = eval(argc, argv, cmdline, NULL, 0);
 
         if (single_command)
             break;
