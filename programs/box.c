@@ -71,6 +71,7 @@
 #include "box_sleep.c"
 #include "box_sort.c"
 #include "box_strings.c"
+#include "box_tail.c"
 #include "box_tee.c"
 #include "box_touch.c"
 #include "box_tr.c"
@@ -114,6 +115,7 @@ static const struct {
     {"sleep", sleep_main},
     {"sort", sort_main},
     {"strings", strings_main},
+    {"tail", tail_main},
     {"tee", tee_main},
     {"touch", touch_main},
     {"tr", tr_main},
