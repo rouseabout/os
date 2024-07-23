@@ -199,6 +199,7 @@ To use the text mode console, it is neccessary to first set the `MULTIBOOT_VIDEO
 |init |init process |
 |kill |kill process |
 |ln |create symbolic link |
+|logger |write message to syslog |
 |ls |list contents of directory |
 |mkdir |make directory |
 |more |more |

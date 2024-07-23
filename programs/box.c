@@ -59,6 +59,7 @@
 #include "box_head.c"
 #include "box_kill.c"
 #include "box_ln.c"
+#include "box_logger.c"
 #include "box_ls.c"
 #include "box_mkdir.c"
 #include "box_more.c"
@@ -101,6 +102,7 @@ static const struct {
     {"head", head_main},
     {"kill", kill_main},
     {"ln", ln_main},
+    {"logger", logger_main},
     {"ls", ls_main},
     {"mkdir", mkdir_main},
     {"more", more_main},
