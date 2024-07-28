@@ -2319,7 +2319,7 @@ static Task * create_task_kernel(void (*eip)(int), unsigned int stack_size, uint
     return new_task;
 }
 
-#include "elf.h"
+#include <elf.h>
 
 static void create_vm_block(page_directory * dir, uintptr_t addr, uintptr_t size)
 {

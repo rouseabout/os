@@ -181,6 +181,7 @@ HEADERS=\
 	assert.h \
 	ctype.h \
 	dirent.h \
+	elf.h \
 	errno.h \
 	features.h \
 	fcntl.h \
@@ -364,7 +365,7 @@ DUMPELF_BIN=dumpelf
 test:: $(DUMPELF_BIN) init
 	./$^
 $(DUMPELF_BIN): contrib/dumpelf.c
-	$(HOSTCC) $(HOSTCCFLAGS) -Ikernel -o $@ $^ -g
+	$(HOSTCC) $(HOSTCCFLAGS) -Ilibc -o $@ $^ -g
 
 DUMPEXT2_BIN=dumpext2
 test:: $(DUMPEXT2_BIN) initrd
