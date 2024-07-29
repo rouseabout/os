@@ -10,8 +10,8 @@ Features:
 * Virtual file system with read/write ext2 file system.
 * Minimal libc and libm implementation.
 * Unix sockets.
-* Includes simple user space programs such as sh, cat, echo and more.
-* Capable of running various third-party programs including bash, gcc, git, python, vim, and fbdoom.
+* User space programs including *sh*, *cat*, *echo*, *more* and *asm* assembler.
+* Capable of running various third-party programs including *bash*, *gcc*, *git*, *python*, *vim*, and *fbdoom*.
 
 It is not robust, secure, or efficient, and should be considered highly experimental.
 
