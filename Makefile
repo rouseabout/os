@@ -168,13 +168,13 @@ clean:
 	rm -f kernel.bin kernel.linux* kernel.map $(KERNEL_OBJS) kernel/multiboot.o kernel/linux32.o cdrom.iso iso/boot/kernel.bin initrd iso/boot/initrd disk_image disk_image.vdi hd/boot/kernel.bin hd/boot/initrd $(TFTP_FILES) programs/*.o libc/*.o libc/$(ARCH)/*.o libdl/*.o libg/*.o libm/*.o $(shell echo $(PROGRAMS)) libc.a libdl.a libg.a libm.a $(TEST_BIN) $(DUMPELF_BIN) $(DUMPEXT2_BIN) $(EXT2TEST_BIN) .sysroot
 	rm -rf sysroot
 
-initrd: $(shell echo $(PROGRAMS)) $(wildcard scripts/*) README.md
+initrd: $(shell echo $(PROGRAMS)) $(wildcard scripts/*) README.md programs/hello.asm
 	rm -f $@
 	/sbin/mkfs.ext2 -r 1 -b 4096 $@ $(INITRDSIZE)
 	e2cp -p $(shell echo $(PROGRAMS)) scripts/* $@:bin/
 	for x in $(shell echo $(BOXPROGRAMS)); do e2ln initrd:/bin/box bin/$$x; done
 	e2mkdir $@:/tmp
-	e2cp README.md $@:
+	e2cp README.md programs/hello.asm $@:
 
 HEADERS=\
 	alloca.h \

@@ -38,7 +38,7 @@ cp -r hd/* mnt/
 mkdir mnt/bin
 cp $PROGRAMS scripts/* mnt/bin
 (cd mnt/bin; for x in $BOXPROGRAMS; do ln -s box $x; done)
-cp README.md mnt/
+cp README.md programs/hello.asm mnt/
 mkdir mnt/tmp
 cp -R sysroot/* mnt/
 find mnt -type f -executable -exec toolchain-${ARCH}-pc-elf/bin/${ARCH}-pc-elf-strip {} \;
