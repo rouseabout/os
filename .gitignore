@@ -16,6 +16,7 @@ libdl.a
 libg.a
 libm.a
 alloc
+asm
 box
 chat
 crash
