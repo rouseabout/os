@@ -15,7 +15,7 @@ typedef struct {
     uint16_t e_shentsize;
     uint16_t e_shnum;
     uint16_t e_shstrndx;
-} ElfHeader;
+} Elf32Header;
 
 typedef struct {
     uint8_t e_ident[16];
@@ -47,7 +47,7 @@ typedef struct {
     uint32_t p_memsz;
     uint32_t p_flags;
     uint32_t p_align;
-} ElfPHeader;
+} Elf32PHeader;
 
 typedef struct {
     uint32_t p_type;
@@ -82,7 +82,7 @@ typedef struct {
     uint32_t sh_info;
     uint32_t sh_addralign;
     uint32_t sh_entsize;
-} ElfSHeader;
+} Elf32SHeader;
 
 typedef struct {
     uint32_t sh_name;
@@ -96,3 +96,13 @@ typedef struct {
     uint64_t sh_addralign;
     uint64_t sh_entsize;
 } Elf64SHeader;
+
+#if defined(ARCH_i686)
+#define ElfHeader Elf32Header
+#define ElfPHeader Elf32PHeader
+#define ElfSHeader Elf32SHeader
+#elif defined(ARCH_x86_64)
+#define ElfHeader Elf64Header
+#define ElfPHeader Elf64PHeader
+#define ElfSHeader Elf64SHeader
+#endif

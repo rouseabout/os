@@ -2340,11 +2340,7 @@ static void create_vm_block(page_directory * dir, uintptr_t addr, uintptr_t size
 //
 static uintptr_t create_task_elf_fd(page_directory * dir, FileDescriptor * fd)
 {
-#if defined(ARCH_i686)
     ElfHeader e;
-#elif defined(ARCH_x86_64)
-    Elf64Header e;
-#endif
     vfs_read(fd, &e, sizeof(e));
 
     if (e.e_ident[0] != 0x7F || e.e_ident[1] != 'E' || e.e_ident[2] != 'L' || e.e_ident[3] != 'F') {
@@ -2365,11 +2361,7 @@ static uintptr_t create_task_elf_fd(page_directory * dir, FileDescriptor * fd)
     }
 
     for (unsigned int i = 0; i < e.e_phnum; i++) {
-#if defined(ARCH_i686)
         ElfPHeader p;
-#elif defined(ARCH_x86_64)
-        Elf64PHeader p;
-#endif
         vfs_lseek(fd, e.e_phoff + i * sizeof(p), SEEK_SET);
         vfs_read(fd, &p, sizeof(p));
 

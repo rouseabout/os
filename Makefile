@@ -365,7 +365,7 @@ DUMPELF_BIN=dumpelf
 test:: $(DUMPELF_BIN) init
 	./$^
 $(DUMPELF_BIN): contrib/dumpelf.c
-	$(HOSTCC) $(HOSTCCFLAGS) -Ilibc -o $@ $^ -g
+	$(HOSTCC) $(HOSTCCFLAGS) -Ilibc -DARCH_$(ARCH) -o $@ $^ -g
 
 DUMPEXT2_BIN=dumpext2
 test:: $(DUMPEXT2_BIN) initrd
