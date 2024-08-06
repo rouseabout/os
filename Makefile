@@ -281,7 +281,7 @@ sysroot/usr/lib/%: libc/% # needed for crt0.o
 
 CACHE=.cache
 BINUTILSVER=2.42
-GCCVER=14.1.0
+GCCVER=14.2.0
 SYSLINUXVER=6.03
 $(CACHE)/binutils-$(BINUTILSVER).tar.xz:
 	curl https://ftp.gnu.org/gnu/binutils/binutils-$(BINUTILSVER).tar.xz -o $@
