@@ -4,6 +4,8 @@
 #include "ringbuffer.h"
 #include <termios.h>
 #include "serial.h"
+#include <errno.h>
+#include <sys/ioctl.h>
 
 #define PORT 0x3F8
 
@@ -146,10 +148,22 @@ static int serial_tcsetattr(FileDescriptor * fd, int optional_actions, const str
     return 0;
 }
 
+static int serial_ioctl(FileDescriptor * fd, int request, void * data)
+{
+    if (request == TIOCGWINSZ) {
+        struct winsize * ws = data;
+        ws->ws_row = 25;
+        ws->ws_col = 80;
+        return 0;
+    }
+    return -EINVAL;
+}
+
 const DeviceOperations serial_dio = {
     .write = serial_write,
     .read = serial_read,
     .read_available = serial_read_available,
+    .ioctl = serial_ioctl,
     .tcgetpgrp = serial_tcgetpgrp,
     .tcsetpgrp = serial_tcsetpgrp,
     .tcgetattr = serial_tcgetattr,
