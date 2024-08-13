@@ -722,6 +722,16 @@ static void assemble(Token * tok)
                 buf_write1(&buf, op2->u.reg * 0x8 + op1->u.addr->u.reg);
             } else
                 parse_error(tok, "unsupported operand");
+        } else if (equal(tok, "lea")) {
+            Operand * op1 = parse_operand(&tok, tok->next);
+            tok = expect(tok, ",");
+            Operand * op2 = parse_operand(&tok, tok);
+            if (op1->kind == OPERAND_REG && op2->kind == OPERAND_ADDR && op2->u.addr->kind == OPERAND_REG) {
+                buf_expand(&buf, 2);
+                buf_write1(&buf, 0x8d);
+                buf_write1(&buf, op1->u.reg * 0x8 + op2->u.addr->u.reg);
+            } else
+                parse_error(tok, "unsupported operand");
         } else
             parse_error(tok, "unexpected token");
     }
