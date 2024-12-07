@@ -280,7 +280,7 @@ sysroot/usr/lib/%: libc/% # needed for crt0.o
 	touch $@
 
 CACHE=.cache
-BINUTILSVER=2.42
+BINUTILSVER=2.43.1
 GCCVER=14.2.0
 SYSLINUXVER=6.03
 $(CACHE)/binutils-$(BINUTILSVER).tar.xz:
