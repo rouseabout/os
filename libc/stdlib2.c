@@ -6,8 +6,10 @@
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include <bsd/string.h>
 #include <os/syscall.h>
+#include <sys/stat.h>
 #include <syslog.h>
 #include "heap.h"
 
@@ -165,16 +167,35 @@ char * mkdtemp(char * template)
     return template;
 }
 
+#include <time.h>
+static int template_counter = 0;
+static int fill_template(char * template)
+{
+    int n = strlen(template);
+    if (n < 6 || strcmp(template + n - 6, "XXXXXX")) {
+        errno = EINVAL;
+        return -1;
+    }
+    int id = time(NULL) + 1000*getpid() + template_counter++;
+    for (int i = 0; i < 6; i++) {
+        template[n - 6 + i] = 'A' + (id % 26);
+        id /= 26;
+    }
+    return 0;
+}
+
 int mkstemp(char * template)
 {
-    syslog(LOG_DEBUG, "libc: mkstemp");
-    return open("/tmp/file.XXX", O_RDWR|O_CREAT|O_EXCL, S_IRUSR|S_IWUSR); //FIXME:
+    if (fill_template(template) == -1)
+        return -1;
+    return open(template, O_RDWR|O_CREAT|O_EXCL, S_IRUSR|S_IWUSR);
 }
 
 char * mktemp(char * template)
 {
-    syslog(LOG_DEBUG, "libc: mktemp");
-    return template; //FIXME:
+    if (fill_template(template) == -1)
+        template[0] = 0;
+    return template;
 }
 
 static int is_power_of_two(int x)
@@ -219,9 +240,6 @@ void * realloc(void * ptr, size_t size)
 {
     return hrealloc(&uheap, ptr, size);
 }
-
-#include <sys/stat.h>
-#include <unistd.h>
 
 static int realpath2(const char * file_name, char * resolved_name)
 {
