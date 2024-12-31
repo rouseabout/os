@@ -203,6 +203,7 @@ To use the text mode console, it is neccessary to first set the `MULTIBOOT_VIDEO
 |logger |write message to syslog |
 |ls |list contents of directory |
 |mkdir |make directory |
+|mktemp |create temporary file |
 |more |more |
 |mv |rename files |
 |ps |list processes |

@@ -62,6 +62,7 @@
 #include "box_logger.c"
 #include "box_ls.c"
 #include "box_mkdir.c"
+#include "box_mktemp.c"
 #include "box_more.c"
 #include "box_mv.c"
 #include "box_pwd.c"
@@ -106,6 +107,7 @@ static const struct {
     {"logger", logger_main},
     {"ls", ls_main},
     {"mkdir", mkdir_main},
+    {"mktemp", mktemp_main},
     {"more", more_main},
     {"mv", mv_main},
     {"pwd", pwd_main},
