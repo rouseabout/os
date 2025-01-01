@@ -162,6 +162,11 @@ It works because the *os* operates in promiscuous mode.
 To use the text mode console, it is neccessary to first set the `MULTIBOOT_VIDEO_INFO` mode value to 1 (EGA text mode).
 
 
+### EFI boot loader
+
+`make qemu-efi-cdrom` will boot *os* using its own EFI loader. This only works with 64-bit *os*.
+
+
 ## Included programs
 
 *os* includes the following programs. They are installed under `/bin`.

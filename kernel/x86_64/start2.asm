@@ -9,6 +9,7 @@ extern bss
 extern end
 
 global start2
+global start2_64
 extern start3
 start2:
 
@@ -68,10 +69,52 @@ start2:
     mov gs, eax
     mov ss, eax
 
-    jmp 0x8:.long
+    jmp 0x8:start2_long
 
 bits 64
-.long:
+start2_64:
+    push rdi ; magic
+
+    ; identity map first 8MiB and mirror first 8MiB @ KERNEL_START
+
+    SET_PAGE pml4, 0, pml3
+    SET_PAGE pml4, KERNEL_START / PML123_SIZE, pml3
+
+    SET_PAGE pml3, 0, pml2
+
+    SET_PAGE pml2, 0, pml1_0
+    SET_PAGE pml2, 1, pml1_1
+    SET_PAGE pml2, 2, pml1_2
+    SET_PAGE pml2, 3, pml1_3
+
+    mov rdi, pml1_0
+    mov eax, PAGE_PRESENT | PAGE_WRITE
+.loop:
+    mov [rdi], eax
+    add eax, 0x1000
+    add edi, 8
+    cmp eax, 0x800000
+    jb .loop
+
+    mov rax, 10100000b
+    mov cr4, rax
+
+    mov rax, pml4
+    mov cr3, rax
+
+    mov ecx, 0xC0000080
+    rdmsr
+    or eax, 0x00000100 ; LME
+    wrmsr
+
+    mov rax, cr0
+    or rax, 0x80000001 ; pg,pe
+    and rax, ~0x10000 ; wp
+    mov cr0, rax
+
+    pop rdi ; magic
+
+start2_long:
     ; now load 64-bit gdt with high tss address
 
     mov rax, tss
@@ -95,6 +138,15 @@ bits 64
 
     mov ax, 0x2b ; tss segment in gdt64 + rpl 3
     ltr ax
+
+    mov eax, 0x10
+    mov ds, eax
+    mov es, eax
+    mov fs, eax
+    mov gs, eax
+    mov ss, eax
+    mov eax, 0x8
+    mov cs, eax
 
     ; clear bss
     mov r14, rdi

@@ -44,6 +44,24 @@ qemu-hd: disk_image
 qemu-hd-serial: disk_image
 	$(QEMU) $(QEMUFLAGS) -drive if=ide,file=disk_image,format=raw,index=0,media=disk -nographic
 
+qemu-efi: efi/EFI/BOOT/BOOT$(EFIARCH).EFI efi/kernel efi/initrd
+	$(QEMU) $(QEMUFLAGS) -bios /usr/share/ovmf/OVMF.fd -drive file=fat:rw:efi,format=raw
+
+efi-cdrom.iso: efi/EFI/BOOT/BOOT$(EFIARCH).EFI efi/kernel efi/initrd
+	dd if=/dev/zero of=$@ bs=1M count=6
+	mformat -i $@ ::
+	mmd -i $@ EFI
+	mmd -i $@ EFI/BOOT
+	mcopy -i $@ efi/EFI/BOOT/BOOT$(EFIARCH).EFI ::EFI/BOOT
+	mcopy -i $@ efi/kernel efi/initrd ::
+
+qemu-efi-cdrom: efi-cdrom.iso
+	$(QEMU) $(QEMUFLAGS) -bios /usr/share/ovmf/OVMF.fd -cdrom $<
+
+efi/EFI/BOOT/BOOT$(EFIARCH).EFI: loader/efiloader.c
+	$(ARCH)-w64-mingw32-gcc -o loader/efiloader.o -c loader/efiloader.c -Wall -ffreestanding -I/usr/include/efi/
+	$(ARCH)-w64-mingw32-gcc -o $@ loader/efiloader.o -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -e $(EFIMAIN)
+
 disk_image: make_disk_image.sh hd/boot/grub/grub.cfg hd/boot/kernel.bin hd/boot/initrd sysroot
 	sudo --help >/dev/null 2>&1 && sudo ./make_disk_image.sh || ./make_disk_image.sh
 
@@ -89,6 +107,9 @@ iso/boot/%: %
 tftp/%: %
 	cp $< $@
 
+efi/%: %
+	cp $< $@
+
 temu-linux: kernel.linux initrd
 	temu temu-linux.cfg
 
@@ -117,6 +138,9 @@ kernel.linux16: kernel/linux16.asm
 
 kernel.linux32: kernel/linker.ld kernel/linux32.o $(KERNEL_OBJS) .toolchain-$(ARCH)-stage1
 	$(LD) $(LDFLAGS) -o $@ -Wl,--oformat=binary -Wl,--defsym,ARCH_$(ARCH)=1 -T kernel/linker.ld -Wl,-Map,kernel.map kernel/linux32.o $(KERNEL_OBJS) -lgcc
+
+efi/kernel: kernel/linker.ld kernel/$(ARCH)/efi.o $(KERNEL_OBJS) .toolchain-$(ARCH)-stage1
+	$(LD) $(LDFLAGS) -o $@ -Wl,--oformat=binary -Wl,--defsym,ARCH_$(ARCH)=1 -T kernel/linker.ld -Wl,-Map,kernel.map kernel/$(ARCH)/efi.o $(KERNEL_OBJS) -lgcc
 
 libc.a: $(LIBC_COMMON_OBJS) $(LIBC_ONLY_OBJS) .toolchain-$(ARCH)-stage1
 	$(AR) rcs $@ $^
@@ -165,7 +189,7 @@ gdb: kernel.bin
 	gdb $< -ex 'target remote localhost:1234'
 
 clean:
-	rm -f kernel.bin kernel.linux* kernel.map $(KERNEL_OBJS) kernel/multiboot.o kernel/linux32.o cdrom.iso iso/boot/kernel.bin initrd iso/boot/initrd disk_image disk_image.vdi hd/boot/kernel.bin hd/boot/initrd $(TFTP_FILES) programs/*.o libc/*.o libc/$(ARCH)/*.o libdl/*.o libg/*.o libm/*.o $(shell echo $(PROGRAMS)) libc.a libdl.a libg.a libm.a $(TEST_BIN) $(DUMPELF_BIN) $(DUMPEXT2_BIN) $(EXT2TEST_BIN) .sysroot
+	rm -f kernel.bin kernel.linux* kernel.map $(KERNEL_OBJS) kernel/multiboot.o kernel/linux32.o cdrom.iso iso/boot/kernel.bin initrd iso/boot/initrd disk_image disk_image.vdi hd/boot/kernel.bin hd/boot/initrd $(TFTP_FILES) programs/*.o libc/*.o libc/$(ARCH)/*.o libdl/*.o libg/*.o libm/*.o $(shell echo $(PROGRAMS)) libc.a libdl.a libg.a libm.a $(TEST_BIN) $(DUMPELF_BIN) $(DUMPEXT2_BIN) $(EXT2TEST_BIN) efimain.o efi/kernel efi/initrd efi/EFI/BOOT/BOOT$(EFIARCH).EFI .sysroot
 	rm -rf sysroot
 
 initrd: $(shell echo $(PROGRAMS)) $(wildcard scripts/*) README.md programs/hello.asm
