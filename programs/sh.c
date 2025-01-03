@@ -8,7 +8,7 @@
 #include <signal.h>
 #include <errno.h>
 
-static int eval(int argc, char ** argv, char * cmdline, char * buf, size_t buf_size)
+static int eval(int argc, char ** argv, char * cmdline, char * buf, size_t buf_size, int * exit)
 {
     int ret;
 
@@ -74,7 +74,7 @@ static int eval(int argc, char ** argv, char * cmdline, char * buf, size_t buf_s
                         return EXIT_FAILURE;
                     }
                     buf2[0] = 0;
-                    eval(argc, argv, p, buf2, 1024);
+                    eval(argc, argv, p, buf2, 1024, NULL);
                     newargv[newargc++] = buf2; //FIXME: free
                     p = next + 1;
                 } else {
@@ -114,8 +114,11 @@ static int eval(int argc, char ** argv, char * cmdline, char * buf, size_t buf_s
             printf("newargv[%d]='%s'\n", i, newargv[i]);
         }
 #endif
-        if (!strcmp(newargv[0], "exit"))
+        if (!strcmp(newargv[0], "exit")) {
+            if (exit)
+                *exit = 1;
             break;
+        }
         if (!strcmp(newargv[0], "cd")) {
             if (newargc > 2) {
                 fprintf(stderr, "too many arguments\n");
@@ -246,6 +249,7 @@ int main(int argc, char ** argv)
     int interactive = isatty(STDIN_FILENO);
     int single_command = 0;
     int ret = 0;
+    int exit = 0;
 
     if (argc >= 3 && !strcmp(argv[1], "-c")) {
         interactive = 0;
@@ -273,9 +277,9 @@ int main(int argc, char ** argv)
         } else
             strlcpy(cmdline, argv[2], sizeof(cmdline));
 
-        ret = eval(argc, argv, cmdline, NULL, 0);
+        ret = eval(argc, argv, cmdline, NULL, 0, &exit);
 
-        if (single_command)
+        if (single_command || exit)
             break;
     }
 
