@@ -102,14 +102,9 @@ start2_64:
     mov rax, pml4
     mov cr3, rax
 
-    mov ecx, 0xC0000080
-    rdmsr
-    or eax, 0x00000100 ; LME
-    wrmsr
-
     mov rax, cr0
-    or rax, 0x80000001 ; pg,pe
-    and rax, ~0x10000 ; wp
+    or eax, 0x80000001 ; pg,pe
+    and eax, ~0x10000 ; wp
     mov cr0, rax
 
     pop rdi ; magic
