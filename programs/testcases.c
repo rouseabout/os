@@ -47,13 +47,13 @@ static void * thread_func(void * v)
     return (void *)0xc0de;
 }
 
-static int signal_fired = 0;
+static volatile int signal_fired = 0;
 static void alarm_handler(int sig)
 {
     signal_fired = 1;
 }
 
-static int trap_fired = 0;
+static volatile int trap_fired = 0;
 static void trap_handler(int sig)
 {
     trap_fired = 1;
