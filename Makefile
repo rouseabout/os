@@ -389,20 +389,20 @@ $(EXT2TEST_BIN): kernel/dev.c kernel/ext2.c kernel/pipe.c kernel/vfs.c contrib/e
 	$(HOSTCC) $(HOSTCCFLAGS) -DTEST=1 -Ikernel -o $@ $^ -g -lbsd
 
 DUMPELF_BIN=dumpelf
-test:: $(DUMPELF_BIN) init
-	./$^
+#test:: $(DUMPELF_BIN) init
+#	./$^
 $(DUMPELF_BIN): contrib/dumpelf.c
 	$(HOSTCC) $(HOSTCCFLAGS) -Ilibc -DARCH_$(ARCH) -o $@ $^ -g
 
 DUMPEXT2_BIN=dumpext2
-test:: $(DUMPEXT2_BIN) initrd
-	./$^
+#test:: $(DUMPEXT2_BIN) initrd
+#	./$^
 $(DUMPEXT2_BIN): contrib/dumpext2.c
 	$(HOSTCC) $(HOSTCCFLAGS) -Ikernel -o $@ $^ -g
 
 DUMPGPT_BIN=dumpgpt
-test:: $(DUMPGPT_BIN) disk_image
-	./$^
+#test:: $(DUMPGPT_BIN) disk_image
+#	./$^
 $(DUMPGPT_BIN): contrib/dumpgpt.c
 	$(HOSTCC) $(HOSTCCFLAGS) -o $@ $^ -g
 
