@@ -146,6 +146,7 @@ EFI_STATUS EFIAPI efi_main(void *imageHandle, EFI_SYSTEM_TABLE *systemTable) {
     write_32(info, 0x218, INITRD_START);
     write_32(info, 0x21c, initrd_size);
     write_32(info, 0x228, info + 0x30); //cmdline
+    write_8(info, 0x30, 0);
 
     EFI_MEMORY_DESCRIPTOR *Map;
     UINTN MapSize, MapKey;
