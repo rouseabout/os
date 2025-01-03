@@ -421,5 +421,14 @@ int main(int argc, char **argv, char ** envp)
 
     printf("Tests complete\n");
 
+    if (getpid() == 1) {
+        int fd = open("/dev/power", O_WRONLY);
+        if (fd != -1) {
+            char value = 1;
+            write(fd, &value, sizeof(value));
+            close(fd);
+        }
+    }
+
     return EXIT_SUCCESS;
 }

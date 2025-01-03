@@ -412,6 +412,9 @@ test:: $(HEAPTEST_BIN)
 $(HEAPTEST_BIN): libc/heap.c libc/bsd_string.c
 	$(HOSTCC) $(HOSTCCFLAGS) -DTEST=1 -o $@ $^ -g
 
+test:: kernel.linux initrd
+	$(QEMU) $(subst -debugcon stdio,,$(QEMUFLAGS)) -kernel kernel.linux -initrd initrd -append "init=/bin/testcases console=/dev/serial0" -nographic
+
 clean-tests:
 	rf -f $(EXT2TEST_BIN) $(DUMPELF_BIN) $(DUMPEXT2_BIN) $(DUMPGPT_BIN) $(HEAPTEST_BIN)
 
