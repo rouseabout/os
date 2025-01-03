@@ -68,14 +68,14 @@ static int eval(int argc, char ** argv, char * cmdline, char * buf, size_t buf_s
                         return EXIT_FAILURE;
                     }
                     *next = 0;
-                    char * buf = malloc(1024);
-                    if (!buf) {
+                    char * buf2 = malloc(1024);
+                    if (!buf2) {
                         perror("malloc");
                         return EXIT_FAILURE;
                     }
-                    buf[0] = 0;
-                    eval(argc, argv, p, buf, 1024);
-                    newargv[newargc++] = buf; //FIXME: free
+                    buf2[0] = 0;
+                    eval(argc, argv, p, buf2, 1024);
+                    newargv[newargc++] = buf2; //FIXME: free
                     p = next + 1;
                 } else {
                     char * start = p;
