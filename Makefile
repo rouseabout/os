@@ -1,6 +1,6 @@
 include .config
 HOSTCC=cc
-HOSTCCFLAGS=-m32
+HOSTCCFLAGS=
 TOOLCHAIN=$(PWD)/toolchain-$(ARCH)-pc-elf
 CC=$(TOOLCHAIN)/bin/$(ARCH)-pc-elf-gcc
 CXX=$(TOOLCHAIN)/bin/$(ARCH)-pc-elf-g++
