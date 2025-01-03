@@ -9,8 +9,7 @@ int main(int argc, char **argv, char ** envp)
         if (!pid) {
             tcsetpgrp(STDIN_FILENO, setpgrp());
             char * newargv[] = { "/bin/sh", NULL };
-            char * newenvp[] = { "HOME=/", "PATH=/bin:/usr/bin:/usr/local/bin:/usr/local/sbin", "TERM=vt100", NULL };
-            printf("execve returned %d\n", execve(newargv[0], newargv, newenvp));
+            printf("execv returned %d\n", execv(newargv[0], newargv));
             return -1;
         } else {
             int status;

@@ -3275,7 +3275,11 @@ static int pci_enum(void * cntx, int bus, int slot, int func)
 }
 #endif
 
-void jmp_to_userspace(uintptr_t eip, uintptr_t esp);
+void jmp_to_userspace(
+#if defined(ARCH_x86_64)
+    uintptr_t rdi, uintptr_t rsi, uintptr_t rdx,
+#endif
+    uintptr_t eip, uintptr_t esp);
 
 static void idle(int param);
 
@@ -3376,7 +3380,9 @@ void start3(int magic, const void * info)
 
     idle_task = create_task_kernel(idle, 0x1000, 0xbeef);
 
-    uintptr_t entry = create_task_elf(current_task->proc->page_directory, "/bin/init");
+    static char init_path[128];
+    get_cmdline_token("init=", "/bin/init", init_path, sizeof(init_path));
+    uintptr_t entry = create_task_elf(current_task->proc->page_directory, init_path);
     if (!entry)
         panic("create task elf failed");
 
@@ -3388,15 +3394,31 @@ void start3(int magic, const void * info)
 
     switch_page_directory(current_task->proc->page_directory);
 
+    char *argv_local[] = {init_path, NULL};
+    char *envp_local[] = {"HOME=/", "PATH=/bin:/usr/bin:/usr/local/bin:/usr/local/sbin", "TERM=vt100", NULL};
+
+    int argv_size = vector_flat_size(argv_local);
+    int envp_size = vector_flat_size(envp_local);
+
+    void * envp_stack = (uintptr_t *)(USER_STACK_TOP - envp_size);
+    vector_dup2(envp_stack, envp_local);
+
+    void * argv_stack = (uintptr_t *)(USER_STACK_TOP - argv_size - envp_size);
+    vector_dup2(argv_stack, argv_local);
+
 #if defined(ARCH_i686)
-    uintptr_t * stack_values = (uintptr_t *)PAD_DOWN(USER_STACK_TOP - 3*sizeof(uintptr_t));
-    stack_values[2] = 0; //envp
-    stack_values[1] = 0; //argv
-    stack_values[0] = 0; //argc
+    uintptr_t * stack_values = (uintptr_t *)PAD_DOWN(USER_STACK_TOP - argv_size - envp_size - 3*sizeof(uintptr_t));
+    stack_values[2] = USER_STACK_TOP - envp_size; //envp
+    stack_values[1] = USER_STACK_TOP - argv_size - envp_size; //argv
+    stack_values[0] = vector_count(argv_local); //argc
 #elif defined(ARCH_x86_64)
-    uintptr_t * stack_values = (uintptr_t *)USER_STACK_TOP;
+    uintptr_t * stack_values = (uintptr_t *)PAD_DOWN(USER_STACK_TOP - argv_size - envp_size);
 #endif
-    jmp_to_userspace(entry, (uintptr_t)stack_values);
+    jmp_to_userspace(
+#if defined(ARCH_x86_64)
+        vector_count(argv_local), USER_STACK_TOP - argv_size - envp_size, USER_STACK_TOP - envp_size,
+#endif
+        entry, (uintptr_t)stack_values);
 
     /* never reach here */
 }
