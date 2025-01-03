@@ -141,7 +141,7 @@ EFI_STATUS EFIAPI efi_main(void *imageHandle, EFI_SYSTEM_TABLE *systemTable) {
     write_16(info, 0x14, gop->Mode->Info->VerticalResolution);
     write_16(info, 0x16, 32);
     write_32(info, 0x18, gop->Mode->FrameBufferBase);
-    write_16(info, 0x24, gop->Mode->Info->HorizontalResolution*4);
+    write_16(info, 0x24, gop->Mode->Info->PixelsPerScanLine*4);
 
     write_32(info, 0x218, INITRD_START);
     write_32(info, 0x21c, initrd_size);
