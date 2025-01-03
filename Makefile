@@ -33,7 +33,7 @@ qemu: kernel.bin initrd
 	$(QEMU) $(QEMUFLAGS) -kernel $< -append "" -initrd initrd
 
 qemu-serial: kernel.bin initrd
-	$(QEMU) $(QEMUFLAGS) -kernel $< -append "console=/dev/serial0" -initrd initrd -nographic
+	$(QEMU) $(subst -debugcon stdio,,$(QEMUFLAGS)) -kernel $< -append "console=/dev/serial0" -initrd initrd -nographic
 
 qemu-hd-initrd: kernel.bin initrd
 	$(QEMU) $(QEMUFLAGS) -kernel $< -append "root=/dev/hda" -drive if=ide,file=initrd,format=raw,index=0,media=disk
@@ -42,7 +42,7 @@ qemu-hd: disk_image
 	$(QEMU) $(QEMUFLAGS) -drive if=ide,file=disk_image,format=raw,index=0,media=disk
 
 qemu-hd-serial: disk_image
-	$(QEMU) $(QEMUFLAGS) -drive if=ide,file=disk_image,format=raw,index=0,media=disk -nographic
+	$(QEMU) $(subst -debugcon stdio,,$(QEMUFLAGS)) -drive if=ide,file=disk_image,format=raw,index=0,media=disk -nographic
 
 qemu-efi: efi/EFI/BOOT/BOOT$(EFIARCH).EFI efi/kernel efi/initrd
 	$(QEMU) $(QEMUFLAGS) -bios /usr/share/ovmf/OVMF.fd -drive file=fat:rw:efi,format=raw
@@ -93,7 +93,7 @@ qemu-pxe: $(TFTP_FILES)
 		-device virtio-net-pci,netdev=net0 -boot n
 
 qemu-pxe-serial: $(TFTP_FILES)
-	$(QEMU) $(QEMUFLAGS) \
+	$(QEMU) $(subst -debugcon stdio,,$(QEMUFLAGS)) \
 		-netdev user,id=net0,net=192.168.88.0/24,tftp=$(PWD)/tftp/,bootfile=/pxelinux.0 \
 		-device virtio-net-pci,netdev=net0 -boot n \
 		-nographic
@@ -115,6 +115,9 @@ temu-linux: kernel.linux initrd
 
 qemu-linux: kernel.linux initrd
 	$(QEMU) $(QEMUFLAGS) -kernel kernel.linux -initrd initrd
+
+qemu-linux-serial: kernel.linux initrd
+	$(QEMU) $(subst -debugcon stdio,,$(QEMUFLAGS)) -kernel kernel.linux -initrd initrd -append "console=/dev/serial0" -nographic
 
 %.o: %.asm
 	nasm -f $(NASMFORMAT) -DARCH_$(ARCH) -o $@ $<
