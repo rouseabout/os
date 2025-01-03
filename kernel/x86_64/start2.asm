@@ -144,10 +144,15 @@ start2_long:
     mov es, eax
     mov fs, eax
     mov gs, eax
-    mov ss, eax
-    mov eax, 0x8
-    mov cs, eax
 
+    push 0x10
+    push rsp
+    pushf
+    push 0x08
+    push start2_next
+    iretq
+
+start2_next:
     ; clear bss
     mov r14, rdi
     mov r15, rsi
