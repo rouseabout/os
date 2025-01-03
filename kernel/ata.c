@@ -13,6 +13,8 @@
 #define ATA_PORT_DH       0x1F6
 #define ATA_PORT_CMD      0x1F7
 
+#define ATA_PRIMARY_CONTROL 0x3F6
+
 #define ATA_CMD_READ 0x20
 #define ATA_CMD_WRITE 0x30
 #define ATA_CMD_READ_DMA 0xC8
@@ -62,6 +64,11 @@ static void wait_drq()
 
 static int init()
 {
+    outb(ATA_PRIMARY_CONTROL, 4); //SRST
+    inb(ATA_PRIMARY_CONTROL);
+    outb(ATA_PRIMARY_CONTROL, 0);
+    inb(ATA_PRIMARY_CONTROL);
+
     outb(ATA_PORT_DH, 0xE0); // master drive
     outb(ATA_PORT_LBA_LOW, 0);
     outb(ATA_PORT_LBA_MID, 0);
