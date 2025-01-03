@@ -720,7 +720,7 @@ void interrupt_handler(registers * regs)
             if (current_task && current_task->state != STATE_TRAP && current_task->proc->act[SIGTRAP].sa_handler != SIG_DFL) {
                 sigaddset(&current_task->proc->signal, SIGTRAP);
                 current_task->state = STATE_TRAP;
-                regs->eip += 2;
+                regs->eip++;
                 current_task->reg = *regs;
                 move_current_task_to_queue(&wait_queue);
                 current_task = NULL;
