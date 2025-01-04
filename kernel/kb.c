@@ -85,8 +85,30 @@ static void kb_irq(void * opaque)
     process_scancode(scancode);
 }
 
+static void write_command(int command)
+{
+    while (inb(0x64) & 2) ;
+    outb(0x64, command);
+}
+
+static void write_data(int data)
+{
+    while (inb(0x64) & 2) ;
+    outb(0x60, data);
+}
+
+static int read_data()
+{
+    while (!(inb(0x64) & 1)) ;
+    return inb(0x60);
+}
+
 void kb_init()
 {
+    write_data(0xff);
+    read_data();
+    read_data();
+
     ringbuffer_init(&rb, rb_buffer, sizeof(rb_buffer));
     irq_handler[1] = kb_irq;
 }
