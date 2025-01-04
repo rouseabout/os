@@ -212,7 +212,10 @@ static void parse_linux_params(const uint8_t * params, uintptr_t * mod_start, ui
     strlcpy(cmdline, (const char *)(uintptr_t)read_32(params, 0x228), sizeof(cmdline));
 
     if (read_8(params, 0xf) == 0x23) {
-        fb_init(/*base*/read_32(params, 0x18), /*stride*/read_16(params,0x24), /*width*/read_16(params, 0x12), /*height*/read_16(params, 0x14), /*depth*/read_16(params, 0x16));
+        uintptr_t base = read_32(params, 0x18);
+        if (read_32(params, 0x36) & 2)
+            base |= (uintptr_t)read_32(params, 0x3a) << 32; // ext_lfb_base
+        fb_init(base, /*stride*/read_16(params,0x24), /*width*/read_16(params, 0x12), /*height*/read_16(params, 0x14), /*depth*/read_16(params, 0x16));
         tty = &fb_commands;
     }
 
