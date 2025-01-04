@@ -101,6 +101,8 @@ typedef struct {
 EFI_STATUS EFIAPI efi_main(void *imageHandle, EFI_SYSTEM_TABLE *systemTable) {
     EFI_STATUS ret;
 
+    systemTable->ConOut->EnableCursor(systemTable->ConOut, TRUE);
+
     EFI_LOADED_IMAGE_PROTOCOL *loadedImage;
     ret = systemTable->BootServices->HandleProtocol(imageHandle, &gEfiLoadedImageProtocolGuid, (void**)&loadedImage);
     if (ret != EFI_SUCCESS)
