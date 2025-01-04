@@ -26,7 +26,11 @@ typedef struct {
     uintptr_t pat      :  1;
     uintptr_t global   :  1;
     uintptr_t unused   :  3;
+#if defined(ARCH_i686)
     uintptr_t frame    : 20;
+#elif defined(ARCH_x86_64)
+    uintptr_t frame    : 52;
+#endif
 } page_entry;
 
 typedef struct {

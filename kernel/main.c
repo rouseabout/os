@@ -1196,7 +1196,7 @@ static void set_frame_identity(page_entry * page, uintptr_t addr, int flags)
         page->writethrough = 0;
         page->pat = !!(flags & MAP_WRITETHROUGH);
     }
-    page->frame   = addr / 0x1000;
+    page->frame   = addr >> 12;
 }
 
 static page_directory * alloc_new_page_directory(int use_reserve)
