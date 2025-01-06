@@ -32,6 +32,9 @@ start16:
     xor eax, eax
     xor ebx, ebx
 
+    mov [0x70], eax ; @0x70: rsdp_phy_addr
+    mov [0x74], eax
+
     mov ax, 0xe801
     int 0x15
     jc .check_switch ; failed

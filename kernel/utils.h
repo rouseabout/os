@@ -55,6 +55,8 @@ uintptr_t allocate_virtual_address(uintptr_t size, int align);
 #define MAP_WRITETHROUGH (1<<7)
 void map_address(uintptr_t phy_addr, uintptr_t virt_addr, uintptr_t size, int flags);
 
+void * alloc_map(uintptr_t phy, size_t size);
+
 void * kmalloc(uintptr_t size, const char * tag);
 uintptr_t kmalloc_ap(uintptr_t size, uintptr_t * phys, const char * tag);
 

@@ -3,6 +3,7 @@
 #include <stddef.h> //offsetof
 #include <string.h>
 
+#include "acpi.h"
 #include  "dev.h"
 #include "tty.h"
 #include "ata.h"
@@ -131,9 +132,19 @@ void map_address(uintptr_t phy_addr, uintptr_t virt_addr, uintptr_t size, int fl
         set_frame_identity(get_page_entry(virt_addr + i, 1, kernel_directory, NULL, 0), phy_addr + i, flags);
 }
 
-static void parse_multiboot_info(const multiboot_info * info, uintptr_t * mod_start, uintptr_t * mod_size)
+void * alloc_map(uintptr_t phy, size_t size)
+{
+    int preamble = phy & 0xfff;
+    uintptr_t v = allocate_virtual_address(preamble + size, 1);
+    map_address(phy - preamble, v, preamble + size, 0);
+    return (void *)(v + preamble);
+}
+
+static void parse_multiboot_info(const multiboot_info * info, uintptr_t * mod_start, uintptr_t * mod_size, const rsdp_descriptor ** rsdp_ptr)
 {
     uintptr_t low_size, up_size;
+    uint64_t acpi_phy_addr;
+    size_t acpi_size = 0;
 
     if (info->flags & MULTIBOOT_INFO_CMDLINE) {
         kprintf("cmdline: %s\n", (const char *)(uintptr_t)info->cmdline);
@@ -185,6 +196,10 @@ static void parse_multiboot_info(const multiboot_info * info, uintptr_t * mod_st
             kprintf("mmap: size:0x%x, base_addr:0x%llx, length:0x%llx, type:%s\n", mmap->size, mmap->base_addr, mmap->length, mmap->type == 1 ? "available" : "reserved");
             if (mmap->type != 1)
                 mem_set_frames(mmap->base_addr & ~0xFFF, mmap->length);
+            if (mmap->type == 3) {
+                acpi_phy_addr = mmap->base_addr;
+                acpi_size = mmap->length;
+            }
             i += mmap->size + 4;
         }
     }
@@ -197,18 +212,27 @@ static void parse_multiboot_info(const multiboot_info * info, uintptr_t * mod_st
         map_address(*mod_start, addr, *mod_size, 0);
         *mod_start = addr;
     }
+
+    if (acpi_size) {
+        uintptr_t acpi_addr = allocate_virtual_address(acpi_size, 1);
+        map_address(acpi_phy_addr, acpi_addr, acpi_size, 0);
+        *rsdp_ptr = find_rsdp(acpi_addr, acpi_size);
+    }
 }
 
 #define read_8(params, offset) params[offset]
 #define read_16(params, offset) *(uint16_t *)(params + offset)
 #define read_32(params, offset) *(uint32_t *)(params + offset)
+#define read_64(params, offset) *(uint64_t *)(params + offset)
 typedef struct {
     uint64_t addr;
     uint64_t size;
     int32_t type;
 } __attribute__((packed)) e820_entry;
-static void parse_linux_params(const uint8_t * params, uintptr_t * mod_start, uintptr_t * mod_size)
+static void parse_linux_params(const uint8_t * params, uintptr_t * mod_start, uintptr_t * mod_size, const rsdp_descriptor ** rsdp_ptr)
 {
+    uint64_t acpi_phy_addr;
+    size_t acpi_size = 0;
     kprintf("cmdline: %s\n", read_32(params, 0x228));
     strlcpy(cmdline, (const char *)(uintptr_t)read_32(params, 0x228), sizeof(cmdline));
 
@@ -220,6 +244,8 @@ static void parse_linux_params(const uint8_t * params, uintptr_t * mod_start, ui
         fb_init(base, /*stride*/read_16(params,0x24), /*width*/read_16(params, 0x12), /*height*/read_16(params, 0x14), /*depth*/read_16(params, 0x16));
         tty = &fb_commands;
     }
+
+    uint64_t rsdp_phy_addr = read_64(params, 0x70);
 
     uint32_t alt_mem_k = read_32(params, 0x1e0);
     if (!alt_mem_k)
@@ -235,6 +261,10 @@ static void parse_linux_params(const uint8_t * params, uintptr_t * mod_start, ui
         kprintf("mmap: addr:0x%llx size:0x%llx type:0x%d\n", mmap[i].addr, mmap[i].size, mmap[i].type);
         if (mmap[i].type != 1)
             mem_set_frames(mmap[i].addr & ~0xFFF, mmap[i].size);
+        if (!rsdp_phy_addr && mmap[i].type == 3) {
+            acpi_phy_addr = mmap[i].addr;
+            acpi_size = mmap[i].size;
+        }
     }
 
     init_paging(639 * 1024);
@@ -244,6 +274,14 @@ static void parse_linux_params(const uint8_t * params, uintptr_t * mod_start, ui
         mem_set_frames(initrd_start, *mod_size);
         map_address(initrd_start, addr, *mod_size, 0);
         *mod_start = addr;
+    }
+
+    if (rsdp_phy_addr) {
+        *rsdp_ptr = alloc_map(rsdp_phy_addr, sizeof(rsdp_descriptor));
+    } else if (acpi_size) {
+        uintptr_t acpi_addr = allocate_virtual_address(acpi_size, 1);
+        map_address(acpi_phy_addr, acpi_addr, acpi_size, 0);
+        *rsdp_ptr = find_rsdp(acpi_addr, acpi_size);
     }
 }
 
@@ -334,6 +372,136 @@ static void cpu_init()
         eax |= 7; //AVX,SSE,X87
         asm volatile("xsetbv" : : "a"(eax), "c"(0), "d"(edx));
     }
+}
+
+static uint8_t * g_apic_addr;
+int use_x2apic = 0;
+
+static uint32_t read_apic_register(int offset)
+{
+    if (use_x2apic)
+        return rdmsr(0x800 + (offset >> 4));
+    else
+        return *(volatile uint32_t *)(g_apic_addr + offset);
+}
+
+static void write_apic_register(int offset, uint32_t v)
+{
+    if (use_x2apic)
+        wrmsr(0x800 + (offset >> 4), v);
+    else
+        *(volatile uint32_t *)(g_apic_addr + offset) = v;
+}
+
+static void init_apic()
+{
+    uint32_t eax, ebx, ecx, edx;
+    asm volatile("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(1), "c"(0));
+    if (ecx & (1 << 21)) {
+        kprintf("x2APIC available\n");
+        use_x2apic = 1;
+    }
+    if (edx & (1 << 9))
+        kprintf("APIC available\n");
+
+    uint64_t base = rdmsr(0x1b); //ia32_apic_base
+    kprintf("apic enabled: %d, bsp_bit: %d\n", !!(base & (1<<11)), !!(base & (1<<8)));
+
+    if (use_x2apic) {
+        base |= (1 << 10);
+        wrmsr(0x1b, base);
+    } else {
+        g_apic_addr = alloc_map(base & ~0xfff, 4096); //FIXME: size
+    }
+
+    write_apic_register(0xF0, (1<<8) | 255); //spurious register
+
+    int version = read_apic_register(0x30);
+    kprintf("apic version register: 0x%x\n", version);
+}
+
+static uint32_t read_ioapic_register(uint8_t * ioapic_addr, int offset)
+{
+    *(volatile uint32_t *)ioapic_addr = offset;
+    return *(volatile uint32_t *)(ioapic_addr + 0x10);
+}
+
+static void write_ioapic_register(uint8_t * ioapic_addr, int offset, uint32_t v)
+{
+    *(volatile uint32_t *)ioapic_addr = offset;
+    *(volatile uint32_t *)(ioapic_addr + 0x10) = v;
+}
+
+#define APIC_ID 0 /* FIXME: allocate all pins to apic_id 0 */
+
+#define IOAPIC_INT_ACTIVELOW      0x00002000
+#define IOAPIC_INT_LEVELTRIGGERED 0x00008000
+#define IOAPIC_INT_MASKED         0x00010000
+
+#define IOAPIC_REDIRECTION_TABLE 0x10
+static void ioapic_write_redirection2(uint8_t * ioapic_addr, int index, uint32_t hi, uint32_t lo)
+{
+    write_ioapic_register(ioapic_addr, IOAPIC_REDIRECTION_TABLE + 2*index, hi);
+    write_ioapic_register(ioapic_addr, IOAPIC_REDIRECTION_TABLE + 2*index + 1, lo);
+}
+
+typedef struct {
+    uint8_t * ioapic_addr;
+    int nb_redirections;
+    int gsi_base;
+} IOAPICContext;
+
+static void init_iso_cb(int type, void * opaque, const void *p)
+{
+    IOAPICContext * ctx = opaque;
+    if (type != ACPI_MADT_INTERRUPT_SOURCE_OVERRIDE)
+        return;
+    const interrupt_source_override * iso = (const interrupt_source_override *)p;
+
+    int gsi = iso->global_system_interrupt;
+    if (gsi < ctx->gsi_base || gsi >= ctx->gsi_base + ctx->nb_redirections)
+        return;
+    if (iso->source > 16) //NUM_IRQS
+        return;
+    uint32_t flags = 0;
+    if ((iso->flags & 3) == 3)
+        flags |= IOAPIC_INT_ACTIVELOW;
+    if (((iso->flags >> 2) & 3) == 3)
+        flags |= IOAPIC_INT_LEVELTRIGGERED;
+    ioapic_write_redirection2(ctx->ioapic_addr, gsi - ctx->gsi_base, (iso->source + 0x20) | flags, APIC_ID);
+}
+
+static void init_ioapic_cb(int type, void * opaque, const void * p)
+{
+    if (type != ACPI_MADT_IO_APIC)
+        return;
+    const io_apic * item = p;
+
+    IOAPICContext ctx;
+
+    ctx.ioapic_addr = alloc_map(item->io_apic_addr, 4096); //FIXME: size
+
+    uint32_t ioapic_version = read_ioapic_register(ctx.ioapic_addr, 0x1);
+    ctx.nb_redirections = ((ioapic_version >> 16) & 0xff) + 1;
+    ctx.gsi_base = item->global_system_interrupt_base;
+
+    for (int i = 0; i < ctx.nb_redirections; i++)
+        ioapic_write_redirection2(ctx.ioapic_addr, i, IOAPIC_INT_MASKED, 0);
+
+    for (int i = 0; i < ctx.nb_redirections && i + ctx.gsi_base < 16; i++) //NUM_IRQs
+        ioapic_write_redirection2(ctx.ioapic_addr, i, 0x20 + i + ctx.gsi_base, APIC_ID);
+
+    acpi_madt_enum(&ctx, init_iso_cb);
+
+#if 0
+    for (int i = 0; i < nb_redirections; i++)
+        ioapic_dump(ctx.ioapic_addr, i);
+#endif
+}
+
+static void init_ioapic()
+{
+    acpi_madt_enum(NULL, init_ioapic_cb);
 }
 
 typedef struct {
@@ -808,9 +976,14 @@ void interrupt_handler(registers * regs)
         }
 
         if (number >= 32 && number < 48) { // reset apic
-            if (number >= 40)
-                outb(0xA0, 0x20); /* reset slave */
-            outb(0x20, 0x20); /* reset master */
+
+            if (acpi_madt_valid()) {
+                write_apic_register(0xb0, 0); /* apic eoi register */
+            } else {
+                if (number >= 40)
+                    outb(0xA0, 0x20); /* reset slave */
+                outb(0x20, 0x20); /* reset master */
+            }
         }
 
     } else if (regs->number == 128) {  // syscall
@@ -935,7 +1108,7 @@ void interrupt_handler(registers * regs)
 #undef _
 void isr128(void);
 
-static void init_idt()
+static void init_pic(int mask1, int mask2)
 {
     /* remap pic irq table to 32-47, to deconflict with cpu triggered interrupts (0-31) */
     outb(0x20, 0x11);
@@ -946,9 +1119,12 @@ static void init_idt()
     outb(0xA1, 0x02);
     outb(0x21, 0x01);
     outb(0xA1, 0x01);
-    outb(0x21, 0x0);
-    outb(0xA1, 0x0);
+    outb(0x21, mask1);
+    outb(0xA1, mask2);
+}
 
+static void init_idt()
+{
     memset(idt, 0, sizeof(idt));
 
 #define _(x) idt_set(x, (uintptr_t)isr##x, 0x08, 0x8E);
@@ -3292,17 +3468,16 @@ void start3(int magic, const void * info);
 void start3(int magic, const void * info)
 {
     uintptr_t mod_start, mod_size;
+    const rsdp_descriptor * rsdp = NULL;
     kprintf("Hello world, magic=0x%x, info=%p\n", magic, info);
     KERNEL_START = (uintptr_t)&text - (uintptr_t)&boot_end;
 
     cpu_init();
-    init_idt();
-    init_timer(TICKS_PER_SECOND);
 
     if (magic == 0x2BADB002)
-        parse_multiboot_info(info, &mod_start, &mod_size);
+        parse_multiboot_info(info, &mod_start, &mod_size, &rsdp);
     else if (magic == 0x1337)
-        parse_linux_params(info, &mod_start, &mod_size);
+        parse_linux_params(info, &mod_start, &mod_size, &rsdp);
     else {
         panic("invalid magic number");
         return;
@@ -3312,6 +3487,25 @@ void start3(int magic, const void * info)
         textmode_init();
     else
         fb_init2();
+
+    //FIXME: drop e0000 when using efi
+    uintptr_t e0000 = allocate_virtual_address(0x20000, 1);
+    map_address(0xe0000, e0000, 0x20000, 0);
+    if (!rsdp)
+        rsdp = find_rsdp(e0000, 0x20000);
+    if (rsdp)
+        acpi_init(rsdp);
+
+    if (acpi_madt_valid()) {
+        init_apic();
+        init_ioapic();
+        init_pic(0xff, 0xff);
+    } else {
+        init_pic(0, 0);
+    }
+
+    init_idt();
+    init_timer(TICKS_PER_SECOND);
 
     kb_init();
     tty_init();
@@ -3348,8 +3542,6 @@ void start3(int magic, const void * info)
         }
     }
 
-    uintptr_t e0000 = allocate_virtual_address(0x20000, 1);
-    map_address(0xe0000, e0000, 0x20000, 0);
     void * bios = mem_init((void *)(e0000 - 0xe0000), 0x100000);
     dev_register_device("mem", &mem_dio, 0, mem_getsize, bios);
 

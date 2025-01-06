@@ -5,6 +5,8 @@ EFI_GUID gEfiLoadedImageProtocolGuid = EFI_LOADED_IMAGE_PROTOCOL_GUID;
 EFI_GUID gEfiSimpleFileSystemProtocolGuid = EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID;
 EFI_GUID gEfiFileInfoGuid = EFI_FILE_INFO_ID;
 EFI_GUID gEfiGraphicsOutputProtocolGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
+static const EFI_GUID acpi2_guid = ACPI_20_TABLE_GUID;
+static const EFI_GUID acpi1_guid = ACPI_TABLE_GUID;
 
 #if 0
 double fabs (double f)
@@ -42,6 +44,14 @@ int kprintf(const char * fmt, ...)
     return 0; //FIXME: return bytes printed
 }
 #endif
+
+int memcmp(const void * s1, const void * s2, size_t n)
+{
+    const unsigned char * m1 = s1, * m2 = s2;
+    int ret = 0;
+    for (size_t i = 0; i < n && !(ret = m1[i] - m2[i]); i++) ;
+    return ret;
+}
 
 static EFI_STATUS load_file_at(EFI_SYSTEM_TABLE *systemTable, EFI_FILE *root, CHAR16 *name, EFI_ALLOCATE_TYPE type, EFI_PHYSICAL_ADDRESS *addr, UINTN *size)
 {
@@ -91,6 +101,7 @@ static EFI_STATUS load_file_at(EFI_SYSTEM_TABLE *systemTable, EFI_FILE *root, CH
 #define write_8(params, offset, value) *(uint8_t *)(params + offset) = value
 #define write_16(params, offset, value) *(uint16_t *)(params + offset) = value
 #define write_32(params, offset, value) *(uint32_t *)(params + offset) = value
+#define write_64(params, offset, value) *(uint64_t *)(params + offset) = value
 typedef struct {
     uint64_t addr;
     uint64_t size;
@@ -147,6 +158,16 @@ EFI_STATUS EFIAPI efi_main(void *imageHandle, EFI_SYSTEM_TABLE *systemTable) {
     write_16(info, 0x24, gop->Mode->Info->PixelsPerScanLine*4);
     write_32(info, 0x36, 2);
     write_32(info, 0x3a, gop->Mode->FrameBufferBase >> 32);
+
+    void *acpi2 = NULL, *acpi1 = NULL;
+    for (size_t i = 0; i < systemTable->NumberOfTableEntries; i++) {
+        const EFI_CONFIGURATION_TABLE *table = &systemTable->ConfigurationTable[i];
+        if (!memcmp(&table->VendorGuid, &acpi2_guid, sizeof(EFI_GUID)))
+            acpi2 = table->VendorTable;
+        else if (!memcmp(&table->VendorGuid, &acpi1_guid, sizeof(EFI_GUID)))
+            acpi1 = table->VendorTable;
+    }
+    write_64(info, 0x70, acpi2 ? (uint64_t)acpi2 : (uint64_t)acpi1);
 
     write_32(info, 0x218, initrd_addr);
     write_32(info, 0x21c, initrd_size);
