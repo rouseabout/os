@@ -158,7 +158,7 @@ EFI_STATUS EFIAPI efi_main(void *imageHandle, EFI_SYSTEM_TABLE *systemTable) {
     UINTN DescriptorSize;
     UINT32 DescriptorVersion;
     systemTable->BootServices->GetMemoryMap(&MapSize, NULL, &MapKey, &DescriptorSize, &DescriptorVersion);
-    MapSize += DescriptorSize;
+    MapSize += 2*DescriptorSize;
 
     ret = systemTable->BootServices->AllocatePool(EfiLoaderData, MapSize, (void**)&Map);
     if (ret != EFI_SUCCESS)
