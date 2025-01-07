@@ -40,7 +40,7 @@ typedef struct {
     int (*columns)(void);
 } TTYCommands;
 
-void fb_init(uintptr_t addr, uint32_t stride, uint32_t width, uint32_t height, uint32_t bpp);
+void fb_init(uint64_t addr, uint32_t stride, uint32_t width, uint32_t height, uint32_t bpp);
 void fb_init2(void);
 extern const DeviceOperations fb_io;
 
