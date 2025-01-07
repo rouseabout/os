@@ -212,8 +212,8 @@ static void parse_linux_params(const uint8_t * params, uintptr_t * mod_start, ui
     kprintf("cmdline: %s\n", read_32(params, 0x228));
     strlcpy(cmdline, (const char *)(uintptr_t)read_32(params, 0x228), sizeof(cmdline));
 
-
-    if (read_8(params, 0xf) == 0x23) {
+    int have_vga = read_8(params, 0xf);
+    if (have_vga == 0x23 || have_vga == 0x70) {
         uint64_t base = read_32(params, 0x18);
         if (read_32(params, 0x36) & 2)
             base |= (uint64_t)read_32(params, 0x3a) << 32; // ext_lfb_base
