@@ -9,6 +9,8 @@ extern start2_64
 
 global start
 start:
+    cli
+
     mov esp, boot_stack.bottom
     xor ebp, ebp
 
