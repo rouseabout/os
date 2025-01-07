@@ -50,6 +50,7 @@ void panic(const char * reason)
 static void kputc(void *cntx, int c)
 {
     outb(0xE9, c);
+    //tty_puts((char[]){c, 0});
 }
 
 #include "generic_printf.h"
