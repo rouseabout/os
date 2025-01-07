@@ -43,7 +43,7 @@ int kprintf(const char * fmt, ...)
 }
 #endif
 
-static EFI_STATUS load_file_at(EFI_SYSTEM_TABLE *systemTable, EFI_FILE *root, CHAR16 *name, EFI_PHYSICAL_ADDRESS where, UINTN *size)
+static EFI_STATUS load_file_at(EFI_SYSTEM_TABLE *systemTable, EFI_FILE *root, CHAR16 *name, EFI_ALLOCATE_TYPE type, EFI_PHYSICAL_ADDRESS *addr, UINTN *size)
 {
     EFI_FILE *kernel;
     EFI_STATUS ret;
@@ -68,8 +68,7 @@ static EFI_STATUS load_file_at(EFI_SYSTEM_TABLE *systemTable, EFI_FILE *root, CH
         return ret;
 
     int pages = (fileInfo->FileSize + 4095) / 4096;
-    EFI_PHYSICAL_ADDRESS segment = where;
-    ret = systemTable->BootServices->AllocatePages(AllocateAddress, EfiBootServicesData, pages, &segment);
+    ret = systemTable->BootServices->AllocatePages(type, EfiBootServicesData, pages, addr);
     if (ret != EFI_SUCCESS) {
         if (ret == EFI_NOT_FOUND)
             systemTable->ConOut->OutputString(systemTable->ConOut, L"AllocatePages failed");
@@ -77,17 +76,17 @@ static EFI_STATUS load_file_at(EFI_SYSTEM_TABLE *systemTable, EFI_FILE *root, CH
     }
 
     *size = fileInfo->FileSize;
-    ret = kernel->Read(kernel, size, (void*)segment);
+    ret = kernel->Read(kernel, size, (void*)*addr);
     if (ret != EFI_SUCCESS)
         return ret;
 
     systemTable->BootServices->FreePool(fileInfo);
 
+    kernel->Close(kernel);
+
     systemTable->ConOut->OutputString(systemTable->ConOut, L"\r\n");
     return EFI_SUCCESS;
 }
-
-#define INITRD_START 0x200000
 
 #define write_8(params, offset, value) *(uint8_t *)(params + offset) = value
 #define write_16(params, offset, value) *(uint16_t *)(params + offset) = value
@@ -123,13 +122,15 @@ EFI_STATUS EFIAPI efi_main(void *imageHandle, EFI_SYSTEM_TABLE *systemTable) {
     if (ret != EFI_SUCCESS)
         return ret;
 
+    EFI_PHYSICAL_ADDRESS kernel_addr = 0x100000;
     UINTN kernel_size;
-    ret = load_file_at(systemTable, root, L"kernel", 0x100000, &kernel_size);
+    ret = load_file_at(systemTable, root, L"kernel", AllocateAddress, &kernel_addr, &kernel_size);
     if (ret != EFI_SUCCESS)
         return ret;
 
+    EFI_PHYSICAL_ADDRESS initrd_addr;
     UINTN initrd_size;
-    ret = load_file_at(systemTable, root, L"initrd", INITRD_START, &initrd_size);
+    ret = load_file_at(systemTable, root, L"initrd", AllocateAnyPages, &initrd_addr, &initrd_size);
     if (ret != EFI_SUCCESS)
         return ret;
 
@@ -147,7 +148,7 @@ EFI_STATUS EFIAPI efi_main(void *imageHandle, EFI_SYSTEM_TABLE *systemTable) {
     write_32(info, 0x36, 2);
     write_32(info, 0x3a, gop->Mode->FrameBufferBase >> 32);
 
-    write_32(info, 0x218, INITRD_START);
+    write_32(info, 0x218, initrd_addr);
     write_32(info, 0x21c, initrd_size);
     write_32(info, 0x228, info + 0x30); //cmdline
     write_8(info, 0x30, 0);
