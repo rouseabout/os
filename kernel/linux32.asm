@@ -2,6 +2,8 @@ bits 32
 section .boot.header
 align 4
 
+KERNEL_START equ 0xC0000000
+
 extern bss
 extern end
 
@@ -13,8 +15,8 @@ start:
     popf
 
 %ifdef ARCH_i686
-    mov edi, bss
-    mov ecx, end
+    mov edi, bss - KERNEL_START
+    mov ecx, end - KERNEL_START
     sub ecx, edi
     xor eax, eax
     rep stosb
