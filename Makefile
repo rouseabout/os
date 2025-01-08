@@ -22,6 +22,8 @@ QEMUFLAGS+=-s -m 128m -no-reboot
 QEMUFLAGS+=-debugcon stdio
 #QEMUFLAGS+=-S  #(wait for debugger connection)
 #QEMUFLAGS+=-enable-kvm
+QEMUFLAGS+=-d guest_errors
+QEMUFLAGS+=-cpu max
 
 ifeq ($(ARCH),x86_64)
 all: qemu-linux
