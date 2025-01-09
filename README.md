@@ -87,9 +87,15 @@ To boot in QEMU use `make qemu-hd`. To boot in Bochs use `make bochs-hd`. To boo
 To boot in QEMU use use `make qemu-linux`. To boot in TinyEMU use `make temu-linux`.
 
 
-### os boot loader
+### 64-bit EFI boot loader
 
-No operating system is complete without its own boot loader!
+`make qemu-efi` or `make qemu-efi-cdrom` will boot *os* using its own 64-bit EFI boot loader.
+The files produced in the efi/ directory can be copied to a USB FAT file sytsem for testing on real hardware.
+
+
+### BIOS boot loader
+
+No operating system is complete without its own BIOS boot loader!
 `make boot.bin` will produce a custom boot image that can be written to a hard disk or USB drive.
 The image contains no files, just the boot loader, kernel and initrd stored in contiguous sectors.
 
@@ -160,11 +166,6 @@ It works because the *os* operates in promiscuous mode.
 `make qemu-pxe` or `make qemu-pxe-serial` will boot *os* over PXE.
 
 To use the text mode console, it is neccessary to first set the `MULTIBOOT_VIDEO_INFO` mode value to 1 (EGA text mode).
-
-
-### EFI boot loader
-
-`make qemu-efi-cdrom` will boot *os* using its own EFI loader. This only works with 64-bit *os*.
 
 
 ## Included programs
