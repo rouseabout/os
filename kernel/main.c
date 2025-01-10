@@ -214,9 +214,8 @@ static void parse_multiboot_info(const multiboot_info * info, uintptr_t * mod_st
     }
 
     if (acpi_size) {
-        uintptr_t acpi_addr = allocate_virtual_address(acpi_size, 1);
-        map_address(acpi_phy_addr, acpi_addr, acpi_size, 0);
-        *rsdp_ptr = find_rsdp(acpi_addr, acpi_size);
+        void * acpi_addr = alloc_map(acpi_phy_addr, acpi_size);
+        *rsdp_ptr = find_rsdp((uintptr_t)acpi_addr, acpi_size);
     }
 }
 
@@ -279,9 +278,8 @@ static void parse_linux_params(const uint8_t * params, uintptr_t * mod_start, ui
     if (rsdp_phy_addr) {
         *rsdp_ptr = alloc_map(rsdp_phy_addr, sizeof(rsdp_descriptor));
     } else if (acpi_size) {
-        uintptr_t acpi_addr = allocate_virtual_address(acpi_size, 1);
-        map_address(acpi_phy_addr, acpi_addr, acpi_size, 0);
-        *rsdp_ptr = find_rsdp(acpi_addr, acpi_size);
+        void * acpi_addr = alloc_map(acpi_phy_addr, acpi_size);
+        *rsdp_ptr = find_rsdp((uintptr_t)acpi_addr, acpi_size);
     }
 }
 
