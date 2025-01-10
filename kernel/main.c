@@ -127,6 +127,11 @@ static void mem_set_frames(uintptr_t phy_addr, int size)
 
 void map_address(uint64_t phy_addr, uintptr_t virt_addr, uintptr_t size, int flags)
 {
+#if defined(ARCH_i686)
+    if (!cpu_has_pae && phy_addr >= 0x100000000ULL) {
+        panic("can't map >= 4GiB");
+    }
+#endif
     KASSERT(!(phy_addr & 0xFFF));
     for (uintptr_t i = 0; i < size; i += 0x1000)
         set_frame_identity(get_page_entry(virt_addr + i, 1, kernel_directory, NULL, 0), phy_addr + i, flags);

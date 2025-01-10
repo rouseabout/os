@@ -5,7 +5,7 @@
 #include "tty.h"
 #include "utils.h"
 
-static uintptr_t fb_phy_addr;
+static uint64_t fb_phy_addr;
 static uint8_t * fb_addr = NULL;
 static unsigned int fb_stride;
 static int fb_width;
@@ -54,12 +54,6 @@ static void fb_reset()
 
 void fb_init(uint64_t phy_addr, uint32_t stride, uint32_t width, uint32_t height, uint32_t bpp)
 {
-#if defined(ARCH_i686)
-    if (phy_addr >= 0x100000000ULL) {
-        panic("can't map >= 4GiB");
-    }
-#endif
-
     fb_phy_addr = phy_addr;
     fb_stride = stride;
     fb_width = width;
