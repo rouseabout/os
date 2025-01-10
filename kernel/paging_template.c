@@ -1,5 +1,3 @@
-//#include "paging.h"
-#include "paging_std.h"
 
 extern page_directory *kernel_directory;
 extern uintptr_t clone_vaddr;
@@ -14,6 +12,9 @@ extern page_entry * clone_pe;
 
 #define ENTRIES_PER_TABLE (1 << BITS_PER_TABLE)
 
+#if PAE
+#define uintptr_t uint64_t
+#endif
 struct page_entry {
     uintptr_t present  :  1;
     uintptr_t rw       :  1;
@@ -26,11 +27,18 @@ struct page_entry {
     uintptr_t global   :  1;
     uintptr_t unused   :  3;
 #if defined(ARCH_i686)
+#if PAE
+    uintptr_t frame    : 52;
+#else
     uintptr_t frame    : 20;
+#endif
 #elif defined(ARCH_x86_64)
     uintptr_t frame    : 52;
 #endif
 };
+#if PAE
+#undef uintptr_t
+#endif
 
 typedef struct {
     page_entry pages[ENTRIES_PER_TABLE];
@@ -120,7 +128,7 @@ void RENAME(free_frame)(page_entry *page)
     page->frame   = 0xBEEF;
 }
 
-void RENAME(set_frame_identity)(page_entry * page, uintptr_t addr, int flags)
+void RENAME(set_frame_identity)(page_entry * page, uint64_t addr, int flags)
 {
     if (page->present)
         panic("set_frame_identity: page already present\n");
@@ -173,8 +181,10 @@ page_entry * RENAME(get_page_entry)(uintptr_t address, int make, page_directory 
             }
             //kprintf(" -> new table %p virt (%p phy)\n", dir->tables[idx], phy);
             dir->tables_physical[idx].present = 1;
-            dir->tables_physical[idx].rw = 1;
-            dir->tables_physical[idx].user = 1; //FIXME:
+            if (!PAE || level < PAGE_LEVELS - 1) {
+                dir->tables_physical[idx].rw = 1;
+                dir->tables_physical[idx].user = 1; //FIXME:
+            }
             dir->tables_physical[idx].frame = phy / 0x1000;
         }
         dir = dir->tables[idx];
@@ -272,8 +282,10 @@ static page_directory * clone_directory_r(const page_directory * src, const page
                 return NULL;
             }
             dir->tables_physical[i].present = 1;
-            dir->tables_physical[i].rw = 1;
-            dir->tables_physical[i].user = 1; //FIXME:
+            if (!PAE || level != PAGE_LEVELS) {
+                dir->tables_physical[i].rw = 1;
+                dir->tables_physical[i].user = 1; //FIXME:
+            }
             dir->tables_physical[i].frame = phys / 0x1000;
         }
     }

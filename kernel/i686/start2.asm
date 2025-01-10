@@ -5,11 +5,62 @@ section .boot.text
 KERNEL_START equ 0xC000000
 PML1_SIZE equ 0x40000 ; 4MiB
 
+KERNEL_START2 equ 0xC0000000
+PML12_SIZE equ 0x40000000 ; 1GiB
+
 extern bss
 extern end
 extern start3
 global start2
 start2:
+    mov eax, 1
+    xor ecx, ecx
+    cpuid
+    and edx, 0x40 ; pae
+    jz .std
+;----
+.pae:
+    mov al, 'P'
+    out 0xe9, al
+    mov al, 'A'
+    out 0xe9, al
+    mov al, 'E'
+    out 0xe9, al
+
+%macro PAE_SET_PAGE 4 ; table index phy flags
+    mov eax, %3
+    or eax, PAGE_PRESENT | %4
+    mov [%1 + (%2) * 8], eax
+%endmacro
+
+    PAE_SET_PAGE pml3, 0, pml2, 0
+    PAE_SET_PAGE pml3, KERNEL_START2 / PML12_SIZE, pml2, 0
+
+    PAE_SET_PAGE pml2, 0, pml1_0, PAGE_WRITE
+    PAE_SET_PAGE pml2, 1, pml1_1, PAGE_WRITE
+    PAE_SET_PAGE pml2, 2, pml1_2, PAGE_WRITE
+    PAE_SET_PAGE pml2, 3, pml1_3, PAGE_WRITE
+
+    mov edi, pml1_0
+    mov eax, PAGE_PRESENT | PAGE_WRITE
+.paeloop:
+    mov [edi], eax
+    add eax, 0x1000
+    add edi, 8
+    cmp eax, 0x800000
+    jb .paeloop
+
+    mov eax, cr4
+    or eax, 100000b ; pae
+    mov cr4, eax
+
+    mov eax, pml3
+    mov cr3, eax
+
+    jmp .common
+;----
+
+.std:
 
 %macro SET_PAGE 3 ; table index phy
     mov eax, %3
@@ -36,6 +87,7 @@ start2:
     mov eax, pml2
     mov cr3, eax
 
+.common:
     mov eax, cr0
     or eax, 0x80000000 ; pg
     and eax, ~0x10000 ; wp
@@ -90,9 +142,12 @@ gdt_ptr:
 
 section .boot.bss
 
+pml3: resq 512
 pml2: times 1024 dd 0
 pml1_0: times 1024 dd 0
 pml1_1: times 1024 dd 0
+pml1_2: resq 512
+pml1_3: resq 512
 
 section .data
 

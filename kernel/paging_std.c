@@ -1,3 +1,4 @@
+#define PAE 0
 #if defined(ARCH_i686)
 #define BITS_PER_TABLE 10
 #define PAGE_LEVELS 2
@@ -8,4 +9,5 @@
 #error unsupported architecture
 #endif
 
+#include "paging_std.h"
 #include "paging_template.c"

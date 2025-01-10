@@ -125,7 +125,7 @@ static void mem_set_frames(uintptr_t phy_addr, int size)
         set_frame(i);
 }
 
-void map_address(uintptr_t phy_addr, uintptr_t virt_addr, uintptr_t size, int flags)
+void map_address(uint64_t phy_addr, uintptr_t virt_addr, uintptr_t size, int flags)
 {
     KASSERT(!(phy_addr & 0xFFF));
     for (uintptr_t i = 0; i < size; i += 0x1000)
@@ -338,7 +338,6 @@ static void cpu_init()
     asm volatile("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(1), "c"(0));
 
     cpu_has_pae = edx & (1 << 6);
-kprintf("PAE:%d\n", cpu_has_pae);
 
     if (edx & (1 << 16)) { //PAT
         uint64_t pat = rdmsr(0x277);

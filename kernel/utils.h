@@ -53,7 +53,7 @@ uintptr_t allocate_virtual_address(uintptr_t size, int align);
 #define MAP_WRITABLE (1<<1)
 #define MAP_USER (1<<2)
 #define MAP_WRITETHROUGH (1<<7)
-void map_address(uintptr_t phy_addr, uintptr_t virt_addr, uintptr_t size, int flags);
+void map_address(uint64_t phy_addr, uintptr_t virt_addr, uintptr_t size, int flags);
 
 void * alloc_map(uintptr_t phy, size_t size);
 
@@ -91,6 +91,7 @@ extern void * irq_context[16];
 extern IrqCb * irq_handler[16];
 
 extern uintptr_t KERNEL_START;
+extern int cpu_has_pae;
 extern int cpu_has_pat;
 
 extern uint32_t nframes;
