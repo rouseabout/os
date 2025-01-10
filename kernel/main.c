@@ -3085,6 +3085,14 @@ static void proc_cmdline(FileDescriptor * fd)
     printf("%s\n", cmdline);
 }
 
+static void proc_cpuinfo(FileDescriptor * fd)
+{
+    printf("flags:");
+    if (cpu_has_pae) printf(" PAE");
+    if (cpu_has_pat) printf(" PAT");
+    printf("\n");
+}
+
 static void proc_meminfo(FileDescriptor * fd)
 {
     printf("%d/%d KiB in use\n", count_used_frames()*4, nframes*4);
@@ -3268,6 +3276,7 @@ void start3(int magic, const void * info)
 
     proc_init();
     proc_register_file("cmdline", proc_cmdline);
+    proc_register_file("cpuinfo", proc_cpuinfo);
     proc_register_file("meminfo", proc_meminfo);
     proc_register_file("psinfo", proc_psinfo);
     proc_register_file("uptime", proc_uptime);
