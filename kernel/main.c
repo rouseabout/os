@@ -113,7 +113,7 @@ static const char * get_cmdline_token(const char * token, const char * def, char
     return out;
 }
 
-page_directory *kernel_directory;
+static page_directory *kernel_directory;
 
 static void pmm_init(uintptr_t low_size, uintptr_t up_size, uintptr_t extra);
 static void init_paging(uintptr_t low_size);
@@ -884,7 +884,7 @@ void interrupt_handler(registers * regs);
 void interrupt_handler(registers * regs)
 {
     switch_page_directory(kernel_directory);
-    load_user_pages(current_task->proc->page_directory);
+    load_user_pages(kernel_directory, current_task->proc->page_directory);
     if (regs->number < 32) { /* exceptions */
 
         if (regs->number == 13) {
@@ -1089,7 +1089,7 @@ void interrupt_handler(registers * regs)
             switch_task(regs);
         else {
             switch_page_directory(current_task->proc->page_directory);
-            clear_user_pages();
+            clear_user_pages(kernel_directory);
         }
 
     } else {
@@ -1322,7 +1322,7 @@ static void shrink_cb(Halloc * cntx, uintptr_t boundary_addr)
 
 static void dump_cb(Halloc * cntx)
 {
-    dump_directory(kernel_directory, "directory", 0);
+    dump_directory(kernel_directory, kernel_directory, "directory", 0);
 }
 
 static void kheap_panic()
@@ -1442,7 +1442,7 @@ Task * idle_task;
 
 static void init_tasking(const char * console_dev)
 {
-    page_directory * directory = clone_directory(kernel_directory);
+    page_directory * directory = clone_directory(kernel_directory, kernel_directory);
 
     current_task = ready_queue   = kmalloc(sizeof(Task) + sizeof(Process), "task-init");
     strlcpy(current_task->name, "init task", sizeof(current_task->name));
@@ -1557,7 +1557,7 @@ static int task_ready(Task * t)
         Task * stopped = find_stopped(t->id);
         if (stopped) {
             if (t->u.waitpid.status) {
-                load_user_pages(t->proc->page_directory);
+                load_user_pages(kernel_directory, t->proc->page_directory);
                 *t->u.waitpid.status = MK_WAITPID_STATUS(0, 1);
             }
             stopped->u.stopped.parent_notified = 1;
@@ -1568,7 +1568,7 @@ static int task_ready(Task * t)
         if (pp) {
             Task * zombie = *pp;
             if (t->u.waitpid.status) {
-                load_user_pages(t->proc->page_directory);
+                load_user_pages(kernel_directory, t->proc->page_directory);
                 *t->u.waitpid.status = MK_WAITPID_STATUS(zombie->proc->errorlevel, 0);
             }
             t->reg.eax = zombie->id;
@@ -1586,7 +1586,7 @@ static int task_ready(Task * t)
 
         int sz = t->u.read.size - t->u.read.pos;
 
-        load_user_pages(t->proc->page_directory);
+        load_user_pages(kernel_directory, t->proc->page_directory);
         int ret = vfs_read(t->u.read.fd, t->u.read.buf + t->u.read.pos, sz);
         if (ret > 0)
             t->u.read.pos += ret;
@@ -1606,7 +1606,7 @@ static int task_ready(Task * t)
 
         int sz = t->u.write.size - t->u.write.pos;
 
-        load_user_pages(t->proc->page_directory);
+        load_user_pages(kernel_directory, t->proc->page_directory);
         int ret = vfs_write(t->u.write.fd, t->u.write.buf + t->u.write.pos, sz);
         if (ret > 0)
             t->u.write.pos += ret;
@@ -1626,7 +1626,7 @@ static int task_ready(Task * t)
         for (Join * j = t->proc->joins; j; j = j->next) {
             if (j->thread == t->u.pthread_join.thread) {
                 if (t->u.pthread_join.value_ptr) {
-                    load_user_pages(t->proc->page_directory);
+                    load_user_pages(kernel_directory, t->proc->page_directory);
                     *t->u.pthread_join.value_ptr = j->value;
                 }
                 return 1;
@@ -1637,7 +1637,7 @@ static int task_ready(Task * t)
     if (t->state == STATE_SELECT) {
         fd_set r_response, w_response;
 
-        load_user_pages(t->proc->page_directory);
+        load_user_pages(kernel_directory, t->proc->page_directory);
 
         int count = process_fd_sets(t, t->u.select.nfds, t->u.select.readfds, t->u.select.writefds, &r_response, &w_response);
 
@@ -1719,7 +1719,7 @@ static int do_signal_action(int i)
 static int process_signal(Task * t)
 {
     current_task = t;
-    load_user_pages(t->proc->page_directory);
+    load_user_pages(kernel_directory, t->proc->page_directory);
     int i;
     for (i = 0; i < 64 && !sigismember(&current_task->proc->signal, i); i++) ;
     if (i == 64)
@@ -1789,7 +1789,7 @@ static void switch_task(registers * reg)
 
     if (current_task == task0) {
         switch_page_directory(current_task->proc->page_directory);
-        clear_user_pages();
+        clear_user_pages(kernel_directory);
         return;
     }
 
@@ -1800,7 +1800,7 @@ static void switch_task(registers * reg)
     halloc_integrity_check(&kheap);
     *reg = current_task->reg;
     switch_page_directory(current_task->proc->page_directory);
-    clear_user_pages();
+    clear_user_pages(kernel_directory);
 }
 
 static void deliver_signal_pid(int pid, int signal)
@@ -1830,7 +1830,7 @@ static int sys_fork(const registers * reg)
 {
     kprintf("sys_fork %p pid=%d\n", current_task, current_task ? current_task->id : - 1);
 
-    page_directory * directory = clone_directory(current_task->proc->page_directory);
+    page_directory * directory = clone_directory(current_task->proc->page_directory, kernel_directory);
     if (!directory)
         return -ENOMEM;
 
@@ -1957,7 +1957,7 @@ static int exit2(int status, int thread_termination)
                 vfs_close(ct->proc->fd[i]);
 
         /* free page directory and process frames */
-        clean_directory(ct->proc->page_directory, 1);
+        clean_directory(ct->proc->page_directory, 1, kernel_directory);
 
         /* kill any threads belonging to this process */
         kill_threads(current_task);
@@ -2259,7 +2259,7 @@ static uintptr_t create_task_elf_fd(page_directory * dir, FileDescriptor * fd)
             continue;
 
         create_vm_block(dir, p.p_vaddr, p.p_memsz);
-        load_user_pages(dir);
+        load_user_pages(kernel_directory, dir);
 
         vfs_lseek(fd, p.p_offset, SEEK_SET);
 
@@ -2360,7 +2360,7 @@ static int sys_execve(registers * regs, const char * pathname, char * const argv
 
     kill_threads(current_task);
 
-    clean_directory(current_task->proc->page_directory, 0);
+    clean_directory(current_task->proc->page_directory, 0, kernel_directory);
 
     current_task->stack_top = USER_STACK_TOP;
     alloc_stack(current_task->proc->page_directory, (void*)USER_STACK_TOP, USER_STACK_SIZE, 0xf1);

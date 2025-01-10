@@ -10,10 +10,10 @@ uint64_t RENAME(page_get_phy_address)(const page_entry *page);
 void RENAME(set_frame_identity)(page_entry * page, uint64_t addr, int flags);
 
 page_directory * RENAME(alloc_new_page_directory)(int use_reserve);
-page_directory * RENAME(clone_directory)(const page_directory * src);
-void RENAME(clean_directory)(page_directory * dir, int free_all);
-void RENAME(dump_directory)(const page_directory * dir, const char * name, int hexdump);
+page_directory * RENAME(clone_directory)(const page_directory * src, const page_directory * kernel_directory);
+void RENAME(clean_directory)(page_directory * dir, int free_all, const page_directory * kernel_directory);
+void RENAME(dump_directory)(const page_directory * dir, const page_directory * kernel_directory, const char * name, int hexdump);
 
-void RENAME(switch_page_directory)(page_directory * dir);
-void RENAME(load_user_pages)(const page_directory * src);
-void RENAME(clear_user_pages)(void);
+void RENAME(switch_page_directory)(const page_directory * dir);
+void RENAME(load_user_pages)(page_directory * kernel_directory, const page_directory * src);
+void RENAME(clear_user_pages)(page_directory * kernel_directory);

@@ -80,62 +80,62 @@ page_directory * alloc_new_page_directory(int use_reserve)
         return (page_directory *)std_alloc_new_page_directory(use_reserve);
 }
 
-page_directory * clone_directory(const page_directory * src)
+page_directory * clone_directory(const page_directory * src, const page_directory * kernel_directory)
 {
 #if defined(ARCH_i686)
     if (cpu_has_pae)
-        return (page_directory *)pae_clone_directory((pae_page_directory *)src);
+        return (page_directory *)pae_clone_directory((const pae_page_directory *)src, (const pae_page_directory *)kernel_directory);
     else
 #endif
-        return (page_directory *)std_clone_directory((std_page_directory *)src);
+        return (page_directory *)std_clone_directory((const std_page_directory *)src, (const std_page_directory *)kernel_directory);
 }
 
-void clean_directory(page_directory * dir, int free_all)
+void clean_directory(page_directory * dir, int free_all, const page_directory * kernel_directory)
 {
 #if defined(ARCH_i686)
     if (cpu_has_pae)
-        pae_clean_directory((pae_page_directory *)dir, free_all);
+        pae_clean_directory((pae_page_directory *)dir, free_all, (const pae_page_directory *)kernel_directory);
     else
 #endif
-        std_clean_directory((std_page_directory *)dir, free_all);
+        std_clean_directory((std_page_directory *)dir, free_all, (const std_page_directory *)kernel_directory);
 }
 
-void dump_directory(const page_directory * dir, const char * name, int hexdump)
+void dump_directory(const page_directory * dir, const page_directory * kernel_directory, const char * name, int hexdump)
 {
 #if defined(ARCH_i686)
     if (cpu_has_pae)
-        pae_dump_directory((pae_page_directory *)dir, name, hexdump);
+        pae_dump_directory((const pae_page_directory *)dir, (const pae_page_directory *)kernel_directory, name, hexdump);
     else
 #endif
-        std_dump_directory((std_page_directory *)dir, name, hexdump);
+        std_dump_directory((const std_page_directory *)dir, (const std_page_directory *)kernel_directory, name, hexdump);
 }
 
-void switch_page_directory(page_directory * dir)
+void switch_page_directory(const page_directory * dir)
 {
 #if defined(ARCH_i686)
     if (cpu_has_pae)
-        pae_switch_page_directory((pae_page_directory *)dir);
+        pae_switch_page_directory((const pae_page_directory *)dir);
     else
 #endif
-        std_switch_page_directory((std_page_directory *)dir);
+        std_switch_page_directory((const std_page_directory *)dir);
 }
 
-void load_user_pages(const page_directory * src)
+void load_user_pages(page_directory * kernel_directory, const page_directory * src)
 {
 #if defined(ARCH_i686)
     if (cpu_has_pae)
-        pae_load_user_pages((pae_page_directory *)src);
+        pae_load_user_pages((pae_page_directory *)kernel_directory, (const pae_page_directory *)src);
     else
 #endif
-        std_load_user_pages((std_page_directory *)src);
+        std_load_user_pages((std_page_directory *)kernel_directory, (const std_page_directory *)src);
 }
 
-void clear_user_pages(void)
+void clear_user_pages(page_directory * kernel_directory)
 {
 #if defined(ARCH_i686)
     if (cpu_has_pae)
-        pae_clear_user_pages();
+        pae_clear_user_pages((pae_page_directory *)kernel_directory);
     else
 #endif
-        std_clear_user_pages();
+        std_clear_user_pages((std_page_directory *)kernel_directory);
 }

@@ -1,8 +1,5 @@
-
-extern page_directory *kernel_directory;
 extern uintptr_t clone_vaddr;
 extern page_entry * clone_pe;
-
 
 #include "utils.h"
 #include <string.h>
@@ -77,13 +74,13 @@ static void dump_directory_r(const page_directory * dir, const page_directory * 
     }
 }
 
-void RENAME(dump_directory)(const page_directory * dir, const char * name, int hexdump)
+void RENAME(dump_directory)(const page_directory * dir, const page_directory * kernel_directory, const char * name, int hexdump)
 {
     dump_directory_r(dir, kernel_directory, name, hexdump, PAGE_LEVELS, 0);
     kprintf("\n");
 }
 
-void RENAME(load_user_pages)(const page_directory * src)
+void RENAME(load_user_pages)(page_directory * kernel_directory, const page_directory * src)
 {
     for (unsigned int i = 0; i < ENTRIES_PER_TABLE; i++) {
         uintptr_t base2 = (uintptr_t)i << (12 + (PAGE_LEVELS - 1)*BITS_PER_TABLE);
@@ -95,7 +92,7 @@ void RENAME(load_user_pages)(const page_directory * src)
     RENAME(switch_page_directory)(kernel_directory);
 }
 
-void RENAME(clear_user_pages)()
+void RENAME(clear_user_pages)(page_directory * kernel_directory)
 {
     for (unsigned int i = 0; i < ENTRIES_PER_TABLE; i++) {
         uintptr_t base2 = (uintptr_t)i << (12 + (PAGE_LEVELS - 1)*BITS_PER_TABLE);
@@ -201,7 +198,7 @@ uint64_t RENAME(page_get_phy_address)(const page_entry *page)
 }
 
 
-static page_table * RENAME(clone_table)(const page_table * src, uintptr_t * physical_address, uintptr_t base)
+static page_table * RENAME(clone_table)(const page_table * src, uintptr_t * physical_address, uintptr_t base, const page_directory * kernel_directory)
 {
     page_table * table = (page_table *)kmalloc_ap(sizeof(page_table), physical_address, "pg-table-clone");
     //kprintf("page_table %p (%d bytes)\n", table, sizeof(page_table));
@@ -254,9 +251,9 @@ _(dirty)
     return table;
 }
 
-static int clean_directory_r(page_directory * dir, const page_directory * kd, int level, uintptr_t base, int free_all);
+static int clean_directory_r(page_directory * dir, const page_directory * kd, int level, uintptr_t base, int free_all, const page_directory * kernel_directory);
 
-static page_directory * clone_directory_r(const page_directory * src, const page_directory * kd, uintptr_t * pphys, int level, uintptr_t base)
+static page_directory * clone_directory_r(const page_directory * src, const page_directory * kd, uintptr_t * pphys, int level, uintptr_t base, const page_directory * kernel_directory)
 {
     page_directory * dir = (page_directory *)kmalloc_ap(sizeof(page_directory), pphys, "pg-dir-clone");
     if (!dir)
@@ -275,9 +272,9 @@ static page_directory * clone_directory_r(const page_directory * src, const page
             dir->tables_physical[i] = src->tables_physical[i];
         } else {
             uintptr_t phys;
-            dir->tables[i] = level > 2 ? clone_directory_r(src->tables[i], kd ? kd->tables[i] : NULL, &phys, level - 1, base2) : (page_directory *)RENAME(clone_table)((const page_table *)src->tables[i], &phys, base2) ;
+            dir->tables[i] = level > 2 ? clone_directory_r(src->tables[i], kd ? kd->tables[i] : NULL, &phys, level - 1, base2, kernel_directory) : (page_directory *)RENAME(clone_table)((const page_table *)src->tables[i], &phys, base2, kernel_directory) ;
             if (!dir->tables[i]) {
-                clean_directory_r(dir, kd, level, base, 1);
+                clean_directory_r(dir, kd, level, base, 1, kernel_directory);
                 kfree(dir);
                 return NULL;
             }
@@ -293,10 +290,10 @@ static page_directory * clone_directory_r(const page_directory * src, const page
     return dir;
 }
 
-page_directory * RENAME(clone_directory)(const page_directory * src)
+page_directory * RENAME(clone_directory)(const page_directory * src, const page_directory * kernel_directory)
 {
     uintptr_t phys;
-    return clone_directory_r(src, (page_directory *)kernel_directory, &phys, PAGE_LEVELS, 0);
+    return clone_directory_r(src, kernel_directory, &phys, PAGE_LEVELS, 0, kernel_directory);
 }
 
 /* remove all non-kernel pages from the directory */
@@ -309,7 +306,7 @@ static void RENAME(clean_table)(page_table * table)
     }
 }
 
-static int clean_directory_r(page_directory * dir, const page_directory * kd, int level, uintptr_t base, int free_all)
+static int clean_directory_r(page_directory * dir, const page_directory * kd, int level, uintptr_t base, int free_all, const page_directory * kernel_directory)
 {
     int empty = 1;
     for (unsigned int i = 0; i < ENTRIES_PER_TABLE; i++) {
@@ -322,7 +319,7 @@ static int clean_directory_r(page_directory * dir, const page_directory * kd, in
         }
         int free_this;
         if (level > 2) {
-            free_this = clean_directory_r(dir->tables[i], kd ? kd->tables[i] : NULL, level - 1, base2, free_all);
+            free_this = clean_directory_r(dir->tables[i], kd ? kd->tables[i] : NULL, level - 1, base2, free_all, kernel_directory);
         } else {
             RENAME(clean_table)((page_table *)dir->tables[i]);
             free_this = 1;
@@ -338,14 +335,14 @@ static int clean_directory_r(page_directory * dir, const page_directory * kd, in
     return empty;
 }
 
-void RENAME(clean_directory)(page_directory * dir, int free_all)
+void RENAME(clean_directory)(page_directory * dir, int free_all, const page_directory * kernel_directory)
 {
-    clean_directory_r(dir, kernel_directory, PAGE_LEVELS, 0, free_all);
+    clean_directory_r(dir, kernel_directory, PAGE_LEVELS, 0, free_all, kernel_directory);
     if (free_all)
         kfree(dir);
 }
 
-void RENAME(switch_page_directory)(page_directory * dir)
+void RENAME(switch_page_directory)(const page_directory * dir)
 {
     asm volatile("mov %0, %%cr3" : : "r" (dir->physical_address));
 }
