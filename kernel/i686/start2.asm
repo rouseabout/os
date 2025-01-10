@@ -5,6 +5,8 @@ section .boot.text
 KERNEL_START equ 0xC000000
 PML1_SIZE equ 0x40000 ; 4MiB
 
+extern bss
+extern end
 extern start3
 global start2
 start2:
@@ -57,6 +59,13 @@ start2:
     mov fs, eax
     mov gs, eax
     mov ss, eax
+
+    ; clear bss FIXME: only needed for linux boot protocol
+    mov edi, bss
+    mov ecx, end
+    sub ecx, edi
+    xor al, al
+    rep stosb
 
     ; copy arguments from boot stack to kernel stack
     add esp, 4
