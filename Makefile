@@ -203,7 +203,7 @@ gdb: kernel.bin
 	gdb $< -ex 'target remote localhost:1234'
 
 clean:
-	rm -f kernel.bin kernel.linux* kernel.map $(KERNEL_OBJS) kernel/multiboot.o kernel/linux32.o cdrom.iso iso/boot/kernel.bin initrd iso/boot/initrd disk_image disk_image.vdi hd/boot/kernel.bin hd/boot/initrd $(TFTP_FILES) programs/*.o libc/*.o libc/$(ARCH)/*.o libdl/*.o libg/*.o libm/*.o $(shell echo $(PROGRAMS)) libc.a libdl.a libg.a libm.a $(TEST_BIN) $(DUMPELF_BIN) $(DUMPEXT2_BIN) $(EXT2TEST_BIN) efimain.o efi/kernel efi/initrd efi/EFI/BOOT/BOOTX64.EFI .sysroot
+	rm -f kernel.bin kernel.linux* kernel.map $(KERNEL_OBJS) kernel/multiboot.o kernel/linux32.o cdrom.iso iso/boot/kernel.bin initrd iso/boot/initrd disk_image disk_image.vdi hd/boot/kernel.bin hd/boot/initrd $(TFTP_FILES) programs/*.o libc/*.o libc/$(ARCH)/*.o libdl/*.o libg/*.o libm/*.o $(shell echo $(PROGRAMS)) $(shell echo $(BOXPROGRAMS)) libc.a libdl.a libg.a libm.a $(TEST_BIN) $(DUMPELF_BIN) $(DUMPEXT2_BIN) $(EXT2TEST_BIN) efimain.o efi/kernel efi/initrd efi/EFI/BOOT/BOOTX64.EFI .sysroot
 	rm -rf sysroot
 
 initrd: $(shell echo $(PROGRAMS)) $(wildcard scripts/*) README.md programs/hello.asm
