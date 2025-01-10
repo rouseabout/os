@@ -9,6 +9,9 @@ STRIP=$(TOOLCHAIN)/bin/$(ARCH)-pc-elf-strip
 READELF=$(TOOLCHAIN)/bin/$(ARCH)-pc-elf-readelf
 OBJDUMP=$(TOOLCHAIN)/bin/$(ARCH)-pc-elf-objdump
 CFLAGS=-O3 -Wall -pedantic -Wshadow -Wextra -Werror=format-security -Werror=implicit-function-declaration -Werror=missing-prototypes -Werror=pointer-arith -Werror=return-type -Werror=vla -Werror=logical-op -Wno-unused-parameter -Wno-sign-compare -g -DARCH_$(ARCH)
+ifeq ($(ARCH),i686)
+CFLAGS+=-march=i386
+endif
 KERNELCFLAGS=-ffreestanding -Ilibc -Ilibdl -Ilibm
 ifeq ($(ARCH),x86_64)
 KERNELCFLAGS+=-mcmodel=large
