@@ -3,51 +3,25 @@
 
 #include <stdint.h>
 
-#if defined(ARCH_i686)
-#define BITS_PER_TABLE 10
-#define PAGE_LEVELS 2
-#elif defined(ARCH_x86_64)
-#define BITS_PER_TABLE 9
-#define PAGE_LEVELS 4
-#else
-#error unsupported architecture
-#endif
-
-#define ENTRIES_PER_TABLE (1 << BITS_PER_TABLE)
-
-typedef struct {
-    uintptr_t present  :  1;
-    uintptr_t rw       :  1;
-    uintptr_t user     :  1;
-    uintptr_t writethrough :  1;
-    uintptr_t nocache  :  1;
-    uintptr_t accessed :  1;
-    uintptr_t dirty    :  1;
-    uintptr_t pat      :  1;
-    uintptr_t global   :  1;
-    uintptr_t unused   :  3;
-#if defined(ARCH_i686)
-    uintptr_t frame    : 20;
-#elif defined(ARCH_x86_64)
-    uintptr_t frame    : 52;
-#endif
-} page_entry;
-
-typedef struct {
-    page_entry pages[ENTRIES_PER_TABLE];
-} page_table;
-
 typedef struct page_directory page_directory;
-struct page_directory {
-    /* because kmalloc_ap only gives physical adddress of the first page, must place tables_physical[] array first */
-    page_entry tables_physical[ENTRIES_PER_TABLE];  //physical address of tables
-    page_directory * tables[ENTRIES_PER_TABLE];  //virtual address to page_directory or page_table struct
-    uintptr_t physical_address;  //physical address; points to tables_physical
-};
+typedef struct page_entry page_entry;
 
-extern page_directory *kernel_directory;
-extern page_directory *current_directory;
-
+void alloc_frame(page_entry * page, int flags);
+void free_frame(page_entry *page);
 page_entry * get_page_entry(uintptr_t address, int make, page_directory * dir, int * called_alloc, int use_reserve);
+uint64_t page_get_phy_address(const page_entry *page);
+void set_frame_identity(page_entry * page, uintptr_t addr, int flags);
+
+page_directory * alloc_new_page_directory(int use_reserve);
+page_directory * clone_directory(const page_directory * src);
+void clean_directory(page_directory * dir, int free_all);
+void dump_directory(const page_directory * dir, const char * name, int hexdump);
+
+void switch_page_directory(page_directory * dir);
+void load_user_pages(const page_directory * src);
+void clear_user_pages(void);
+
+extern uintptr_t clone_vaddr;
+extern page_entry * clone_pe;
 
 #endif

@@ -89,3 +89,14 @@ int pci_scan(int (*cb)(void *cntx, int bus, int slot, int func), void * cntx);
 typedef void IrqCb(void * context);
 extern void * irq_context[16];
 extern IrqCb * irq_handler[16];
+
+extern uintptr_t KERNEL_START;
+extern int cpu_has_pat;
+
+extern uint32_t nframes;
+unsigned int count_used_frames(void);
+uintptr_t first_frame(void);
+void set_frame(uintptr_t frame_address);
+void clear_frame(uintptr_t frame_address);
+
+uintptr_t kmalloc_ap2(uintptr_t size, uintptr_t * phys, int use_reserve, const char * tag);
