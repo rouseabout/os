@@ -2,10 +2,9 @@ bits 32
 section .boot.text
 %include "kernel/x86inc.asm"
 
-KERNEL_START equ 0xC000000
+KERNEL_START equ 0xC0000000
 PML1_SIZE equ 0x40000 ; 4MiB
 
-KERNEL_START2 equ 0xC0000000
 PML12_SIZE equ 0x40000000 ; 1GiB
 
 extern bss
@@ -37,7 +36,7 @@ start2:
 %endmacro
 
     PAE_SET_PAGE pml3, 0, pml2, 0
-    PAE_SET_PAGE pml3, KERNEL_START2 / PML12_SIZE, pml2, 0
+    PAE_SET_PAGE pml3, KERNEL_START / PML12_SIZE, pml2, 0
 
     PAE_SET_PAGE pml2, 0, pml1_0, PAGE_WRITE
     PAE_SET_PAGE pml2, 1, pml1_1, PAGE_WRITE
@@ -75,8 +74,8 @@ start2:
 
     SET_PAGE pml2, 0, pml1_0
     SET_PAGE pml2, 1, pml1_1
-    SET_PAGE pml2, KERNEL_START / PML1_SIZE, pml1_0
-    SET_PAGE pml2, (KERNEL_START / PML1_SIZE) + 1, pml1_1
+    SET_PAGE pml2, KERNEL_START / 0x10 / PML1_SIZE, pml1_0
+    SET_PAGE pml2, (KERNEL_START / 0x10 / PML1_SIZE) + 1, pml1_1
 
     mov edi, pml1_0
     mov eax, PAGE_PRESENT | PAGE_WRITE
