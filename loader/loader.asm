@@ -2,6 +2,7 @@ bits 16
 %include "kernel/x86inc.asm"
 org 0x7c00
 
+STAGING equ 0x9000
 INITRD_START equ 0x800000 ; @ 8MiB
 
 start:
@@ -13,8 +14,10 @@ start:
     mov ss, ax
     mov sp, 0x7c00
 
+%if 0
     mov ax, 0x2401
     int 0x15
+%endif
 
     mov si, zsetup
     call printz
@@ -92,7 +95,7 @@ start:
 
 
 read_sectors_high:
-    mov word [dap.dest], 0x9000 ; staging
+    mov word [dap.dest], STAGING
     mov word [dap.blocks], 1
 
 .loop:
@@ -100,6 +103,7 @@ read_sectors_high:
     call read_sector
     pop ebx
 
+%if 0
     ; memcpy
     push ecx
     cli
@@ -115,7 +119,7 @@ read_sectors_high:
     mov ds, ax
     mov es, ax
 
-    mov esi, 0x9000
+    mov esi, STAGING
     mov edi, ebx
     mov ecx, 512 / 4
 
@@ -132,6 +136,21 @@ read_sectors_high:
     mov ds, ax
     mov es, ax
     ; memcpy done
+%else
+    push ebx
+    push ecx
+    mov word [gdt.dst + 2], bx
+    shr ebx, 16
+    mov byte [gdt.dst + 4], bl
+
+    mov esi, gdt
+    mov ah, 0x87
+    mov cx, 512 / 2
+    int 0x15
+    pop ecx
+    pop ebx
+    jc read_sector.error
+%endif
 
     add ebx, 512
     dec ecx
@@ -188,6 +207,7 @@ dap:
     dd 0
 
 align 4
+%if 0
 gdt:
     GDT_ENTRY32 0, 0, 0, 0
     GDT_ENTRY32 0, 0xFFFFFFFF, 0x92, GRAN_32_BIT_MODE | GRAN_4KIB_BLOCKS
@@ -196,6 +216,17 @@ gdt:
 gdt_ptr:
     dw gdt.end - gdt - 1
     dd gdt
+%else
+gdt:
+    GDT_ENTRY32 0, 0, 0, 0
+    GDT_ENTRY32 0, 0, 0, 0
+.src:
+    GDT_ENTRY32 STAGING, 0x1ff, 0x93, 0
+.dst:
+    GDT_ENTRY32 0, 0x1ff, 0x93, 0
+    GDT_ENTRY32 0, 0, 0, 0
+    GDT_ENTRY32 0, 0, 0, 0
+%endif
 
 times 510 - ($ - $$) db 0
 db 0x55, 0xAA
