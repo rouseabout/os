@@ -68,6 +68,7 @@ static int init()
     inb(ATA_PRIMARY_CONTROL);
     outb(ATA_PRIMARY_CONTROL, 0);
     inb(ATA_PRIMARY_CONTROL);
+    wait_timeout(1000000);
 
     outb(ATA_PORT_DH, 0xE0); // master drive
     outb(ATA_PORT_LBA_LOW, 0);
