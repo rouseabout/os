@@ -335,10 +335,19 @@ static void wrmsr(int msr, uint64_t v)
     asm volatile("wrmsr" : : "a"(low), "d"(high), "c"(msr));
 }
 
+#if defined(ARCH_i686)
+int has_cpuid(void);
+#endif
+
 int cpu_has_pae = 0;
 int cpu_has_pat = 0;
 static void cpu_init()
 {
+#if defined(ARCH_i686)
+    if (!has_cpuid())
+        return;
+#endif
+
     uint32_t eax, ebx, ecx, edx;
     asm volatile("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(1), "c"(0));
 

@@ -13,3 +13,15 @@ GRAN_4KIB_BLOCKS equ (1<<7)
 
 PAGE_PRESENT equ (1<<0)
 PAGE_WRITE equ (1<<1)
+
+%macro HAS_CPUID 0
+    pushfd
+    pushfd
+    or dword [esp], 0x200000
+    popfd
+    pushfd
+    pop eax
+    xor eax, [esp]
+    popfd
+    and eax, 0x200000
+%endmacro

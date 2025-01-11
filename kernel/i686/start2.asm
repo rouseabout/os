@@ -13,6 +13,9 @@ extern end
 extern start3
 global start2
 start2:
+    HAS_CPUID
+    jz .std
+
     mov eax, 1
     xor ecx, ecx
     cpuid

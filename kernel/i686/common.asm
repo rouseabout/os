@@ -1,3 +1,4 @@
+%include "kernel/x86inc.asm"
 bits 32
 section .text
 
@@ -230,3 +231,8 @@ jmp_to_userspace:
 
     xor ebp, ebp
     iret
+
+global has_cpuid
+has_cpuid:
+    HAS_CPUID
+    ret
