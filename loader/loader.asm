@@ -14,11 +14,16 @@ start:
     mov ss, ax
     mov sp, 0x7c00
 
-%if 0
     mov ax, 0x2401
     int 0x15
-%endif
+    jnc .continue
 
+    cli
+    mov al, 2
+    out 0x92, al
+    sti
+
+.continue:
     mov si, zsetup
     call printz
 
