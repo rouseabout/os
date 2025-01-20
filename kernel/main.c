@@ -1168,7 +1168,7 @@ uintptr_t allocate_virtual_address(uintptr_t size, int align)
 }
 
 //FIXME: phys should be uint64_t
-static uintptr_t kmalloc_core(uintptr_t size, int align, uintptr_t * phys, int use_reserve, const char * tag)
+static uintptr_t kmalloc_core(uintptr_t size, int align, uint64_t * phys, int use_reserve, const char * tag)
 {
     if (use_halloc) {
         uintptr_t addr = (uintptr_t)halloc(&kheap, size, align ? 4096 : 0, use_reserve, tag);
@@ -1200,18 +1200,18 @@ static uintptr_t kmalloc_a(uintptr_t size, const char * tag)
 }
 
 #if 0
-static uintptr_t kmalloc_p(uintptr_t size, uintptr_t * phys)
+static uintptr_t kmalloc_p(uintptr_t size, uint64_t * phys)
 {
     return kmalloc_core(size, 0, phys);
 }
 #endif
 
-uintptr_t kmalloc_ap(uintptr_t size, uintptr_t * phys, const char * tag)
+uintptr_t kmalloc_ap(uintptr_t size, uint64_t * phys, const char * tag)
 {
     return kmalloc_core(size, 1, phys, 0, tag);
 }
 
-uintptr_t kmalloc_ap2(uintptr_t size, uintptr_t * phys, int use_reserve, const char * tag)
+uintptr_t kmalloc_ap2(uintptr_t size, uint64_t * phys, int use_reserve, const char * tag)
 {
     return kmalloc_core(size, 1, phys, use_reserve, tag);
 }

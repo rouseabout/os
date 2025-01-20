@@ -58,7 +58,7 @@ void map_address(uint64_t phy_addr, uintptr_t virt_addr, uintptr_t size, int fla
 void * alloc_map(uintptr_t phy, size_t size);
 
 void * kmalloc(uintptr_t size, const char * tag);
-uintptr_t kmalloc_ap(uintptr_t size, uintptr_t * phys, const char * tag);
+uintptr_t kmalloc_ap(uintptr_t size, uint64_t * phys, const char * tag);
 
 void kfree(void *);
 
@@ -100,4 +100,4 @@ uintptr_t first_frame(void);
 void set_frame(uintptr_t frame_address);
 void clear_frame(uintptr_t frame_address);
 
-uintptr_t kmalloc_ap2(uintptr_t size, uintptr_t * phys, int use_reserve, const char * tag);
+uintptr_t kmalloc_ap2(uintptr_t size, uint64_t * phys, int use_reserve, const char * tag);

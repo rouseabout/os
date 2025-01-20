@@ -45,7 +45,7 @@ struct page_directory {
     /* because kmalloc_ap only gives physical adddress of the first page, must place tables_physical[] array first */
     page_entry tables_physical[ENTRIES_PER_TABLE];  //physical address of tables
     page_directory * tables[ENTRIES_PER_TABLE];  //virtual address to page_directory or page_table struct
-    uintptr_t physical_address;  //physical address; points to tables_physical
+    uint64_t physical_address;  //physical address; points to tables_physical
 };
 
 static void indent(int level)
@@ -143,7 +143,7 @@ void RENAME(set_frame_identity)(page_entry * page, uint64_t addr, int flags)
 
 page_directory * RENAME(alloc_new_page_directory)(int use_reserve)
 {
-    uintptr_t phy;
+    uint64_t phy;
     page_directory * dir = (page_directory *)kmalloc_ap2(sizeof(page_directory), &phy, use_reserve, "pg-dir");
     memset(dir->tables_physical, 0, sizeof(dir->tables_physical));
     memset(dir->tables, 0, sizeof(dir->tables));
@@ -151,7 +151,7 @@ page_directory * RENAME(alloc_new_page_directory)(int use_reserve)
     return dir;
 }
 
-static void * RENAME(alloc_new_page_table)(uintptr_t * phy, int use_reserve)
+static void * RENAME(alloc_new_page_table)(uint64_t * phy, int use_reserve)
 {
     page_table * pt = (page_table *)kmalloc_ap2(sizeof(page_table), phy, use_reserve, "pg-table");
     memset(pt, 0, sizeof(page_table));
@@ -169,7 +169,7 @@ page_entry * RENAME(get_page_entry)(uintptr_t address, int make, page_directory 
                 return NULL;
             if (called_alloc)
                 *called_alloc = 1;
-            uintptr_t phy;
+            uint64_t phy;
             if (level + 1 == 2) {
                 dir->tables[idx] = RENAME(alloc_new_page_table)(&phy, use_reserve);
             } else {
@@ -198,7 +198,7 @@ uint64_t RENAME(page_get_phy_address)(const page_entry *page)
 }
 
 
-static page_table * RENAME(clone_table)(const page_table * src, uintptr_t * physical_address, uintptr_t base, const page_directory * kernel_directory)
+static page_table * RENAME(clone_table)(const page_table * src, uint64_t * physical_address, uintptr_t base, const page_directory * kernel_directory)
 {
     page_table * table = (page_table *)kmalloc_ap(sizeof(page_table), physical_address, "pg-table-clone");
     //kprintf("page_table %p (%d bytes)\n", table, sizeof(page_table));
@@ -253,7 +253,7 @@ _(dirty)
 
 static int clean_directory_r(page_directory * dir, const page_directory * kd, int level, uintptr_t base, int free_all, const page_directory * kernel_directory);
 
-static page_directory * clone_directory_r(const page_directory * src, const page_directory * kd, uintptr_t * pphys, int level, uintptr_t base, const page_directory * kernel_directory)
+static page_directory * clone_directory_r(const page_directory * src, const page_directory * kd, uint64_t * pphys, int level, uintptr_t base, const page_directory * kernel_directory)
 {
     page_directory * dir = (page_directory *)kmalloc_ap(sizeof(page_directory), pphys, "pg-dir-clone");
     if (!dir)
@@ -271,7 +271,7 @@ static page_directory * clone_directory_r(const page_directory * src, const page
             dir->tables[i] = src->tables[i];
             dir->tables_physical[i] = src->tables_physical[i];
         } else {
-            uintptr_t phys;
+            uint64_t phys;
             dir->tables[i] = level > 2 ? clone_directory_r(src->tables[i], kd ? kd->tables[i] : NULL, &phys, level - 1, base2, kernel_directory) : (page_directory *)RENAME(clone_table)((const page_table *)src->tables[i], &phys, base2, kernel_directory) ;
             if (!dir->tables[i]) {
                 clean_directory_r(dir, kd, level, base, 1, kernel_directory);
@@ -292,7 +292,7 @@ static page_directory * clone_directory_r(const page_directory * src, const page
 
 page_directory * RENAME(clone_directory)(const page_directory * src, const page_directory * kernel_directory)
 {
-    uintptr_t phys;
+    uint64_t phys;
     return clone_directory_r(src, kernel_directory, &phys, PAGE_LEVELS, 0, kernel_directory);
 }
 
@@ -344,5 +344,9 @@ void RENAME(clean_directory)(page_directory * dir, int free_all, const page_dire
 
 void RENAME(switch_page_directory)(const page_directory * dir)
 {
-    asm volatile("mov %0, %%cr3" : : "r" (dir->physical_address));
+    asm volatile("mov %0, %%cr3" : : "r" (
+#if defined(ARCH_i686)
+        (uint32_t)
+#endif
+        dir->physical_address));
 }
