@@ -66,6 +66,17 @@ int main(int argc, char ** argv)
     //printf("sizeof(ElfHeader): %d\n", sizeof(ElfHeader));
     printf("\n");
 
+    switch(e.e_machine) {
+#if defined(ARCH_i686)
+    case 0x3: break;
+#elif defined(ARCH_x86_64)
+    case 0x3E: break;
+#endif
+    default:
+        printf("unsupported architecture\n");
+        return -1;
+    }
+
     for (int i = 0; i < e.e_phnum; i++) {
         fseek(f, e.e_phoff + i * sizeof(ElfPHeader), SEEK_SET);
         ElfPHeader p;
