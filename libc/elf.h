@@ -17,6 +17,12 @@ typedef struct {
     uint16_t e_shstrndx;
 } Elf32Header;
 
+#define ET_REL 1
+#define ET_EXEC 2
+
+#define EM_386 0x3
+#define EM_X86_64 0x3E
+
 typedef struct {
     uint8_t e_ident[16];
     uint16_t e_type;
@@ -97,12 +103,55 @@ typedef struct {
     uint64_t sh_entsize;
 } Elf64SHeader;
 
+typedef struct {
+    uint32_t st_name;
+    uint32_t st_value;
+    uint32_t st_size;
+    uint8_t st_info;
+    uint8_t st_other;
+    uint16_t st_shndx;
+} Elf32Sym;
+
+typedef struct {
+    uint32_t st_name;
+    uint8_t st_info;
+    uint8_t st_other;
+    uint16_t st_shndx;
+    uint64_t st_value;
+    uint64_t st_size;
+} Elf64Sym;
+
+#define STB_LOCAL 0
+#define STB_GLOBAL 1
+
+#define STT_NOTYPE 0
+#define STT_FUNC 2
+#define STT_SECTION 3
+#define STT_FILE 4
+
+typedef struct {
+    uint32_t r_offset;
+    uint32_t r_info;
+} Elf32Rel;
+
+typedef struct {
+    uint64_t r_offset;
+    uint64_t r_info;
+} Elf64Rel;
+
+#define R_386_32 1
+#define R_386_PC32 2
+
 #if defined(ARCH_i686)
 #define ElfHeader Elf32Header
 #define ElfPHeader Elf32PHeader
 #define ElfSHeader Elf32SHeader
+#define ElfSym Elf32Sym
+#define ElfRel Elf32Rel
 #elif defined(ARCH_x86_64)
 #define ElfHeader Elf64Header
 #define ElfPHeader Elf64PHeader
 #define ElfSHeader Elf64SHeader
+#define ElfSym Elf64Sym
+#define ElfRel Elf64Rel
 #endif

@@ -2247,14 +2247,14 @@ static uintptr_t create_task_elf_fd(page_directory * dir, FileDescriptor * fd)
         return 0;
     }
 
-    if (e.e_type != 2)
+    if (e.e_type != ET_EXEC)
         return 0; /* not executable file */
 
     switch(e.e_machine) {
 #if defined(ARCH_i686)
-    case 0x3: break;
+    case EM_386: break;
 #elif defined(ARCH_x86_64)
-    case 0x3E: break;
+    case EM_X86_64: break;
 #endif
     default: return 0;
     }

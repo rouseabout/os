@@ -579,9 +579,9 @@ static void write_elf(const char * path, void * text, size_t text_size)
         .e_ident = {127, 'E', 'L', 'F', 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
         .e_type = 2,
 #if defined(ARCH_i686)
-        .e_machine = 3,
+        .e_machine = EM_386,
 #elif defined(ARCH_x86_64)
-        .e_machine = 0x3E,
+        .e_machine = EM_X86_64,
 #endif
         .e_phoff = sizeof(hdr),
         .e_phnum = 1,

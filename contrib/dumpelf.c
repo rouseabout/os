@@ -68,9 +68,9 @@ int main(int argc, char ** argv)
 
     switch(e.e_machine) {
 #if defined(ARCH_i686)
-    case 0x3: break;
+    case EM_386: break;
 #elif defined(ARCH_x86_64)
-    case 0x3E: break;
+    case EM_X86_64: break;
 #endif
     default:
         printf("unsupported architecture\n");
