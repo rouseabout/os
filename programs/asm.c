@@ -1,6 +1,8 @@
+#include <assert.h>
 #include <ctype.h>
 #include <elf.h>
 #include <fcntl.h>
+#include <libgen.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -8,6 +10,8 @@
 #include <string.h>
 #include <unistd.h>
 #define NB_ELEMS(x) (sizeof(x)/sizeof((x)[0]))
+
+#define PAD16(x) (((x) + 16) & ~15)
 
 static const char * punctuator[]= { /* search algorith is greedy, so place longest punctuators first */
     "%", "[", "]", ":", ",", "+", "-",
@@ -185,6 +189,11 @@ static void dump_tokens(Token * t)
     }
 }
 #endif
+
+static int tok_equal(Token * a, Token * b)
+{
+    return a->size == b->size && !memcmp(a->str, b->str, a->size);
+}
 
 static int tok_is_equal(Token * tok, const char * str)
 {
@@ -385,6 +394,9 @@ struct Operand {
 
 typedef struct Symbol Symbol;
 struct Symbol {
+    int global;
+    int section_idx;
+    int symbol_idx;
     off_t offset;
     char * name;
     Symbol * next;
@@ -413,31 +425,38 @@ static Symbol * find_symbol(Symbol * symbols, Token * tok)
     return NULL;
 }
 
-static int operand_eval(Operand * op, Symbol * symbols, unsigned long * value)
+static int operand_eval(Operand * op, Symbol * symbols, unsigned long * value, Symbol ** symbol)
 {
     if (op->kind == OPERAND_IMM) {
         *value = op->u.value;
+        *symbol = NULL;
         return 1;
     } else if (op->kind == OPERAND_SYMBOL) {
         Symbol * sym = find_symbol(symbols, op->u.symbol);
         if (!sym)
             return 0;
         *value = sym->offset;
+        *symbol = sym;
         return 1;
     } else if (op->kind == OPERAND_ADD) {
         unsigned long lvalue, rvalue;
-        if (operand_eval(op->u.math.left, symbols, &lvalue) && operand_eval(op->u.math.right, symbols, &rvalue)) {
+        Symbol * lsymbol, * rsymbol;
+        if (operand_eval(op->u.math.left, symbols, &lvalue, &lsymbol) && operand_eval(op->u.math.right, symbols, &rvalue, &rsymbol)) {
             *value = lvalue + rvalue;
+            *symbol = NULL; //FIXME: lsymbol/rsymbol
             return 1;
         }
     } else if (op->kind == OPERAND_SUB) {
         unsigned long lvalue, rvalue;
-        if (operand_eval(op->u.math.left, symbols, &lvalue) && operand_eval(op->u.math.right, symbols, &rvalue)) {
+        Symbol * lsymbol, * rsymbol;
+        if (operand_eval(op->u.math.left, symbols, &lvalue, &lsymbol) && operand_eval(op->u.math.right, symbols, &rvalue, &rsymbol)) {
             *value = lvalue - rvalue;
+            *symbol = NULL; //FIXME: lsymbol/rsymbol
             return 1;
         }
     }
     *value = 0;
+    *symbol = NULL;
     return 0;
 }
 
@@ -547,59 +566,86 @@ static void buf_write4(Buffer * buf, uint32_t v)
 
 typedef struct Fixup Fixup;
 struct Fixup {
+    int section_idx;
     off_t offset;
     int size;
     Operand * op;
-    long adjust;
+    int pc_relative;
     Fixup * next;
 };
 
-static void buf_write4_imm(Buffer * buf, Operand * op, int adjust, Fixup ** fixups, Symbol * symbols)
+static void buf_write4_imm(Buffer * buf, int section_idx, Operand * op, int pc_relative, Fixup ** fixups, Symbol * symbols)
 {
     unsigned long v;
-    if (!operand_eval(op, symbols, &v)) {
+    Symbol * symbol;
+    if (!operand_eval(op, symbols, &v, &symbol) || symbol) {
         Fixup * f = malloc(sizeof(Fixup));
+        f->section_idx = section_idx;
         f->offset = buf->pos;
         f->size = 4;
         f->op = op;
-        f->adjust = adjust;
+        f->pc_relative = pc_relative;
         f->next = *fixups;
         *fixups = f;
     }
     buf_write4(buf, v);
 }
 
-static void write_elf(const char * path, void * text, size_t text_size)
+typedef struct Section Section;
+struct Section {
+    Token * name;
+    Buffer buf;
+    ElfSHeader sh;
+
+    int symtab_idx;
+
+    int nb_rel;
+    ElfRel * rel;
+};
+
+static void write_elf(const char * path, Section * sections, int nb_sections, int shstrtab_idx)
 {
-#define ORG 0x1000
     int fd = open(path, O_WRONLY|O_CREAT, 0666);
     if (fd == -1)
         perror2(path);
+
+    lseek(fd, PAD16(sizeof(ElfHeader)), SEEK_SET);
+
+    for (int i = 0; i < nb_sections; i++) {
+        sections[i].sh.sh_offset = lseek(fd, 0, SEEK_CUR);
+        sections[i].sh.sh_size = sections[i].buf.size;
+        write(fd, sections[i].buf.data, sections[i].buf.size);
+        lseek(fd, PAD16(sections[i].sh.sh_offset + sections[i].buf.size), SEEK_SET);
+    }
+
+    int shoff = lseek(fd, 0, SEEK_CUR);
+    write(fd, &(ElfSHeader){0}, sizeof(ElfSHeader));
+    for (int i = 0; i < nb_sections; i++) {
+         write(fd, &sections[i].sh, sizeof(sections[i].sh));
+    }
+
+    lseek(fd, 0, SEEK_SET);
+
     ElfHeader hdr = {
+#if defined(ARCH_i686)
+        .e_ident = {127, 'E', 'L', 'F', 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+#elif defined(ARCH_x86_64)
         .e_ident = {127, 'E', 'L', 'F', 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        .e_type = 2,
+#endif
+        .e_type = ET_REL,
 #if defined(ARCH_i686)
         .e_machine = EM_386,
 #elif defined(ARCH_x86_64)
         .e_machine = EM_X86_64,
 #endif
-        .e_phoff = sizeof(hdr),
-        .e_phnum = 1,
+        .e_version = 1,
+        .e_shoff = shoff,
+        .e_shnum = nb_sections + 1,
+        .e_shstrndx = shstrtab_idx + 1,
         .e_ehsize = sizeof(ElfHeader),
-        .e_phentsize = sizeof(ElfPHeader),
         .e_shentsize = sizeof(ElfSHeader),
-        .e_entry = ORG,
     };
     write(fd, &hdr, sizeof(hdr));
-    ElfPHeader phdr = {
-        .p_type = PT_LOAD,
-        .p_vaddr = ORG,
-        .p_memsz = text_size,
-        .p_filesz = text_size,
-        .p_offset = sizeof(hdr) + sizeof(phdr),
-    };
-    write(fd, &phdr, sizeof(phdr));
-    write(fd, text, text_size);
     close(fd);
 }
 
@@ -609,13 +655,45 @@ static void write_elf(const char * path, void * text, size_t text_size)
 #define ASM_BITS 64
 #endif
 
-static void assemble(Token * tok)
+static int add_section(Section ** sections, int * nb_sections, Token * name, int sh_type, int sh_flags, int align, int entsize)
+{
+    Section * new_sections;
+    new_sections = realloc(*sections, (*nb_sections + 1) * sizeof(Section));
+    assert(new_sections);
+
+    int idx = *nb_sections;
+    new_sections[idx] = (Section){.name=name, .buf={.data=NULL}, .sh={.sh_type=sh_type, .sh_flags=sh_flags, .sh_addralign=align, .sh_entsize=entsize}, .nb_rel=0, .rel=NULL};
+
+    *sections = new_sections;
+    (*nb_sections)++;
+
+    return idx;
+}
+
+static int find_section(Section * sections, int nb_sections, Token * name)
+{
+    for (int i = 0; i < nb_sections; i++)
+        if (tok_equal(sections[i].name, name))
+            return i;
+    return -1;
+}
+
+static char * textz = ".text";
+static char * strtabz = ".strtab";
+static char * symtabz = ".symtab";
+static char * shstrtabz = ".shstrtab";
+
+static void assemble(char *path, Token * tok, const char * output_path)
 {
     Symbol * symbols = NULL;
     Fixup * fixups = NULL;
     Token * last_label = NULL;
     int bits = ASM_BITS;
-    Buffer buf = {.data = NULL};
+
+    Section * sections = NULL;
+    int nb_sections = 0;
+    int current_section = add_section(&sections, &nb_sections, make_token(TOK_LITERAL, textz, textz + strlen(textz), 0, 1, ""), SHT_PROGBITS, SHF_ALLOC|SHF_EXECINSTR, 16, 0);
+    Buffer * buf = &sections[current_section].buf;
 
     while (tok->kind != TOK_EOF) {
         if (equal(tok, "bits")) {
@@ -626,18 +704,33 @@ static void assemble(Token * tok)
             tok = tok->next;
             do {
                 if (tok->kind == TOK_STRING) {
-                    buf_expand(&buf, tok->size);
-                    buf_write(&buf, tok->str, tok->size);
+                    buf_expand(buf, tok->size);
+                    buf_write(buf, tok->str, tok->size);
                     tok = tok->next;
                 } else if (tok->kind == TOK_NUMBER) {
-                    buf_expand(&buf, 1);
-                    buf_write1(&buf, parse_number(&tok, tok));
+                    buf_expand(buf, 1);
+                    buf_write1(buf, parse_number(&tok, tok));
                 } else
                     parse_error(tok, "unexpected token");
                 if (tok->at_begin)
                     break;
                 tok = expect(tok, ",");
             } while (1);
+        } else if (equal(tok, "extern")) {
+            tok = tok->next;
+            if (tok->kind != TOK_LITERAL)
+                parse_error(tok, "unexpected token");
+            Symbol * sym = malloc(sizeof(Symbol));
+            sym->name = malloc(tok->size + 1);
+            assert(sym->name);
+            memcpy(sym->name, tok->str, tok->size);
+            sym->name[tok->size] = 0;
+            sym->global = 1;
+            sym->section_idx = -1;
+            sym->offset = 0;
+            sym->next = symbols;
+            symbols = sym;
+            tok = tok->next;
         } else if (equal(tok, "global")) {
             tok = tok->next;
             if (tok->kind != TOK_LITERAL)
@@ -647,6 +740,10 @@ static void assemble(Token * tok)
             tok = tok->next;
             if (tok->kind != TOK_LITERAL)
                 parse_error(tok, "unexpected token");
+            current_section = find_section(sections, nb_sections, tok);
+            if (current_section < 0)
+                current_section = add_section(&sections, &nb_sections, tok, SHT_PROGBITS, SHF_WRITE|SHF_ALLOC, 16, 0);
+            buf = &sections[current_section].buf;
             tok = tok->next;
         } else if (tok->kind == TOK_LITERAL && equal(tok->next, ":")) {
             Symbol * sym = malloc(sizeof(Symbol));
@@ -666,60 +763,71 @@ static void assemble(Token * tok)
                 memcpy(sym->name, tok->str, tok->size);
                 sym->name[tok->size] = 0;
             }
-            sym->offset = ORG + buf.pos;
+            sym->global = 1;
+            sym->section_idx = current_section;
+            sym->offset = buf->pos;
             sym->next = symbols;
             symbols = sym;
+
             tok = tok->next->next;
         } else if (equal(tok, "nop")) {
-            buf_expand(&buf, 1);
-            buf_write1(&buf, 0x90);
+            buf_expand(buf, 1);
+            buf_write1(buf, 0x90);
+            tok = tok->next;
+        } else if (equal(tok, "int3")) {
+            buf_expand(buf, 1);
+            buf_write1(buf, 0xcc);
             tok = tok->next;
         } else if (equal(tok, "int")) {
-            buf_expand(&buf, 2);
-            buf_write1(&buf, 0xcd);
-            buf_write1(&buf, parse_number(&tok, tok->next));
+            buf_expand(buf, 2);
+            buf_write1(buf, 0xcd);
+            buf_write1(buf, parse_number(&tok, tok->next));
         } else if (equal(tok, "xor")) {
             Operand * op1 = parse_operand(&tok, tok->next);
             tok = expect(tok, ",");
             Operand * op2 = parse_operand(&tok, tok);
             if (op1->kind == OPERAND_REG && op2->kind == OPERAND_REG) {
-                buf_expand(&buf, 2);
-                buf_write1(&buf, 0x31);
-                buf_write1(&buf, 0xC0 + op2->u.reg * 0x8 + op1->u.reg);
+                buf_expand(buf, 2);
+                buf_write1(buf, 0x31);
+                buf_write1(buf, 0xC0 + op2->u.reg * 0x8 + op1->u.reg);
             } else
                 parse_error(tok, "unsupported operand");
         } else if (equal(tok, "push") || equal(tok, "pop")) {
             int is_push = equal(tok, "push");
             Operand * op = parse_operand(&tok, tok->next);
             if (op->kind == OPERAND_REG) {
-                buf_expand(&buf, 2);
-                buf_write1(&buf, (is_push ? 0x50 : 0x58) + op->u.reg);
+                buf_expand(buf, 2);
+                buf_write1(buf, (is_push ? 0x50 : 0x58) + op->u.reg);
+            } else if (is_push && op->kind == OPERAND_SYMBOL) {
+                buf_expand(buf, 5);
+                buf_write1(buf, 0x68);
+                buf_write4_imm(buf, current_section, op, 0, &fixups, symbols);
             } else
                 parse_error(tok, "unsupported operand");
         } else if (equal(tok, "call")) {
             Operand * op = parse_operand(&tok, tok->next);
             if (operand_is_imm(op)) {
-                buf_expand(&buf, 5);
-                buf_write1(&buf, 0xE8);
-                buf_write4_imm(&buf, op, -(ORG + buf.pos + 4), &fixups, symbols);
+                buf_expand(buf, 5);
+                buf_write1(buf, 0xE8);
+                buf_write4_imm(buf, current_section, op, 1, &fixups, symbols);
             } else
                 parse_error(tok, "unsupported operand");
         } else if (equal(tok, "ret")) {
-            buf_expand(&buf, 1);
-            buf_write1(&buf, 0xC3);
+            buf_expand(buf, 1);
+            buf_write1(buf, 0xC3);
             tok = tok->next;
         } else if (equal(tok, "mov")) {
             Operand * op1 = parse_operand(&tok, tok->next);
             tok = expect(tok, ",");
             Operand * op2 = parse_operand(&tok, tok);
             if (op1->kind == OPERAND_REG && operand_is_imm(op2)) { // MOV r32,imm32
-                buf_expand(&buf, 5);
-                buf_write1(&buf, 0xB8 + op1->u.reg);
-                buf_write4_imm(&buf, op2, 0, &fixups, symbols);
+                buf_expand(buf, 5);
+                buf_write1(buf, 0xB8 + op1->u.reg);
+                buf_write4_imm(buf, current_section, op2, 0, &fixups, symbols);
             } else if (op1->kind == OPERAND_ADDR && op1->u.addr->kind == OPERAND_REG && op2->kind == OPERAND_REG) { //MOV r/m32,r32
-                buf_expand(&buf, 2);
-                buf_write1(&buf, 0x89);
-                buf_write1(&buf, op2->u.reg * 0x8 + op1->u.addr->u.reg);
+                buf_expand(buf, 2);
+                buf_write1(buf, 0x89);
+                buf_write1(buf, op2->u.reg * 0x8 + op1->u.addr->u.reg);
             } else
                 parse_error(tok, "unsupported operand");
         } else if (equal(tok, "lea")) {
@@ -727,36 +835,160 @@ static void assemble(Token * tok)
             tok = expect(tok, ",");
             Operand * op2 = parse_operand(&tok, tok);
             if (op1->kind == OPERAND_REG && op2->kind == OPERAND_ADDR && op2->u.addr->kind == OPERAND_REG) {
-                buf_expand(&buf, 2);
-                buf_write1(&buf, 0x8d);
-                buf_write1(&buf, op1->u.reg * 0x8 + op2->u.addr->u.reg);
+                buf_expand(buf, 2);
+                buf_write1(buf, 0x8d);
+                buf_write1(buf, op1->u.reg * 0x8 + op2->u.addr->u.reg);
             } else
                 parse_error(tok, "unsupported operand");
         } else
             parse_error(tok, "unexpected token");
     }
 
+    int strtab_idx = add_section(&sections, &nb_sections, make_token(TOK_LITERAL, strtabz, strtabz + strlen(strtabz), 0, 1, ""), SHT_STRTAB, 0, 1, 0);
+    buf_expand(&sections[strtab_idx].buf, 1);
+    buf_write1(&sections[strtab_idx].buf, 0);
+
+    int file_strtab_pos = sections[strtab_idx].buf.pos;
+    buf_expand(&sections[strtab_idx].buf, strlen(path) + 1);
+    buf_write(&sections[strtab_idx].buf, path, strlen(path) + 1);
+
+    int symtab_idx = add_section(&sections, &nb_sections, make_token(TOK_LITERAL, symtabz, symtabz + strlen(symtabz), 0, 1, ""), SHT_SYMTAB, 0, 4, sizeof(ElfSym));
+    sections[symtab_idx].sh.sh_link = strtab_idx + 1;
+    sections[symtab_idx].sh.sh_info = 1; //symbol count
+    buf_expand(&sections[symtab_idx].buf, sizeof(ElfSym) * 2);
+    buf_write(&sections[symtab_idx].buf, &(ElfSym){0}, sizeof(ElfSym));
+    buf_write(&sections[symtab_idx].buf, &(ElfSym){.st_name=file_strtab_pos, .st_info=STB_LOCAL<<4|STT_FILE, .st_shndx=0xfff1}, sizeof(ElfSym));
+
+    for (int i = 0; i < nb_sections; i++) {
+        if (sections[i].sh.sh_type != SHT_PROGBITS)
+            continue;
+
+        sections[i].symtab_idx = sections[symtab_idx].sh.sh_info;
+        buf_expand(&sections[symtab_idx].buf, sizeof(ElfSym));
+        buf_write(&sections[symtab_idx].buf, &(ElfSym){.st_name=0, .st_info=(STB_LOCAL<<4)|STT_SECTION, .st_shndx=i+1}, sizeof(ElfSym));
+        sections[symtab_idx].sh.sh_info++;
+   }
+
+    for (Symbol * sym = symbols; sym; sym = sym->next) {
+        if (!sym->global)
+            continue;
+
+        int sym_strtab_pos = sections[strtab_idx].buf.pos;
+        buf_expand(&sections[strtab_idx].buf, strlen(sym->name) + 1);
+        buf_write(&sections[strtab_idx].buf, sym->name, strlen(sym->name) + 1);
+
+        buf_expand(&sections[symtab_idx].buf, sizeof(ElfSym));
+        buf_write(&sections[symtab_idx].buf, &(ElfSym){.st_name=sym_strtab_pos, .st_value=sym->offset, .st_info=(STB_GLOBAL<<4)|STT_NOTYPE, .st_shndx=sym->section_idx+1}, sizeof(ElfSym));
+        sym->symbol_idx = sections[symtab_idx].sh.sh_info;
+        sections[symtab_idx].sh.sh_info++;
+    }
+
     for (Fixup * f = fixups; f; f = f->next) {
         unsigned long v;
-        if (!operand_eval(f->op, symbols, &v))
+        Symbol * symbol; //section_idx, symbol_idx;
+        if (!operand_eval(f->op, symbols, &v, &symbol))
             parse_error(tok, "cannot evaluate expression");
         if (f->size == 4) {
-            buf.pos = f->offset;
-            buf_write4(&buf, v + f->adjust);
+            Section * s = &sections[f->section_idx];
+            s->buf.pos = f->offset;
+
+            if (!symbol) {
+                assert(!f->pc_relative);
+                buf_write4(&s->buf, v);
+            } else if (symbol->section_idx == f->section_idx && f->pc_relative) { //relative, within same section
+                v -= 4 + f->offset;
+                buf_write4(&s->buf, v);
+            } else {
+                if (f->pc_relative) //relative, within local section
+                    v -= 4;
+                buf_write4(&s->buf, v);
+
+                s->rel = realloc(s->rel, (s->nb_rel + 1)*sizeof(ElfRel));
+                assert(s->rel);
+                int rt = f->pc_relative ? R_386_PC32 : R_386_32;
+                int rsymbol_idx = symbol->section_idx >= 0 ? (sections[symbol->section_idx].symtab_idx + 1) : (symbol->symbol_idx + 1);
+                s->rel[s->nb_rel++] = (ElfRel){.r_offset = f->offset, .r_info=rsymbol_idx<<8|rt};
+            }
         }
     }
 
-    write_elf("a.out", buf.data, buf.size);
+    for (int i = 0; i < nb_sections; i++) {
+       if (sections[i].nb_rel) {
+           char * relname = malloc(64);
+           snprintf(relname, 64, ".rel%.*s", sections[i].name->size, sections[i].name->str);
+           int rel_idx = add_section(&sections, &nb_sections, make_token(TOK_LITERAL, relname, relname + strlen(relname), 0, 1, ""), SHT_REL, 0, 4, 8);
+           sections[rel_idx].sh.sh_link = symtab_idx + 1;
+           sections[rel_idx].sh.sh_info = i + 1;
+           buf_expand(&sections[rel_idx].buf, sections[i].nb_rel*sizeof(ElfRel));
+           buf_write(&sections[rel_idx].buf, sections[i].rel, sections[i].nb_rel*sizeof(ElfRel)); //FIXME:unnecessary copy
+       }
+    }
+
+    int shstrtab_idx = add_section(&sections, &nb_sections, make_token(TOK_LITERAL, shstrtabz, shstrtabz + strlen(shstrtabz), 0, 1, ""), SHT_STRTAB, 0, 1, 0);
+    buf_expand(&sections[shstrtab_idx].buf, 1);
+    buf_write1(&sections[shstrtab_idx].buf, 0);
+    for (int i = 0; i < nb_sections; i++) {
+        sections[i].sh.sh_name = sections[shstrtab_idx].buf.pos;
+        buf_expand(&sections[shstrtab_idx].buf, sections[i].name->size + 1);
+        buf_write(&sections[shstrtab_idx].buf, sections[i].name->str, sections[i].name->size);
+        buf_write1(&sections[shstrtab_idx].buf, 0);
+    }
+
+    write_elf(output_path, sections, nb_sections, shstrtab_idx);
+}
+
+static char * mallocf(const char * fmt, ...)
+{
+    va_list args;
+    size_t size;
+    char * s;
+    va_start(args, fmt);
+    size = vsnprintf(NULL, 0, fmt, args);
+    va_end(args);
+
+    s = malloc(size + 1);
+    assert(s);
+
+    va_start(args, fmt);
+    vsnprintf(s, size + 1, fmt, args);
+    va_end(args);
+    return s;
+}
+
+static char * change_file_ext(char * s, char * ext)
+{
+    s = basename(strdup(s));
+    char * dot = strrchr(s, '.');
+    if (dot)
+        *dot = 0;
+    return mallocf("%s%s", s, ext);
 }
 
 int main(int argc, char ** argv)
 {
-    if (argc != 2) {
-        fprintf(stderr, "usage: %s FILE\n", argv[0]);
+    const char * o = NULL;
+    int opt;
+    while ((opt = getopt(argc, argv, "ho:")) != -1) {
+        switch (opt) {
+        case 'o':
+            o = optarg;
+            break;
+        case 'h':
+        default:
+            fprintf(stderr, "usage: %s [-o output] path\n", argv[0]);
+            return EXIT_FAILURE;
+        }
+    }
+    if (optind >= argc) {
+        fprintf(stderr, "no input file specified\n");
         return EXIT_FAILURE;
     }
-    char * s = read_filez(argv[1]);
-    Token * t = tokenise(argv[1], s);
+
+    if (!o)
+        o = change_file_ext(argv[optind], ".o");
+
+    char * s = read_filez(argv[optind]);
+    Token * t = tokenise(argv[optind], s);
     t = preprocess(t);
-    assemble(t);
+    assemble(argv[optind], t, o);
 }
