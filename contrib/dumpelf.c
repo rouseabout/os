@@ -47,7 +47,7 @@ int main(int argc, char ** argv)
 
     printf("e_ident:");
     for (int i = 0; i < sizeof(e.e_ident); i++)
-        printf(" %c (%d)", e.e_ident[i], e.e_ident[i]);
+        printf(" %d", e.e_ident[i]);
     printf("\n");
 
     printf("e_type: %d\n", e.e_type);
@@ -133,7 +133,7 @@ int main(int argc, char ** argv)
         printf("sh_addr: 0x%x\n", s.sh_addr);
         printf("sh_offet: 0x%x\n", s.sh_offset);
         printf("sh_size: 0x%x\n", s.sh_size);
-        printf("sh_link: 0x%x\n", s.sh_link);
+        printf("sh_link: %d\n", s.sh_link);
         printf("sh_info: 0x%x\n", s.sh_info);
         printf("sh_addralign: 0x%x\n", s.sh_addralign);
         printf("sh_entsize: 0x%x\n", s.sh_entsize);
