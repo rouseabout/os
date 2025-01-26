@@ -13,6 +13,24 @@
 
 #define PAD16(x) (((x) + 16) & ~15)
 
+static char * mallocf(const char * fmt, ...)
+{
+    va_list args;
+    size_t size;
+    char * s;
+    va_start(args, fmt);
+    size = vsnprintf(NULL, 0, fmt, args);
+    va_end(args);
+
+    s = malloc(size + 1);
+    assert(s);
+
+    va_start(args, fmt);
+    vsnprintf(s, size + 1, fmt, args);
+    va_end(args);
+    return s;
+}
+
 static const char * punctuator[]= { /* search algorith is greedy, so place longest punctuators first */
     "%", "[", "]", ":", ",", "$", "+", "-",
 };
@@ -97,6 +115,66 @@ static void consume_string(const char * path, char ** send, char *s)
         tokenise_error(path, "unmatched quote");
 }
 
+static int ishexdigit(char c)
+{
+    return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
+}
+
+static char unescape_char(const char * path, char ** send, char * s)
+{
+    if (*s != '\\') {
+        *send = s + 1;
+        return *s;
+    }
+
+    s++;
+    if (!*s)
+        tokenise_error(path, "incomplete escape char");
+
+    if (*s >= '0' && *s <= '7') {
+        int c = *s++ - '0';
+        if (*s >= '0' && *s <= '7') {
+            c = c*8 + *s++ - '0';
+            if (*s >= '0' && *s <= '7')
+                c = c*8 + *s++ - '0';
+        }
+        *send = s;
+        return c;
+    }
+
+    if (s[0] == 'x' && ishexdigit(s[1]) && ishexdigit(s[2])) {
+        int c = strtol(s + 1, NULL, 16);
+        *send = s + 3;
+        return c;
+    }
+
+    switch(*s) {
+    case '\\': *send = s + 1; return '\\';
+    case '\'': *send = s + 1; return '\'';
+    case '"': *send = s + 1; return '"';
+    case 'a': *send = s + 1; return '\a';
+    case 'b': *send = s + 1; return '\b';
+    case 'e': *send = s + 1; return 0x1b;
+    case 'f': *send = s + 1; return '\f';
+    case 'n': *send = s + 1; return '\n';
+    case 'r': *send = s + 1; return '\r';
+    case 't': *send = s + 1; return '\t';
+    case 'v': *send = s + 1; return '\v';
+    }
+
+    tokenise_error(path, "unsuported escape code: '%c'", *s);
+    return 0;
+}
+
+static char unescape_quoted_char(const char * path, char **send, char * s)
+{
+    char c = unescape_char(path, &s, s);
+    if (*s != '\'')
+        tokenise_error(path, "unterminated character");
+    *send = s + 1;
+    return c;
+}
+
 static Token * tokenise(const char * path, char * s)
 {
     int at_space = 0;
@@ -145,6 +223,13 @@ static Token * tokenise(const char * path, char * s)
             consume_string(path, &t, s + 1);
             tok = tok->next = make_token(TOK_STRING, s + 1, t, at_space, at_begin, path);
             s = t + 1;
+            at_space = 0;
+            at_begin = 0;
+            continue;
+        } else if (*s == '\'') {
+            char c = unescape_quoted_char(path, &s, s + 1);
+            char * tmp = mallocf("%d", c);
+            tok = tok->next = make_token(TOK_NUMBER, tmp, tmp + strlen(tmp), at_space, at_begin, path);
             at_space = 0;
             at_begin = 0;
             continue;
@@ -962,24 +1047,6 @@ static void assemble(char *path, Token * tok, const char * output_path)
     }
 
     write_elf(output_path, sections, nb_sections, shstrtab_idx);
-}
-
-static char * mallocf(const char * fmt, ...)
-{
-    va_list args;
-    size_t size;
-    char * s;
-    va_start(args, fmt);
-    size = vsnprintf(NULL, 0, fmt, args);
-    va_end(args);
-
-    s = malloc(size + 1);
-    assert(s);
-
-    va_start(args, fmt);
-    vsnprintf(s, size + 1, fmt, args);
-    va_end(args);
-    return s;
 }
 
 static char * change_file_ext(char * s, char * ext)
