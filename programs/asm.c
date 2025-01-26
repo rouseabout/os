@@ -14,7 +14,7 @@
 #define PAD16(x) (((x) + 16) & ~15)
 
 static const char * punctuator[]= { /* search algorith is greedy, so place longest punctuators first */
-    "%", "[", "]", ":", ",", "+", "-",
+    "%", "[", "]", ":", ",", "$", "+", "-",
 };
 
 static int ispunctuator(const char * s)
@@ -696,7 +696,30 @@ static void assemble(char *path, Token * tok, const char * output_path)
     Buffer * buf = &sections[current_section].buf;
 
     while (tok->kind != TOK_EOF) {
-        if (equal(tok, "bits")) {
+        if (equal(tok, "add") || equal(tok, "sub")) {
+            int add = equal(tok, "add");
+            Operand * op1 = parse_operand(&tok, tok->next);
+            tok = expect(tok, ",");
+            Operand * op2 = parse_operand(&tok, tok);
+
+            if (op1->kind == OPERAND_REG && operand_is_imm(op2)) {
+                buf_expand(buf, 3);
+                buf_write1(buf, 0x83);
+                buf_write1(buf, (add ? 0xc0 : 0xe8) + op1->u.reg);
+                buf_write1(buf, op2->u.value); //FIXME: op2 fixup
+            } else
+                parse_error(tok, "unsupported operand");
+        } else if (equal(tok, "align")) {
+            int align = parse_number(&tok, tok->next);
+            if (align > sections[current_section].sh.sh_addralign)
+                sections[current_section].sh.sh_addralign = align;
+            int pad = (-buf->pos) & (1-align);
+            if (pad) {
+                buf_expand(buf, pad);
+                memset(buf->data + buf->pos, 0, pad);
+                buf->pos += pad;
+            }
+        } else if (equal(tok, "bits")) {
             bits = parse_number(&tok, tok->next);
             if (bits != ASM_BITS)
                 parse_error(tok, "%d bits unsupported", bits);
@@ -715,6 +738,8 @@ static void assemble(char *path, Token * tok, const char * output_path)
                 if (tok->at_begin)
                     break;
                 tok = expect(tok, ",");
+                if (tok->at_begin)
+                    break;
             } while (1);
         } else if (equal(tok, "extern")) {
             tok = tok->next;
@@ -745,7 +770,9 @@ static void assemble(char *path, Token * tok, const char * output_path)
                 current_section = add_section(&sections, &nb_sections, tok, SHT_PROGBITS, SHF_WRITE|SHF_ALLOC, 16, 0);
             buf = &sections[current_section].buf;
             tok = tok->next;
-        } else if (tok->kind == TOK_LITERAL && equal(tok->next, ":")) {
+        } else if ((equal(tok, "$") && tok->next && equal(tok->next->next, ":")) || (tok->kind == TOK_LITERAL && equal(tok->next, ":"))) {
+            if (equal(tok, "$"))
+                tok = tok->next;
             Symbol * sym = malloc(sizeof(Symbol));
             if (tok->str[0] == '.') {
                 if (!last_label)
