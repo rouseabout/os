@@ -236,6 +236,7 @@ To use the text mode console, it is neccessary to first set the `MULTIBOOT_VIDEO
 |unixserver |unix sockets demonstration server |
 |vi |vi |
 |wc |word count |
+|x |mouse and framebuffer demonstration |
 |xargs |run program with arguments from standard input |
 
 There is no `cp` program; use `cat source > dest` instead.

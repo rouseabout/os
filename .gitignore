@@ -39,6 +39,7 @@ tolower
 truncate
 unixping
 unixserver
+x
 dumpelf
 dumpext2
 dumpgpt
