@@ -17,7 +17,7 @@ PAGE_WRITE equ (1<<1)
 %macro HAS_CPUID 0
     pushfd
     pushfd
-    or dword [esp], 0x200000
+    xor dword [esp], 0x200000
     popfd
     pushfd
     pop eax
