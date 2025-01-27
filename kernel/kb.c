@@ -79,38 +79,117 @@ static RingBuffer rb;
 
 static void process_scancode(unsigned int scancode);
 
+#define PS2_DATA 0x60
+#define PS2_CMD 0x64
+#define PS2_STATUS 0x64
+
 static void kb_irq(void * opaque)
 {
-    int scancode = inb(0x60);
+    int scancode = inb(PS2_DATA);
     process_scancode(scancode);
+}
+
+static char mouse_rb_buffer[32];
+static RingBuffer mouse_rb;
+
+static int mouse_state = 0;
+static char mouse_buffer[3];
+
+static void mouse_irq(void * opaque)
+{
+    int byte = inb(PS2_DATA);
+    switch(mouse_state) {
+    case 0:
+        mouse_buffer[0] = byte;
+        if (!(byte & 0x08))
+            break;
+        mouse_state++;
+        break;
+    case 1:
+        mouse_buffer[1] = byte;
+        mouse_state++;
+        break;
+    case 2:
+        mouse_buffer[2] = byte;
+        mouse_state = 0;
+        if (ringbuffer_write_available(&mouse_rb) >= 3)
+            ringbuffer_write(&mouse_rb, mouse_buffer, 3);
+    }
+}
+
+static int ps2_wait_write()
+{
+    volatile unsigned int timer = 10000;
+    while (inb(PS2_STATUS) & 2 && --timer > 0) ;
+    return timer > 0;
+}
+
+static int ps2_wait_read()
+{
+    volatile unsigned int timer = 10000;
+    while (!(inb(PS2_STATUS) & 1) && --timer > 0) ;
+    return timer > 0;
 }
 
 static void write_command(int command)
 {
-    while (inb(0x64) & 2) ;
-    outb(0x64, command);
+    if (!ps2_wait_write()) {
+        kprintf("ps2: write_command timeout\n");
+        return;
+    }
+    outb(PS2_CMD, command);
 }
 
 static void write_data(int data)
 {
-    while (inb(0x64) & 2) ;
-    outb(0x60, data);
+    if (!ps2_wait_write()) {
+        kprintf("ps2: write_data timeout\n");
+        return;
+    }
+    outb(PS2_DATA, data);
 }
 
 static int read_data()
 {
-    while (!(inb(0x64) & 1)) ;
-    return inb(0x60);
+    if (!ps2_wait_read())
+        return -1;
+    return inb(PS2_DATA);
+}
+
+static void write_data_device(int device, int data)
+{
+    if (device)
+        write_command(0xd4); //write second
+    write_data(data);
 }
 
 void kb_init()
 {
-    write_data(0xff);
+    write_data(0xff); //reset
     read_data();
     read_data();
 
+    write_command(0xad); //disable first port
+    write_command(0xa7); //disable second port
+
+    read_data(); //drain buffer
+
+    write_command(0x20); //read config
+    int config = read_data();
+    config |= (1<<0) | (1<<1); //first port interrupt, second port interrupt
+    write_command(0x60);
+    write_data(config);
+
+    write_command(0xae); //enable first port
     ringbuffer_init(&rb, rb_buffer, sizeof(rb_buffer));
     irq_handler[1] = kb_irq;
+
+    write_command(0xa8); //enable second port
+    write_data_device(1, 0xf6); //set defaults
+    write_data_device(1, 0xf4); //enable scan codes
+
+    ringbuffer_init(&mouse_rb, mouse_rb_buffer, sizeof(mouse_rb_buffer));
+    irq_handler[12] = mouse_irq;
 }
 
 int kb_available()
@@ -277,3 +356,20 @@ static void process_scancode(unsigned int scancode)
             kprintf("[scancode 0x%x]", scancode);
     }
 }
+
+static int mouse_read(FileDescriptor * fd, void * buf, int size)
+{
+    if (!ringbuffer_read_available(&mouse_rb))
+        return -EAGAIN;
+    return ringbuffer_read(&mouse_rb, buf, size);
+}
+
+static int mouse_read_available(const FileDescriptor * fd)
+{
+    return ringbuffer_read_available(&mouse_rb);
+}
+
+const DeviceOperations mouse_dio = {
+    .read  = mouse_read,
+    .read_available  = mouse_read_available,
+};

@@ -3275,6 +3275,7 @@ void start3(int magic, const void * info)
         dev_register_device("fb0", &fb_io, 0, NULL, NULL);
 
     dev_register_device("console0", &tty_dio, 1, NULL, NULL);
+    dev_register_device("mouse0", &mouse_dio, 1, NULL, NULL);
 
     serial_init();
     dev_register_device("serial0", &serial_dio, 1, NULL, NULL);

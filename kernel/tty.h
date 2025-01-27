@@ -67,3 +67,4 @@ extern int tty_autowrap;
 void tty_puts(const char * s);
 
 extern const DeviceOperations tty_dio;
+extern const DeviceOperations mouse_dio;
