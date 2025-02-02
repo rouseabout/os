@@ -31,7 +31,7 @@ int main(int argc, char ** argv)
 {
     int fd = open("/dev/fb0", O_RDWR);
     if (fd < 0) {
-        perror("open");
+        perror("/dev/fb0");
         return EXIT_FAILURE;
     }
 
