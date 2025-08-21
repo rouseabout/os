@@ -26,7 +26,7 @@ It has also been tested with various x86 emulators including 86Box (<https://86b
 To build and boot *os* using QEMU, first install the prerequisites. The following command works on Debian/Ubuntu.
 
 ```
-apt-get install -y git curl build-essential nasm texinfo libgmp-dev libmpfr-dev libmpc-dev lzip e2tools grub2-common grub-pc-bin mtools xorriso parted qemu-system-x86 tofrodos sysvbanner libbsd-dev
+apt-get install -y git curl build-essential nasm texinfo libgmp-dev libmpfr-dev libmpc-dev lzip e2tools grub2-common grub-pc-bin mtools xorriso parted qemu-system-x86 tofrodos sysvbanner libbsd-dev gnu-efi
 
 ```
 
