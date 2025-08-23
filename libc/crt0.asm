@@ -1,7 +1,9 @@
 %ifdef ARCH_i686
 bits 32
+%define OS_EXIT 1
 %elifdef ARCH_x86_64
 bits 64
+%define OS_EXIT 60
 %endif
 
 section .text
@@ -16,7 +18,7 @@ _start:
     call _libc_main
 
     mov ebx, eax
-    mov eax, 4  ; OS_EXIT
+    mov eax, OS_EXIT
     int 0x80
 .loop:
     jmp .loop
