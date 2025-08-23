@@ -2301,17 +2301,17 @@ static int vector_flat_size(char * const v[])
 {
     int count = 0;
     for (int i = 0; v[i]; i++)
-        count += sizeof(char *) + strlen(v[i]) + 1;
+        count += strlen(v[i]) + 1;
 #define PAD(x) ((x + sizeof(uintptr_t)) & ~(sizeof(uintptr_t) - 1))
-    return PAD(count + sizeof(char *));
+    return PAD(count);
 }
 
-static void vector_dup2(void * dst, char * const v[])
+static void vector_dup2(void * dsts, void *dstp, char * const v[])
 {
     int c = vector_count(v);
 
-    char ** pptr = (char **)dst;
-    char * cptr = (char*)dst + (c + 1) * sizeof(char *);
+    char ** pptr = (char **)dstp;
+    char * cptr = (char *)dsts;
 
     for (int i = 0; i < c; i++) {
         pptr[i] = cptr;
@@ -2324,12 +2324,35 @@ static void vector_dup2(void * dst, char * const v[])
 
 static char ** vector_dup(char * const v[])
 {
-    void * buf = kmalloc(vector_flat_size(v), "vector-dup");
+    int count = vector_count(v) + 1;
+    void * buf = kmalloc(count * sizeof(uintptr_t) + vector_flat_size(v), "vector-dup");
     if (!buf)
         panic("kmalloc failed");
 
-    vector_dup2(buf, v);
+    vector_dup2((char *)buf + count * sizeof(uintptr_t), buf, v);
     return buf;
+}
+
+static uintptr_t init_stack_argv_envp(char **argv_local, char **envp_local)
+{
+    int argv_count = vector_count(argv_local) + 1;
+    int argv_size = vector_flat_size(argv_local);
+
+    int envp_count = vector_count(envp_local) + 1;
+    int envp_size = vector_flat_size(envp_local);
+
+    void * envp_stringv_stack = (uintptr_t *)(USER_STACK_TOP - envp_size);
+    void * envp_pointer_stack = (uintptr_t *)(USER_STACK_TOP - envp_size - argv_size - envp_count*sizeof(uintptr_t));
+    vector_dup2(envp_stringv_stack, envp_pointer_stack, envp_local);
+
+    void * argv_stringv_stack = (uintptr_t *)(USER_STACK_TOP - envp_size - argv_size);
+    void * argv_pointer_stack = (uintptr_t *)(USER_STACK_TOP - envp_size - argv_size - (envp_count + argv_count)*sizeof(uintptr_t));
+    vector_dup2(argv_stringv_stack, argv_pointer_stack, argv_local);
+
+    uintptr_t * stack_values = (uintptr_t *)(USER_STACK_TOP - envp_size - argv_size - (envp_count + argv_count + 1)*sizeof(uintptr_t));
+    stack_values[0] = vector_count(argv_local);
+
+    return (uintptr_t)stack_values;
 }
 
 static int sys_execve(registers * regs, const char * pathname, char * const argv[], char * const envp[])
@@ -2381,33 +2404,8 @@ static int sys_execve(registers * regs, const char * pathname, char * const argv
 
     vfs_close(fd);
 
-    /* populate stack with argv and envp */
-    int argv_size = vector_flat_size(argv_local);
-    int envp_size = vector_flat_size(envp_local);
-
-#if defined(ARCH_i686)
-    regs->esp = PAD_DOWN(USER_STACK_TOP - argv_size - envp_size - 3 * sizeof(uintptr_t));
-#elif defined(ARCH_x86_64)
-    regs->esp = PAD_DOWN(USER_STACK_TOP - argv_size - envp_size);
-#endif
+    regs->esp = init_stack_argv_envp(argv_local, envp_local);
     regs->ebp = 0;
-
-#if defined(ARCH_i686)
-    uintptr_t * stack_values = (uintptr_t *)regs->esp;
-    stack_values[2] = USER_STACK_TOP - envp_size; //envp
-    stack_values[1] = USER_STACK_TOP - argv_size - envp_size; //argv
-    stack_values[0] = vector_count(argv_local); //argc
-#elif defined(ARCH_x86_64)
-    regs->edx = USER_STACK_TOP - envp_size; //envp;
-    regs->esi = USER_STACK_TOP - argv_size - envp_size; //argv
-    regs->edi = vector_count(argv_local); //argc
-#endif
-
-    void * envp_stack = (uintptr_t *)(USER_STACK_TOP - envp_size);
-    vector_dup2(envp_stack, envp_local);
-
-    void * argv_stack = (uintptr_t *)(USER_STACK_TOP - argv_size - envp_size);
-    vector_dup2(argv_stack, argv_local);
 
     sigemptyset(&current_task->proc->signal);
     init_sigact(current_task);
@@ -3180,11 +3178,7 @@ static int pci_enum(void * cntx, int bus, int slot, int func)
 }
 #endif
 
-void jmp_to_userspace(
-#if defined(ARCH_x86_64)
-    uintptr_t rdi, uintptr_t rsi, uintptr_t rdx,
-#endif
-    uintptr_t eip, uintptr_t esp);
+void jmp_to_userspace(uintptr_t eip, uintptr_t esp);
 
 static void idle(int param);
 
@@ -3320,28 +3314,9 @@ void start3(int magic, const void * info)
     char *argv_local[] = {init_path, NULL};
     char *envp_local[] = {"HOME=/", "PATH=/bin:/usr/bin:/usr/local/bin:/usr/local/sbin", "TERM=vt100", NULL};
 
-    int argv_size = vector_flat_size(argv_local);
-    int envp_size = vector_flat_size(envp_local);
+    uintptr_t stack_values = init_stack_argv_envp(argv_local, envp_local);
 
-    void * envp_stack = (uintptr_t *)(USER_STACK_TOP - envp_size);
-    vector_dup2(envp_stack, envp_local);
-
-    void * argv_stack = (uintptr_t *)(USER_STACK_TOP - argv_size - envp_size);
-    vector_dup2(argv_stack, argv_local);
-
-#if defined(ARCH_i686)
-    uintptr_t * stack_values = (uintptr_t *)PAD_DOWN(USER_STACK_TOP - argv_size - envp_size - 3*sizeof(uintptr_t));
-    stack_values[2] = USER_STACK_TOP - envp_size; //envp
-    stack_values[1] = USER_STACK_TOP - argv_size - envp_size; //argv
-    stack_values[0] = vector_count(argv_local); //argc
-#elif defined(ARCH_x86_64)
-    uintptr_t * stack_values = (uintptr_t *)PAD_DOWN(USER_STACK_TOP - argv_size - envp_size);
-#endif
-    jmp_to_userspace(
-#if defined(ARCH_x86_64)
-        vector_count(argv_local), USER_STACK_TOP - argv_size - envp_size, USER_STACK_TOP - envp_size,
-#endif
-        entry, (uintptr_t)stack_values);
+    jmp_to_userspace(entry, stack_values);
 
     /* never reach here */
 }

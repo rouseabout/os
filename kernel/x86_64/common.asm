@@ -147,10 +147,10 @@ jmp_to_userspace:
     mov gs, ax
 
     push 0x23
-    push r8
+    push rsi
     pushf
     push 0x1b
-    push rcx
+    push rdi
 
     xor rbp, rbp
     iretq

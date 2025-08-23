@@ -47,8 +47,8 @@ extern void (*__fini_array_start [])(void) __attribute__((weak));
 extern void (*__fini_array_end [])(void) __attribute__((weak));
 
 int main(int argc, char **argv, char ** envp);
-int _libc_main(int argc, char **argv, char ** envp);
-int _libc_main(int argc, char **argv, char ** envp)
+int _libc_main(int argc, char **argv);
+int _libc_main(int argc, char **argv)
 {
     uheap.reserve_size = 0;
     uheap.grow_cb = grow_cb;
@@ -62,9 +62,9 @@ int _libc_main(int argc, char **argv, char ** envp)
     for (size_t i = 0; i < __init_array_end - __init_array_start; i++)
         __init_array_start[i]();
 
-    environ = envp;
+    environ = argv + argc + 1;
     environ_allocated = 0;
-    int ret = main(argc, argv, envp);
+    int ret = main(argc, argv, environ);
     exit(ret);
 
     return ret;
