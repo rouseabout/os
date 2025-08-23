@@ -59,6 +59,8 @@ static int dev_getdents(FileDescriptor * fd, struct dirent * dent, size_t count)
     for (DeviceFile * d = dev_inodes; d; d = d->next, i++) {
         if (i == fd->pos) {
             dent[0].d_ino = d->inode;
+            dent[0].d_off = 0;
+            dent[0].d_reclen = sizeof(struct dirent);
             strlcpy(dent[0].d_name, d->name, sizeof(dent[0].d_name));
             fd->pos++;
             return 1;

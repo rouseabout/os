@@ -2094,12 +2094,12 @@ static off_t sys_lseek(int fd, off_t offset, int whence)
     return vfs_lseek(current_task->proc->fd[fd], offset, whence);
 }
 
-static int sys_getdents(int fd, struct dirent * de, size_t count)
+static int sys_getdents(int fd, struct dirent * de, size_t size)
 {
     if (fd < 0 || fd >= OPEN_MAX || !current_task->proc->fd[fd])
         return -EBADF;
 
-    return vfs_getdents(current_task->proc->fd[fd], de, count);
+    return vfs_getdents(current_task->proc->fd[fd], de, size / sizeof(struct dirent)) * sizeof(struct dirent);
 }
 
 static int sys_dup(int fd)

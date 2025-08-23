@@ -638,9 +638,11 @@ static int ext2_getdents(FileDescriptor * fd, struct dirent * dent, size_t count
 
         KASSERT(sizeof(dent[nread].d_name) > sizeof(entry->name));
 
+        dent[nread].d_ino = entry->inode;
+        dent[nread].d_off = 0;
+        dent[nread].d_reclen = sizeof(struct dirent);
         memcpy(dent[nread].d_name, entry->name, entry->name_len);
         dent[nread].d_name[entry->name_len] = 0;
-        dent[nread].d_ino = entry->inode;
 
         nread++;
 next:

@@ -6,6 +6,9 @@
 
 struct DIR {
     int fd;
+    char buf[sizeof(struct dirent)];
+    size_t size;
+    size_t pos;
 };
 
 int closedir(DIR * dir)
@@ -25,17 +28,24 @@ DIR * opendir(const char * path)
         free(dir);
         return NULL;
     }
+    dir->pos = dir->size = 0;
     return dir;
 }
 
-static struct dirent g_dirent;
 static MK_SYSCALL3(int, sys_getdents, OS_GETDENTS, int, struct dirent *, size_t)
 struct dirent *readdir(DIR * dir)
 {
-    int ret = sys_getdents(dir->fd, &g_dirent, 1);
-    if (ret <= 0)
-        return NULL;
-    return &g_dirent;
+    if (dir->pos >= dir->size) {
+        int ret = sys_getdents(dir->fd, (struct dirent *)dir->buf, sizeof(dir->buf));
+        if (ret <= 0)
+            return NULL;
+        dir->size = ret;
+        dir->pos = 0;
+    }
+
+    struct dirent *d = (struct dirent *)(dir->buf + dir->pos);
+    dir->pos += d->d_reclen;
+    return d;
 }
 
 void rewinddir(DIR * dirp)
