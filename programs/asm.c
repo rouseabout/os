@@ -302,20 +302,68 @@ static void parse_error(Token * tok, const char * fmt, ...)
     exit(EXIT_FAILURE);
 }
 
+typedef struct Define Define;
+struct Define {
+    char *name;
+    Token *tok;
+    Define *next;
+};
+
+static Define * defines = NULL;
+
+static void make_define(char *name, Token **rtok, Token *tok)
+{
+    Define * d = malloc(sizeof(Define));
+    assert(d);
+    d->name = name;
+
+    if (tok->kind != TOK_EOF && !tok->at_begin) {
+        d->tok = tok;
+        while (tok->next->kind != TOK_EOF && !tok->next->at_begin)
+            tok = tok->next;
+        *rtok = tok->next;
+        tok->next = NULL;
+    } else {
+        d->tok = NULL;
+    }
+
+    d->next = defines;
+    defines = d;
+}
+
+static void make_define_static(const char *name)
+{
+    char *name2 = strdup(name);
+    assert(name2);
+    Token tok = {.kind = TOK_EOF};
+    Token *rtok;
+    make_define(name2, &rtok, &tok);
+}
+
+static const Define * find_define(Token *tok)
+{
+    for (Define * d = defines; d; d = d->next) {
+        if (tok_is_equal(tok, d->name))
+            return d;
+}
+    return NULL;
+}
+
 static int test_define(Token * tok)
 {
-    char * defines[] = {
-#if defined(ARCH_i686)
-        "ARCH_i686",
-#elif defined(ARCH_x86_64)
-        "ARCH_x86_64",
-#endif
-    };
-    for (int i = 0; i < NB_ELEMS(defines); i++) {
-        if (tok_is_equal(tok, defines[i]))
-            return 1;
-    }
-    return 0;
+    return !!find_define(tok);
+}
+
+static char * parse_literal(Token **rtok, Token *tok)
+{
+    if (tok->kind != TOK_LITERAL)
+        parse_error(tok, "unexpected token");
+    char *s = malloc(tok->size + 1);
+    assert(s);
+    memcpy(s, tok->str, tok->size);
+    s[tok->size] = 0;
+    *rtok = tok->next;
+    return s;
 }
 
 typedef struct Stack Stack;
@@ -356,6 +404,25 @@ static Token * preprocess(Token * tok)
                 tok = tok->next;
                 continue;
             }
+
+            if (tok->kind == TOK_LITERAL) {
+                const Define * d = find_define(tok);
+                if (d) {
+                    tok = tok->next;
+
+                    if (!d->tok)
+                        continue;
+
+                    Token *last = d->tok;
+                    while (last->next)
+                        last = last->next;
+                    last->next = tok;
+
+                    tok = d->tok;
+                    continue;
+                }
+            }
+
             cur = cur->next = tok;
             tok = tok->next;
             continue;
@@ -398,6 +465,15 @@ static Token * preprocess(Token * tok)
                 parse_error(tok, "unbalanced #endif directive");
             tok = tok->next;
             pop_stack(state);
+            continue;
+        }
+
+        if (equal(tok, "define")) {
+            tok = tok->next;
+            if (state) {
+                char *name = parse_literal(&tok, tok);
+                make_define(name, &tok, tok);
+            }
             continue;
         }
 
@@ -1080,6 +1156,12 @@ int main(int argc, char ** argv)
 
     if (!o)
         o = change_file_ext(argv[optind], ".o");
+
+#if defined(ARCH_i686)
+    make_define_static("ARCH_i686");
+#elif defined(ARCH_x86_64)
+    make_define_static("ARCH_x86_64");
+#endif
 
     char * s = read_filez(argv[optind]);
     Token * t = tokenise(argv[optind], s);
