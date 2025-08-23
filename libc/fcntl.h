@@ -23,15 +23,15 @@ extern "C" {
 #define O_WRONLY 0x1
 #define O_RDWR   0x2
 
-#define O_DIRECTORY 0x4
-#define O_CREAT 0x8
-#define O_EXCL 0x10
-#define O_APPEND 0x20
-#define O_NONBLOCK 0x40
-#define O_TRUNC 0x80
-#define O_NOFOLLOW 0x100
-#define O_NOCTTY 0
-#define O_SYNC 0
+#define O_DIRECTORY 0x10000
+#define O_CREAT 0x40
+#define O_EXCL 0x80
+#define O_APPEND 0x400
+#define O_NONBLOCK 0x800
+#define O_TRUNC 0x200
+#define O_NOFOLLOW 0x20000
+#define O_NOCTTY 0x100
+#define O_SYNC 0x101000
 #define O_NDELAY O_NONBLOCK
 
 #define F_RDLCK 0
