@@ -13,13 +13,17 @@
 #include <syslog.h>
 #include "heap.h"
 
-static MK_SYSCALL2(int, brk, OS_BRK, void *, void **)
+static uintptr_t brk(uintptr_t addr)
+{
+    uintptr_t ret;
+    os_syscall1(ret, OS_BRK, addr);
+    return ret;
+}
 
 static int grow_cb(Halloc * cntx, unsigned int extra)
 {
-    void * cur;
-    brk(NULL, &cur);
-    if (brk((char *)cur + extra, NULL) < 0)
+    uintptr_t cur = brk(0);
+    if (brk(cur + extra) == -1)
         return -ENOMEM;
     cntx->end = (char *)cntx->end + extra;
     return 0;
@@ -27,7 +31,7 @@ static int grow_cb(Halloc * cntx, unsigned int extra)
 
 static void shrink_cb(Halloc * cntx, uintptr_t boundary_addr)
 {
-    brk((void *)boundary_addr, NULL);
+    brk(boundary_addr);
 }
 
 static Halloc uheap;
@@ -42,7 +46,6 @@ extern void (*__init_array_end [])(void) __attribute__((weak));
 extern void (*__fini_array_start [])(void) __attribute__((weak));
 extern void (*__fini_array_end [])(void) __attribute__((weak));
 
-extern char _end;
 int main(int argc, char **argv, char ** envp);
 int _libc_main(int argc, char **argv, char ** envp);
 int _libc_main(int argc, char **argv, char ** envp)
@@ -54,9 +57,7 @@ int _libc_main(int argc, char **argv, char ** envp)
     uheap.printf = printf;
     uheap.abort = abort;
 
-    void *cur;
-    brk(NULL, &cur);
-    halloc_init(&uheap, &_end, (char *)cur - &_end);
+    halloc_init(&uheap, (void *)brk(0), 0);
 
     for (size_t i = 0; i < __init_array_end - __init_array_start; i++)
         __init_array_start[i]();

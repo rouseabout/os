@@ -44,14 +44,19 @@ int msync(void * addr, size_t len, int flags)
 }
 
 #include <os/syscall.h>
-static MK_SYSCALL2(int, brk, OS_BRK, void *, void **)
+static uintptr_t brk(uintptr_t addr)
+{
+    uintptr_t ret;
+    os_syscall1(ret, OS_BRK, addr);
+    return ret;
+}
+
 extern char end;
 int munmap(void * addr, size_t len)
 {
     /* user space mmap */
-    void *cur;
-    brk(NULL, &cur);
-    if (addr >= (void *)&end && addr <= cur) {
+    uintptr_t cur = brk(0);
+    if (addr >= (void *)&end && (uintptr_t)addr <= cur) {
         free(addr);
         return 0;
     }

@@ -742,7 +742,7 @@ static int sys_dup2(int fd, int fd2);
 static int sys_unlink(const char *path);
 static int sys_rmdir(const char *path);
 static int sys_mkdir(const char *path, mode_t mode);
-static int sys_brk(uintptr_t addr, uintptr_t * current_brk);
+static uintptr_t sys_brk(uintptr_t addr);
 static int sys_execve(registers * regs, const char * pathname, char * const argv[], char * const envp[]);
 static pid_t sys_waitpid(registers * reg, pid_t pid, int * stat_loc, int options);
 static int sys_getcwd(char * buf, size_t size);
@@ -1028,7 +1028,7 @@ void interrupt_handler(registers * regs)
         SYSCALL3 (OS_GETDENTS, sys_getdents, int, struct dirent *, size_t)
         SYSCALL1 (OS_DUP, sys_dup, int)
         SYSCALL2 (OS_DUP2, sys_dup2, int, int)
-        SYSCALL2 (OS_BRK, sys_brk, uintptr_t, uintptr_t *)
+        SYSCALL1 (OS_BRK, sys_brk, uintptr_t)
         SYSCALL1 (OS_UNLINK, sys_unlink, const char *)
         SYSCALL1 (OS_RMDIR, sys_rmdir, const char *)
         SYSCALL2 (OS_MKDIR, sys_mkdir, const char *, mode_t)
@@ -2140,12 +2140,12 @@ static int sys_mkdir(const char *path, mode_t mode)
     return vfs_mkdir(path, mode);
 }
 
-static int sys_brk(uintptr_t addr, uintptr_t * current_brk)
+static uintptr_t sys_brk(uintptr_t addr)
 {
     if (addr) {
         if (addr > current_task->proc->brk) {
             if (alloc_frames(current_task->proc->brk, addr - current_task->proc->brk, current_task->proc->page_directory, MAP_USER|MAP_WRITABLE, 0) == -ENOMEM)
-                return -ENOMEM;
+                return -1;
             current_task->proc->brk = addr;
         } else {
             addr += 0xfff;
@@ -2157,9 +2157,7 @@ static int sys_brk(uintptr_t addr, uintptr_t * current_brk)
         }
     }
 
-    if (current_brk)
-        *current_brk = current_task->proc->brk;
-    return 0;
+    return current_task->proc->brk;
 }
 
 static void kthread_exit()
