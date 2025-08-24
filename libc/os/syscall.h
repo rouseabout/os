@@ -80,6 +80,7 @@ enum {
     OS_NB_SYSCALLS
 };
 
+#if defined(ARCH_i686)
 #define os_syscall0(result, syscall) \
     asm volatile ("int $0x80" : "=a"(result) : "a"(syscall) : "memory");
 
@@ -97,6 +98,27 @@ enum {
 
 #define os_syscall5(result, syscall, a1, a2, a3, a4, a5) \
     asm volatile ("int $0x80" : "=a"(result) : "a"(syscall), "b"(a1), "c"(a2), "d"(a3), "S"(a4), "D"(a5) : "memory");
+#elif defined(ARCH_x86_64)
+#define os_syscall0(result, syscall) \
+    asm volatile ("syscall" : "=a"(result) : "a"(syscall) : "rcx", "r11", "memory");
+#define os_syscall1(result, syscall, a1) \
+    asm volatile ("syscall" : "=a"(result) : "a"(syscall), "D"(a1) : "rcx", "r11", "memory");
+#define os_syscall2(result, syscall, a1, a2) \
+    asm volatile ("syscall" : "=a"(result) : "a"(syscall), "D"(a1), "S"(a2) : "rcx", "r11", "memory");
+#define os_syscall3(result, syscall, a1, a2, a3) \
+    asm volatile ("syscall" : "=a"(result) : "a"(syscall), "D"(a1), "S"(a2), "d"(a3) : "rcx", "r11", "memory");
+#define os_syscall4(result, syscall, a1, a2, a3, a4) \
+do { \
+    register long r10 __asm__("r10") = (long)a4; \
+    asm volatile ("syscall" : "=a"(result) : "a"(syscall), "D"(a1), "S"(a2), "d"(a3), "r"(r10) : "rcx", "r11", "memory"); \
+} while(0)
+#define os_syscall5(result, syscall, a1, a2, a3, a4, a5) \
+do { \
+    register long r10 __asm__("r10") = (long)a4; \
+    register long r8 __asm__("r8") = (long)a5; \
+    asm volatile ("syscall" : "=a"(result) : "a"(syscall), "D"(a1), "S"(a2), "d"(a3), "r"(r10), "r"(r8) : "rcx", "r11", "memory"); \
+} while(0)
+#endif
 
 #define RET_ERRNO(ret_type) \
     if (ret < 0) { \

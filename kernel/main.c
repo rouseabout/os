@@ -321,7 +321,7 @@ static void set_cr4(uintptr_t cr4)
     asm volatile("mov %0, %%cr4" : : "r"(cr4));
 }
 
-static inline uint32_t rdmsr(int msr)
+static inline uint64_t rdmsr(int msr)
 {
     uint32_t low, high;
     asm volatile("rdmsr" : "=a"(low), "=d"(high) : "c"(msr));
@@ -1016,69 +1016,7 @@ void interrupt_handler(registers * regs)
     case syscall: regs->eax = name((type1)regs->ebx, (type2)regs->ecx, (type3)regs->edx, (type4)regs->esi); break;
 #define SYSCALL5R(syscall, name, type1, type2, type3, type4, type5) \
     case syscall: regs->eax = name(regs, (type1)regs->ebx, (type2)regs->ecx, (type3)regs->edx, (type4)regs->esi, (type5)regs->edi); break;
-        SYSCALL0 (OS_GETPID, sys_getpid)
-        SYSCALL0 (OS_GETPPID, sys_getppid)
-        SYSCALL3R(OS_WRITE, sys_write, int, const void *, size_t)
-        SYSCALL3R(OS_READ, sys_read, int, void *, size_t)
-        SYSCALL0R(OS_FORK, sys_fork)
-        SYSCALL1 (OS_EXIT, sys_exit, int)
-        SYSCALL3 (OS_OPEN, sys_open, const char *, int, mode_t)
-        SYSCALL1 (OS_CLOSE, sys_close, int)
-        SYSCALL3 (OS_LSEEK, sys_lseek, int, off_t, int)
-        SYSCALL3 (OS_GETDENTS, sys_getdents, int, struct dirent *, size_t)
-        SYSCALL1 (OS_DUP, sys_dup, int)
-        SYSCALL2 (OS_DUP2, sys_dup2, int, int)
-        SYSCALL1 (OS_BRK, sys_brk, uintptr_t)
-        SYSCALL1 (OS_UNLINK, sys_unlink, const char *)
-        SYSCALL1 (OS_RMDIR, sys_rmdir, const char *)
-        SYSCALL2 (OS_MKDIR, sys_mkdir, const char *, mode_t)
-        SYSCALL3R(OS_EXECVE, sys_execve, const char *, char * const *, char * const *)
-        SYSCALL3R(OS_WAITPID, sys_waitpid, pid_t, int *, int)
-        SYSCALL2 (OS_GETCWD, sys_getcwd, char *, size_t)
-        SYSCALL1 (OS_CHDIR, sys_chdir, const char *)
-        SYSCALL2 (OS_STAT, sys_stat, const char *, struct stat *)
-        SYSCALL2 (OS_LSTAT, sys_lstat, const char *, struct stat *)
-        SYSCALL2 (OS_FSTAT, sys_fstat, int, struct stat *)
-        SYSCALL2 (OS_CLOCK_GETTIME, sys_clock_gettime, int, struct timespec *)
-        SYSCALL2R(OS_NANOSLEEP, sys_nanosleep, const struct timespec *, struct timespec *)
-        SYSCALL2 (OS_SETPGID, sys_setpgid, pid_t, pid_t)
-        SYSCALL0 (OS_GETPGRP, sys_getpgrp)
-        SYSCALL0 (OS_SETPGRP, sys_setpgrp)
-        SYSCALL1 (OS_TCGETPGRP, sys_tcgetpgrp, int)
-        SYSCALL2 (OS_TCSETPGRP, sys_tcsetpgrp, int, pid_t)
-        SYSCALL2 (OS_KILL, sys_kill, pid_t, int)
-        SYSCALL1 (OS_UNAME, sys_uname, struct utsname *)
-        SYSCALL3 (OS_IOCTL, sys_ioctl, int, int, void *)
-        SYSCALL1 (OS_MMAP, sys_mmap, struct os_mmap_request *)
-        SYSCALL3 (OS_FCNTL, sys_fcntl, int, int, int)
-        SYSCALL2 (OS_TCGETATTR, sys_tcgetattr, int, struct termios *)
-        SYSCALL3 (OS_TCSETATTR, sys_tcsetattr, int, int, const struct termios *)
-        SYSCALL4 (OS_PTHREAD_CREATE, sys_pthread_create, pthread_t * , const pthread_attr_t * , void *, void *)
-        SYSCALL2R(OS_PTHREAD_JOIN, sys_pthread_join, pthread_t, void **)
-        SYSCALL3 (OS_SIGACTION, sys_sigaction, int, const struct sigaction *, struct sigaction *)
-        SYSCALL2 (OS_GETITIMER, sys_getitimer, int, struct itimerval *)
-        SYSCALL3 (OS_SETITIMER, sys_setitimer, int, const struct itimerval *, struct itimerval *)
-        SYSCALL5R(OS_SELECT, sys_select, int, fd_set *, fd_set *, fd_set *, struct timeval *)
-        SYSCALL1 (OS_PIPE, sys_pipe, int *)
-        SYSCALL1 (OS_ISATTY, sys_isatty, int)
-        SYSCALL2 (OS_SYSLOG, sys_syslog, int, const char *)
-        SYSCALL2 (OS_UTIME, sys_utime, const char *, const struct utimbuf *)
-        SYSCALL2 (OS_RENAME, sys_rename, const char *, const char *)
-        SYSCALL0R(OS_PAUSE, sys_pause)
-        SYSCALL1R(OS_ALARM, sys_alarm, unsigned)
-        SYSCALL2 (OS_GETMNTINFO, sys_getmntinfo, struct statvfs *, int)
-        SYSCALL3 (OS_READLINK, sys_readlink, const char *, char *, size_t)
-        SYSCALL2 (OS_SYMLINK, sys_symlink, const char *, const char *)
-        SYSCALL2 (OS_LINK, sys_link, const char *, const char *)
-        SYSCALL2 (OS_FTRUNCATE, sys_ftruncate, int, off_t)
-        SYSCALL4 (OS_FSTATAT, sys_fstatat, int, const char *, struct stat *, int)
-        SYSCALL1 (OS_FCHDIR, sys_fchdir, int)
-        SYSCALL1 (OS_GETPGID, sys_getpgid, pid_t)
-        SYSCALL3 (OS_SOCKET, sys_socket, int, int, int)
-        SYSCALL3 (OS_BIND, sys_bind, int, const struct sockaddr *, socklen_t)
-        SYSCALL3R(OS_ACCEPT, sys_accept, int, struct sockaddr *, socklen_t *)
-        SYSCALL3 (OS_CONNECT, sys_connect, int, const struct sockaddr *, socklen_t)
-        SYSCALL2 (OS_CHMOD, sys_chmod, const char *, mode_t)
+#include "syscalls.h"
 #undef SYSCALL0
 #undef SYSCALL0R
 #undef SYSCALL1
@@ -1146,6 +1084,80 @@ static void init_idt()
     idt_ptr.base  = (uintptr_t)&idt;
     asm volatile("lidt (%0)" : : "r" (&idt_ptr));
 }
+
+
+/* syscall */
+
+#if defined(ARCH_x86_64)
+void syscall_handler(void);
+
+void syscall_handler2(registers * regs);
+void syscall_handler2(registers * regs)
+{
+    switch_page_directory(kernel_directory);
+    load_user_pages(kernel_directory, current_task->proc->page_directory);
+
+    int syscall = regs->eax;
+    switch(syscall) {
+#define SYSCALL0(syscall, name) \
+    case syscall: regs->eax = name(); break;
+#define SYSCALL0R(syscall, name) \
+    case syscall: regs->eax = name(regs); break;
+#define SYSCALL1(syscall, name, type1) \
+    case syscall: regs->eax = name((type1)regs->edi); break;
+#define SYSCALL1R(syscall, name, type1) \
+    case syscall: regs->eax = name(regs, (type1)regs->edi); break;
+#define SYSCALL2(syscall, name, type1, type2) \
+    case syscall: regs->eax = name((type1)regs->edi, (type2)regs->esi); break;
+#define SYSCALL2R(syscall, name, type1, type2) \
+    case syscall: regs->eax = name(regs, (type1)regs->edi, (type2)regs->esi); break;
+#define SYSCALL3(syscall, name, type1, type2, type3) \
+    case syscall: regs->eax = name((type1)regs->edi, (type2)regs->esi, (type3)regs->edx); break;
+#define SYSCALL3R(syscall, name, type1, type2, type3) \
+    case syscall: regs->eax = name(regs, (type1)regs->edi, (type2)regs->esi, (type3)regs->edx); break;
+#define SYSCALL4(syscall, name, type1, type2, type3, type4) \
+    case syscall: regs->eax = name((type1)regs->edi, (type2)regs->esi, (type3)regs->edx, (type4)regs->r10); break;
+#define SYSCALL5R(syscall, name, type1, type2, type3, type4, type5) \
+    case syscall: regs->eax = name(regs, (type1)regs->edi, (type2)regs->esi, (type3)regs->edx, (type4)regs->r10, (type5)regs->r8); break;
+#include "syscalls.h"
+#undef SYSCALL0
+#undef SYSCALL0R
+#undef SYSCALL1
+#undef SYSCALL1R
+#undef SYSCALL2
+#undef SYSCALL2R
+#undef SYSCALL3
+#undef SYSCALL3R
+#undef SYSCALL4
+#undef SYSCALL5R
+    default:
+        kprintf("unknown syscall: %d\n", regs->eax);
+        regs->eax = -ENOSYS;
+    }
+
+    if (syscall != OS_FORK) {
+        switch_task(regs);
+    } else {
+        switch_page_directory(current_task->proc->page_directory);
+        clear_user_pages(kernel_directory);
+    }
+}
+
+static void syscall_init()
+{
+    wrmsr(0xc0000080, rdmsr(0xc0000080) | 1);
+
+    uint64_t star = rdmsr(0xc0000081);
+    star &= 0xffffffff;
+    star |= 0x13ULL << 48; //user code - 16
+    star |= 0x08ULL << 32; //kernel code
+    wrmsr(0xc0000081, star);
+
+    wrmsr(0xc0000082, (uintptr_t)syscall_handler);
+
+    wrmsr(0xc0000084, 0x200);
+}
+#endif /* ARCH_x86_64 */
 
 /* kernel alloc */
 
@@ -3304,6 +3316,10 @@ void start3(int magic, const void * info)
         panic("create task elf failed");
 
     rtc_init();
+
+#if defined(ARCH_x86_64)
+    syscall_init();
+#endif
 
     asm volatile("sti");
 

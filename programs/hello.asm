@@ -12,6 +12,7 @@ global    _start
 
 section   .text
 _start:
+%ifdef ARCH_i686
     mov eax, OS_WRITE
     mov ebx, 1 ;STDOUT_FILENO
     mov ecx, message
@@ -21,6 +22,17 @@ _start:
     mov eax, OS_EXIT
     xor ebx, ebx
     int 0x80
+%elifdef ARCH_x86_64
+    mov rax , OS_WRITE
+    mov rdi, 1 ;STDOUT_FILENO
+    mov rsi, message
+    mov rdx, message.end - message
+    syscall
+
+    mov rax, OS_EXIT
+    xor rdi, rdi
+    syscall
+%endif
 
 section .data
 message:

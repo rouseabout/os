@@ -199,8 +199,8 @@ gdt64:
     GDT_ENTRY32 0, 0, 0, 0
     GDT_ENTRY32 0, 0, 0x9A, GRAN_64_BIT_MODE | GRAN_4KIB_BLOCKS
     GDT_ENTRY32 0, 0, 0x92, GRAN_64_BIT_MODE | GRAN_4KIB_BLOCKS
-    GDT_ENTRY32 0, 0, 0xFA, GRAN_64_BIT_MODE | GRAN_4KIB_BLOCKS
-    GDT_ENTRY32 0, 0, 0xF2, GRAN_64_BIT_MODE | GRAN_4KIB_BLOCKS
+    GDT_ENTRY32 0, 0, 0xF2, GRAN_64_BIT_MODE | GRAN_4KIB_BLOCKS ; user data
+    GDT_ENTRY32 0, 0, 0xFA, GRAN_64_BIT_MODE | GRAN_4KIB_BLOCKS ; user code
 .tss_entry:
     GDT_ENTRY32 0, tss.end - tss - 1, 0xE9, 0
     dd 0, 0
@@ -233,6 +233,7 @@ tss:
 
 section .bss
 
+global kernel_stack
 kernel_stack:
     resb 0x1000
 .bottom:

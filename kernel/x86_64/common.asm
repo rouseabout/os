@@ -112,6 +112,7 @@ isr_common:
 
     sub rsp, 8
     call interrupt_handler
+.ret:
     add rsp, 8
 
     pop rbp ; restore user-space data segment
@@ -137,19 +138,69 @@ isr_common:
     add rsp, 16
     iretq
 
+extern kernel_stack
+extern syscall_handler2
+global syscall_handler
+syscall_handler:
+    cld
+
+    mov cr2, rax
+    mov rax, rsp
+    mov rsp, kernel_stack + 0x1000
+
+    push qword 0x1b ; ss
+    push rax ; rsp
+    mov  rax, cr2
+    push r11 ; rflags
+    push qword 0x23 ; cs
+    push rcx ; rip
+
+    push qword 0 ; error code
+    push qword 0 ; number
+
+    push r15
+    push r14
+    push r13
+    push r12
+    push r11
+    push r10
+    push r9
+    push r8
+    push rax
+    push rcx
+    push rdx
+    push rbx
+    push rbp
+    push rsi
+    push rdi
+
+    mov rbp, ds ; save user-space data segment
+    push rbp
+
+    mov rbp, 0x10 ; set kernel-space data segment
+    mov ds, rbp
+    mov es, rbp
+
+    xor rbp, rbp
+    mov rdi, rsp
+
+    sub rsp, 8
+    call syscall_handler2
+    jmp isr_common.ret  ; return via iretq
+
 
 global jmp_to_userspace
 jmp_to_userspace:
-    mov ax, 0x23
+    mov ax, 0x1b
     mov ds, ax
     mov es, ax
     mov fs, ax
     mov gs, ax
 
-    push 0x23
+    push 0x1b
     push rsi
     pushf
-    push 0x1b
+    push 0x23
     push rdi
 
     xor rbp, rbp
