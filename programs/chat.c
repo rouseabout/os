@@ -76,7 +76,7 @@ int main(int argc, char ** argv)
 #define MAX(a, b) ((a)>(b)?(a):(b))
         int n = select(MAX(fda, fdb) + 1, &rfds, NULL, NULL, NULL);
         if (n < 0) {
-            fprintf(stderr, "select failed\n");
+            perror("select");
             return EXIT_FAILURE;
         }
 
