@@ -9,14 +9,25 @@
 extern "C" {
 #endif
 
-typedef struct { int fds_bits[1]; } fd_set;
+#define __FD_SETSIZE 1024
 
-#define FD_ISSET(fd, fds) ((fds)->fds_bits[0] & (1 << fd))
-#define FD_CLR(fd, fds) do { (fds)->fds_bits[0] &= ~(1 << fd); } while(0)
-#define FD_SET(fd, fds) do { (fds)->fds_bits[0] |= (1 << fd); } while(0)
-#define FD_ZERO(fds) do { (fds)->fds_bits[0] = 0; } while(0)
+typedef long int __fd_mask;
+#define __NFDBITS (8 * sizeof(__fd_mask))
 
-#define FD_SETSIZE 32
+typedef struct {
+    __fd_mask fds_bits[__FD_SETSIZE / __NFDBITS];
+} fd_set;
+
+#define __FD_ELT(d) ((d) / __NFDBITS)
+#define __FD_MASK(d) (1ULL << ((d) % __NFDBITS))
+
+#define FD_ISSET(fd, fds) (!!((fds)->fds_bits[__FD_ELT(fd)] & __FD_MASK(fd)))
+#define FD_CLR(fd, fds) (fds)->fds_bits[__FD_ELT(fd)] &= ~__FD_MASK(fd)
+#define FD_SET(fd, fds) (fds)->fds_bits[__FD_ELT(fd)] |= __FD_MASK(fd)
+#define FD_ZERO(fds) do { \
+    for (int i = 0; i < sizeof((fds)->fds_bits)/sizeof(__fd_mask); i++) \
+        (fds)->fds_bits[i] = 0; \
+} while(0)
 
 struct timeval {
     time_t tv_sec;
