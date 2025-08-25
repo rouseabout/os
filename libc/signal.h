@@ -33,7 +33,7 @@ extern "C" {
 #define SIGTTOU 22
 #define SIGWINCH 28
 #define SIGXCPU 29
-#define SIGTRAP 30 /* not posix */
+#define SIGTRAP 5 /* not posix */
 
 #define NSIG 64  /* not posix */
 
