@@ -163,7 +163,7 @@ static void relocations(Program * program, File * files, int nb_files)
 
 static void write_elf(const char * path, Program * program)
 {
-    int fd = open(path, O_WRONLY|O_CREAT, 0666);
+    int fd = open(path, O_WRONLY|O_CREAT, 0755);
     if (fd == -1)
         perror2(path);
     ElfHeader hdr = {
@@ -178,19 +178,23 @@ static void write_elf(const char * path, Program * program)
 #elif defined(ARCH_x86_64)
         .e_machine = EM_X86_64,
 #endif
+        .e_version = 1,
         .e_phoff = sizeof(hdr),
         .e_phnum = 1,
         .e_ehsize = sizeof(ElfHeader),
         .e_phentsize = sizeof(ElfPHeader),
-        .e_entry = program->origin, //FIXME:
+        .e_entry = program->origin,
     };
     write(fd, &hdr, sizeof(hdr));
     ElfPHeader phdr = {
-        .p_type = PT_LOAD,
-        .p_vaddr = program->origin,
-        .p_memsz = program->bss_size,
-        .p_filesz = program->size,
-        .p_offset = sizeof(hdr) + sizeof(phdr),
+        .p_type   = PT_LOAD,
+        .p_vaddr  = program->origin - (sizeof(hdr) + sizeof(phdr)),
+        .p_paddr  = program->origin - (sizeof(hdr) + sizeof(phdr)),
+        .p_memsz  = sizeof(hdr) + sizeof(phdr) + program->size,
+        .p_filesz = sizeof(hdr) + sizeof(phdr) + program->size,
+        .p_offset = 0,
+        .p_align  = 0x1000,
+        .p_flags  = 5,
     };
     write(fd, &phdr, sizeof(phdr));
     write(fd, program->data, program->size);
@@ -227,7 +231,7 @@ int main(int argc, char ** argv)
             return EXIT_FAILURE;
 
     Program program={0};
-    program.origin = 0x1000;
+    program.origin = 0x10000 + sizeof(ElfHeader) + sizeof(ElfPHeader);
     append_section(&program, 0, files, nb_files);
     program.bss_size = program.size;
     append_section(&program, 1, files, nb_files);

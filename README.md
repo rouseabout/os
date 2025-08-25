@@ -168,6 +168,12 @@ It works because the *os* operates in promiscuous mode.
 To use the text mode console, it is neccessary to first set the `MULTIBOOT_VIDEO_INFO` mode value to 1 (EGA text mode).
 
 
+### Linux syscall compatibility
+
+Binaries built for *os* can run under Linux without modification.
+This is possible, because *os* syscalls are similar to those used by the Linux kernel.
+
+
 ## Included programs
 
 *os* includes the following programs. They are installed under `/bin`.
