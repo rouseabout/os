@@ -298,17 +298,6 @@ static int tty_read_available(const FileDescriptor * fd)
     return kb_available();
 }
 
-static int tty_tcgetpgrp(FileDescriptor * fd)
-{
-    return tty_foreground_pgrp;
-}
-
-static int tty_tcsetpgrp(FileDescriptor * fd, pid_t pgrp)
-{
-    tty_foreground_pgrp = pgrp;
-    return 0;
-}
-
 /*
  * linux keyboard api
  */
@@ -344,6 +333,12 @@ static int tty_ioctl(FileDescriptor * fd, int request, void * data)
         tty_oflag = termios_p->c_oflag;
         kprintf("tcsetattr: c_iflag=0x%x c_oflag=0x%x\n", termios_p->c_iflag, termios_p->c_oflag);
         return 0;
+    } else if (request == TIOCGPGRP) {
+        *(pid_t *)data = tty_foreground_pgrp;
+        return 0;
+    } else if (request == TIOCSPGRP) {
+        tty_foreground_pgrp = *(const pid_t *)data;
+        return 0;
     }
     return -EINVAL;
 }
@@ -353,6 +348,4 @@ const DeviceOperations tty_dio = {
     .read  = tty_read,
     .read_available  = tty_read_available,
     .ioctl = tty_ioctl,
-    .tcgetpgrp = tty_tcgetpgrp,
-    .tcsetpgrp = tty_tcsetpgrp,
 };

@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <syslog.h>
 #include <sys/resource.h>
+#include <sys/ioctl.h>
 #include <termios.h>
 
 char * optarg __attribute__((weak));
@@ -445,8 +446,19 @@ void swab(const void * src_, void * dst_, ssize_t nbytes)
 }
 
 MK_SYSCALL2(int, symlink, OS_SYMLINK, const char *, const char *)
-MK_SYSCALL1(pid_t, tcgetpgrp, OS_TCGETPGRP, int)
-MK_SYSCALL2(int, tcsetpgrp, OS_TCSETPGRP, int, pid_t)
+
+pid_t tcgetpgrp(int fildes)
+{
+    pid_t pgrp;
+    if (ioctl(fildes, TIOCGPGRP, &pgrp) < 0)
+        return -1;
+    return pgrp;
+}
+
+int tcsetpgrp(int fildes, pid_t pgrp)
+{
+    return ioctl(fildes, TIOCSPGRP, &pgrp);
+}
 
 int truncate(const char * path, off_t length)
 {

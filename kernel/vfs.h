@@ -27,8 +27,6 @@ typedef struct {
     int (*write)(FileDescriptor *, const void *, int);
     int (*write_available)(const FileDescriptor * fd);
     off_t (*lseek)(FileDescriptor *, off_t, int);
-    pid_t (*tcgetpgrp)(FileDescriptor * fd);
-    int (*tcsetpgrp)(FileDescriptor * fd, pid_t pgrp);
     int (*truncate)(FileDescriptor * fd, off_t length);
     int (*ioctl)(FileDescriptor * fd, int request, void * data);
     int (*mmap)(FileDescriptor * fd, struct os_mmap_request * req);
@@ -97,8 +95,6 @@ int vfs_getdents(FileDescriptor * fd, struct dirent * dent, size_t count);
 void vfs_register_mount_point(const char * path, const FileOperations * ops, void * priv_data);
 void vfs_register_mount_point2(int dinode, const char * name, const FileOperations * ops, void * priv_data, int root_inode);
 int vfs_stat(FileDescriptor * fd, const char * path, struct stat * st, int resolve_link);
-pid_t vfs_tcgetpgrp(FileDescriptor * fd);
-int vfs_tcsetpgrp(FileDescriptor * fd, pid_t pgrp);
 int vfs_unlink(const char * path, int dir);
 int vfs_mkdir(const char *path, mode_t mode);
 int vfs_ioctl(FileDescriptor * fd, int request, void * data);

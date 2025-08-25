@@ -175,16 +175,6 @@ static int dev_mmap(FileDescriptor * fd, struct os_mmap_request * req)
     return fd->ops->mmap ? fd->ops->mmap(fd, req) : -ENOSYS;
 }
 
-static pid_t dev_tcgetpgrp(FileDescriptor * fd)
-{
-    return fd->ops->tcgetpgrp ? fd->ops->tcgetpgrp(fd) : -ENOSYS;
-}
-
-static int dev_tcsetpgrp(FileDescriptor * fd, pid_t pgrp)
-{
-    return fd->ops->tcsetpgrp ? fd->ops->tcsetpgrp(fd, pgrp) : -ENOSYS;
-}
-
 const FileOperations dev_io = {
     .name = "dev",
     .inode_range = dev_inode_range,
@@ -200,8 +190,6 @@ const FileOperations dev_io = {
         .read_available = dev_read_available,
         .ioctl = dev_ioctl,
         .mmap = dev_mmap,
-        .tcgetpgrp = dev_tcgetpgrp,
-        .tcsetpgrp = dev_tcsetpgrp,
     },
     .getdents = dev_getdents,
 };

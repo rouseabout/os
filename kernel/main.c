@@ -754,8 +754,6 @@ static int sys_clock_gettime(clockid_t clock_id, struct timespec *tp);
 static int sys_nanosleep(registers * reg, const struct timespec * ts, struct timespec * rem);
 static int sys_setpgid(pid_t pid, pid_t pgid);
 static pid_t sys_getpgrp(void);
-static pid_t sys_tcgetpgrp(int fildes);
-static int sys_tcsetpgrp(int fd, pid_t pgrp);
 static int sys_kill(pid_t pid, int sig);
 static int sys_uname(struct utsname * name);
 static int sys_ioctl(int fd, int request, void * data);
@@ -2610,22 +2608,6 @@ static int sys_setpgid(pid_t pid, pid_t pgid)
 static pid_t sys_getpgrp(void)
 {
     return current_task->proc->pgrp;
-}
-
-static pid_t sys_tcgetpgrp(int fildes)
-{
-    if (fildes < 0 || fildes >= OPEN_MAX || !current_task->proc->fd[fildes])
-        return -EBADF;
-
-    return vfs_tcgetpgrp(current_task->proc->fd[fildes]);
-}
-
-static int sys_tcsetpgrp(int fd, pid_t pgrp)
-{
-    if (fd < 0 || fd >= OPEN_MAX || !current_task->proc->fd[fd])
-        return -EBADF;
-
-    return vfs_tcsetpgrp(current_task->proc->fd[fd], pgrp);
 }
 
 static int sys_kill(pid_t pid, int sig)

@@ -306,22 +306,6 @@ int vfs_stat(FileDescriptor * fd, const char * path, struct stat * st, int resol
     return mount->ops->inode_stat ? mount->ops->inode_stat(mount->priv_data, inode, st) : -ENOSYS;
 }
 
-pid_t vfs_tcgetpgrp(FileDescriptor * fd)
-{
-    if (!fd->ops->tcgetpgrp)
-        return -ENOSYS;
-
-    return fd->ops->tcgetpgrp(fd);
-}
-
-int vfs_tcsetpgrp(FileDescriptor * fd, pid_t pgrp)
-{
-    if (!fd->ops->tcsetpgrp)
-        return -ENOSYS;
-
-    return fd->ops->tcsetpgrp(fd, pgrp);
-}
-
 int vfs_unlink(const char * path, int is_dir)
 {
     Mount * mount;

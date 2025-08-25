@@ -121,17 +121,6 @@ static int serial_read_available(const FileDescriptor * fd)
     return ringbuffer_read_available(&rb);
 }
 
-static int serial_tcgetpgrp(FileDescriptor * fd)
-{
-    return serial_foreground_pgrp;
-}
-
-static int serial_tcsetpgrp(FileDescriptor * fd, pid_t pgrp)
-{
-    serial_foreground_pgrp = pgrp;
-    return 0;
-}
-
 static int serial_ioctl(FileDescriptor * fd, int request, void * data)
 {
     if (request == TIOCGWINSZ) {
@@ -150,6 +139,11 @@ static int serial_ioctl(FileDescriptor * fd, int request, void * data)
         serial_lflag = termios_p->c_lflag;
         serial_oflag = termios_p->c_oflag;
         kprintf("tcsetattr: c_iflag=0x%x c_oflag=0x%x\n", termios_p->c_iflag, termios_p->c_oflag);
+    } else if (request == TIOCGPGRP) {
+        *(pid_t *)data = serial_foreground_pgrp;
+        return 0;
+    } else if (request == TIOCSPGRP) {
+        serial_foreground_pgrp = *(const pid_t *)data;
         return 0;
     }
     return -EINVAL;
@@ -160,6 +154,4 @@ const DeviceOperations serial_dio = {
     .read = serial_read,
     .read_available = serial_read_available,
     .ioctl = serial_ioctl,
-    .tcgetpgrp = serial_tcgetpgrp,
-    .tcsetpgrp = serial_tcsetpgrp,
 };
