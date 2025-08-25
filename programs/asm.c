@@ -519,15 +519,27 @@ typedef enum {
     NB_REGISTER
 } Register;
 
-static const char * register_name[NB_REGISTER] = {
-    [REGISTER_EAX] = "eax",
-    [REGISTER_ECX] = "ecx",
-    [REGISTER_EDX] = "edx",
-    [REGISTER_EBX] = "ebx",
-    [REGISTER_ESP] = "esp",
-    [REGISTER_EBP] = "ebp",
-    [REGISTER_ESI] = "esi",
-    [REGISTER_EDI] = "edi",
+static const char * register_name[2][NB_REGISTER] = {
+    {
+        [REGISTER_EAX] = "eax",
+        [REGISTER_ECX] = "ecx",
+        [REGISTER_EDX] = "edx",
+        [REGISTER_EBX] = "ebx",
+        [REGISTER_ESP] = "esp",
+        [REGISTER_EBP] = "ebp",
+        [REGISTER_ESI] = "esi",
+        [REGISTER_EDI] = "edi",
+    },
+    {
+        [REGISTER_EAX] = "rax",
+        [REGISTER_ECX] = "rcx",
+        [REGISTER_EDX] = "rdx",
+        [REGISTER_EBX] = "rbx",
+        [REGISTER_ESP] = "rsp",
+        [REGISTER_EBP] = "rbp",
+        [REGISTER_ESI] = "rsi",
+        [REGISTER_EDI] = "rdi",
+    }
 };
 
 typedef enum {
@@ -636,12 +648,14 @@ static Operand * parse_operand2(Token ** rtok, Token * tok)
         op->u.value = parse_number(rtok, tok);
         return op;
     }
-    for (int i = 0; i < NB_REGISTER; i++) {
-        if (equal(tok, register_name[i])) {
-            op = make_operand(OPERAND_REG);
-            op->u.reg = i;
-            *rtok = tok->next;
-            return op;
+    for (int j = 0; j < 2; j++) {
+        for (int i = 0; i < NB_REGISTER; i++) {
+            if (equal(tok, register_name[j][i])) {
+                op = make_operand(OPERAND_REG);
+                op->u.reg = i;
+                *rtok = tok->next;
+                return op;
+            }
         }
     }
     if (tok->kind == TOK_LITERAL) {
@@ -684,7 +698,7 @@ static void print_operand(Operand * op)
     if (op->kind == OPERAND_IMM) {
         printf("0x%lx", op->u.value);
     } else if (op->kind == OPERAND_REG) {
-        printf("%s", register_name[op->u.reg]);
+        printf("%s", register_name[0][op->u.reg]);
     } else if (op->kind == OPERAND_ADDR) {
         printf("["); print_operand(op->u.addr); printf("]");
     } else if (op->kind == OPERAND_SYMBOL) {
