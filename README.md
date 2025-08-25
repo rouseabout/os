@@ -48,7 +48,7 @@ NASM >= 2.16 is required.
 
 *os* can be booted many ways.
 First it is important to understand the high-level design of the operating system.
-*os* consists of a kernel file and sysroot directory. The `kernel.bin` file is compatible with the multiboot specification. The `kernel.linux` file is compatbile with the Linux boot protocol. The sysroot directory is copied to an ext2 file system, either intended to function as a ram disk (`initrd`) or a hard disk (`disk_image`).
+*os* consists of a kernel file and sysroot directory. The `kernel.bin` file is compatible with the multiboot specification. The `kernel.linux` file is compatible with the Linux boot protocol. The sysroot directory is copied to an ext2 file system, either intended to function as a ram disk (`initrd`) or a hard disk (`disk_image`).
 When using multiboot with an initrd module, both kernel and initrd files must fit within the first 8 MiB of memory.
 
 
