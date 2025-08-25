@@ -984,6 +984,11 @@ static void assemble(char *path, Token * tok, const char * output_path)
             buf_expand(buf, 2);
             buf_write1(buf, 0xcd);
             buf_write1(buf, parse_number(&tok, tok->next));
+        } else if (equal(tok, "syscall")) {
+            buf_expand(buf, 2);
+            buf_write1(buf, 0x0f);
+            buf_write1(buf, 0x05);
+            tok = tok->next;
         } else if (equal(tok, "xor")) {
             Operand * op1 = parse_operand(&tok, tok->next);
             tok = expect(tok, ",");
