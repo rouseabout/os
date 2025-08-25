@@ -32,8 +32,6 @@ typedef struct {
     int (*truncate)(FileDescriptor * fd, off_t length);
     int (*ioctl)(FileDescriptor * fd, int request, void * data);
     int (*mmap)(FileDescriptor * fd, struct os_mmap_request * req);
-    int (*tcgetattr)(FileDescriptor * fd, struct termios * termios_p);
-    int (*tcsetattr)(FileDescriptor * fd, int optional_actions, const struct termios * termios_p);
 } DeviceOperations; //these are really file operations
 
 typedef struct {
@@ -106,8 +104,6 @@ int vfs_mkdir(const char *path, mode_t mode);
 int vfs_ioctl(FileDescriptor * fd, int request, void * data);
 int vfs_mmap(FileDescriptor * fd, struct os_mmap_request * req);
 int vfs_fstat(FileDescriptor * fd, struct stat * st);
-int vfs_tcgetattr(FileDescriptor * fd, struct termios * termios_p);
-int vfs_tcsetattr(FileDescriptor * fd, int optional_actions, const struct termios * termios_p);
 int vfs_read_available(const FileDescriptor * fd);
 int vfs_write_available(const FileDescriptor * fd);
 int vfs_pipe(FileDescriptor ** rfd_ptr, FileDescriptor ** wfd_ptr);

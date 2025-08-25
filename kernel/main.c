@@ -762,8 +762,6 @@ static int sys_uname(struct utsname * name);
 static int sys_ioctl(int fd, int request, void * data);
 static int sys_mmap(struct os_mmap_request * req);
 static int sys_fcntl(int fd, int cmd, int value);
-static int sys_tcgetattr(int, struct termios *);
-static int sys_tcsetattr(int, int, const struct termios *);
 static int sys_pthread_create(pthread_t * thread, const pthread_attr_t * attr, void * start_routine, void * arg);
 static int sys_pthread_join(registers * reg, pthread_t thread, void ** value_ptr);
 static int sys_sigaction(int sig, const struct sigaction * act, struct sigaction * oact);
@@ -2722,22 +2720,6 @@ static int sys_fcntl(int fd, int cmd, int value)
     }
 
     return -EINVAL;
-}
-
-static int sys_tcgetattr(int fildes, struct termios * termios_p)
-{
-    kprintf("sys_tcgetattr\n");
-    if (fildes < 0 || fildes >= OPEN_MAX || !current_task->proc->fd[fildes])
-        return -EBADF;
-    return vfs_tcgetattr(current_task->proc->fd[fildes], termios_p);
-}
-
-static int sys_tcsetattr(int fildes, int optional_actions, const struct termios * termios_p)
-{
-    kprintf("sys_tcsetattr\n");
-    if (fildes < 0 || fildes >= OPEN_MAX || !current_task->proc->fd[fildes])
-        return -EBADF;
-    return vfs_tcsetattr(current_task->proc->fd[fildes], optional_actions, termios_p);
 }
 
 static int sys_pthread_create(pthread_t * thread, const pthread_attr_t * attr, void * start_routine, void * arg)

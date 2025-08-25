@@ -185,16 +185,6 @@ static int dev_tcsetpgrp(FileDescriptor * fd, pid_t pgrp)
     return fd->ops->tcsetpgrp ? fd->ops->tcsetpgrp(fd, pgrp) : -ENOSYS;
 }
 
-static int dev_tcgetattr(FileDescriptor * fd, struct termios * termios_p)
-{
-    return fd->ops->tcgetpgrp ? fd->ops->tcgetattr(fd, termios_p) : -ENOSYS;
-}
-
-static int dev_tcsetattr(FileDescriptor * fd, int optional_actions, const struct termios * termios_p)
-{
-    return fd->ops->tcsetattr ? fd->ops->tcsetattr(fd, optional_actions, termios_p) : -ENOSYS;
-}
-
 const FileOperations dev_io = {
     .name = "dev",
     .inode_range = dev_inode_range,
@@ -212,8 +202,6 @@ const FileOperations dev_io = {
         .mmap = dev_mmap,
         .tcgetpgrp = dev_tcgetpgrp,
         .tcsetpgrp = dev_tcsetpgrp,
-        .tcgetattr = dev_tcgetattr,
-        .tcsetattr = dev_tcsetattr,
     },
     .getdents = dev_getdents,
 };

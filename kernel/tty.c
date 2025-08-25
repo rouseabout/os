@@ -309,22 +309,6 @@ static int tty_tcsetpgrp(FileDescriptor * fd, pid_t pgrp)
     return 0;
 }
 
-static int tty_tcgetattr(FileDescriptor * fd, struct termios * termios_p)
-{
-    memset(termios_p, 0, sizeof(struct termios));
-    termios_p->c_lflag = tty_lflag;
-    termios_p->c_oflag = tty_oflag;
-    return 0;
-}
-
-static int tty_tcsetattr(FileDescriptor * fd, int optional_actions, const struct termios * termios_p)
-{
-    tty_lflag = termios_p->c_lflag;
-    tty_oflag = termios_p->c_oflag;
-    kprintf("tcsetattr: c_iflag=0x%x c_oflag=0x%x\n", termios_p->c_iflag, termios_p->c_oflag);
-    return 0;
-}
-
 /*
  * linux keyboard api
  */
@@ -348,6 +332,18 @@ static int tty_ioctl(FileDescriptor * fd, int request, void * data)
         ws->ws_row = tty->rows();
         ws->ws_col = tty->columns();
         return 0;
+    } else if (request == TCGETS) {
+        struct termios * termios_p = data;
+        memset(termios_p, 0, sizeof(struct termios));
+        termios_p->c_lflag = tty_lflag;
+        termios_p->c_oflag = tty_oflag;
+        return 0;
+    } else if (request == TCSETS || request == TCSETSW || request == TCSETSF) {
+        const struct termios * termios_p = data;
+        tty_lflag = termios_p->c_lflag;
+        tty_oflag = termios_p->c_oflag;
+        kprintf("tcsetattr: c_iflag=0x%x c_oflag=0x%x\n", termios_p->c_iflag, termios_p->c_oflag);
+        return 0;
     }
     return -EINVAL;
 }
@@ -359,6 +355,4 @@ const DeviceOperations tty_dio = {
     .ioctl = tty_ioctl,
     .tcgetpgrp = tty_tcgetpgrp,
     .tcsetpgrp = tty_tcsetpgrp,
-    .tcgetattr = tty_tcgetattr,
-    .tcsetattr = tty_tcsetattr,
 };

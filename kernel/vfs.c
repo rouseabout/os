@@ -373,22 +373,6 @@ int vfs_fstat(FileDescriptor * fd, struct stat * st)
     return fd->mount->ops->inode_stat(fd->priv_data, fd->inode, st);
 }
 
-int vfs_tcgetattr(FileDescriptor * fd, struct termios * termios_p)
-{
-    if (!fd->ops->tcgetattr)
-        return -ENOSYS;
-
-    return fd->ops->tcgetattr(fd, termios_p);
-}
-
-int vfs_tcsetattr(FileDescriptor * fd, int optional_actions, const struct termios * termios_p)
-{
-    if (!fd->ops->tcsetattr)
-        return -ENOSYS;
-
-    return fd->ops->tcsetattr(fd, optional_actions, termios_p);
-}
-
 int vfs_read_available(const FileDescriptor * fd)
 {
     if (!fd->ops->read_available)

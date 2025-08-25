@@ -1,6 +1,7 @@
 #include <termios.h>
 #include <os/syscall.h>
 #include <syslog.h>
+#include <sys/ioctl.h>
 
 speed_t cfgetispeed(const struct termios * termios_p)
 {
@@ -40,7 +41,10 @@ int tcflush(int fildes, int queue_selector)
     return 0; //FIXME:
 }
 
-MK_SYSCALL2(int, tcgetattr, OS_TCGETATTR, int, struct termios *)
+int tcgetattr(int fildes, struct termios *termios_p)
+{
+    return ioctl(fildes, TCGETS, termios_p);
+}
 
 int tcsendbreak(int fildes, int duration)
 {
@@ -48,4 +52,16 @@ int tcsendbreak(int fildes, int duration)
     return 0; //FIXME:
 }
 
-MK_SYSCALL3(int, tcsetattr, OS_TCSETATTR, int, int, const struct termios *)
+int tcsetattr(int fildes, int optional_actions, const struct termios *termios_p)
+{
+    int opt;
+    switch (optional_actions) {
+    case TCSANOW: opt = TCSETS; break;
+    case TCSADRAIN: opt = TCSETSW; break;
+    case TCSAFLUSH: opt = TCSETSF; break;
+    default:
+        errno = ENOSYS;
+        return -1;
+    }
+    return ioctl(fildes, opt, termios_p);
+}

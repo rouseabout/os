@@ -5,11 +5,11 @@
 extern "C" {
 #endif
 
-typedef int cc_t;
+typedef char cc_t;
 typedef int speed_t;
 typedef int tcflag_t;
 
-#define NCCS 1
+#define NCCS 32
 
 #define VEOF 0
 #define VEOL 0
@@ -89,13 +89,13 @@ typedef int tcflag_t;
 
 // local modes
 
-#define ECHO 1
+#define ECHO 8
 #define ECHOE 0
 #define ECHOK 0
 #define ECHONL 0
 #define ICANON 2
 #define IEXTEN 0
-#define ISIG 4
+#define ISIG 1
 #define NOFLSH 0
 #define TOSTOP 0
 #define FLUSHO 0
@@ -125,6 +125,7 @@ struct termios {
     tcflag_t c_oflag;
     tcflag_t c_cflag;
     tcflag_t c_lflag;
+    cc_t c_line;
     cc_t c_cc[NCCS];
 };
 

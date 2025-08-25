@@ -132,28 +132,24 @@ static int serial_tcsetpgrp(FileDescriptor * fd, pid_t pgrp)
     return 0;
 }
 
-static int serial_tcgetattr(FileDescriptor * fd, struct termios * termios_p)
-{
-    memset(termios_p, 0, sizeof(struct termios));
-    termios_p->c_lflag = serial_lflag;
-    termios_p->c_oflag = serial_oflag;
-    return 0;
-}
-
-static int serial_tcsetattr(FileDescriptor * fd, int optional_actions, const struct termios * termios_p)
-{
-    serial_lflag = termios_p->c_lflag;
-    serial_oflag = termios_p->c_oflag;
-    kprintf("tcsetattr: c_iflag=0x%x c_oflag=0x%x\n", termios_p->c_iflag, termios_p->c_oflag);
-    return 0;
-}
-
 static int serial_ioctl(FileDescriptor * fd, int request, void * data)
 {
     if (request == TIOCGWINSZ) {
         struct winsize * ws = data;
         ws->ws_row = 25;
         ws->ws_col = 80;
+        return 0;
+    } else if (request == TCGETS) {
+        struct termios * termios_p = data;
+        memset(termios_p, 0, sizeof(struct termios));
+        termios_p->c_lflag = serial_lflag;
+        termios_p->c_oflag = serial_oflag;
+        return 0;
+    } else if (request == TCSETS || request == TCSETSW || request == TCSETSF) {
+        const struct termios * termios_p = data;
+        serial_lflag = termios_p->c_lflag;
+        serial_oflag = termios_p->c_oflag;
+        kprintf("tcsetattr: c_iflag=0x%x c_oflag=0x%x\n", termios_p->c_iflag, termios_p->c_oflag);
         return 0;
     }
     return -EINVAL;
@@ -166,6 +162,4 @@ const DeviceOperations serial_dio = {
     .ioctl = serial_ioctl,
     .tcgetpgrp = serial_tcgetpgrp,
     .tcsetpgrp = serial_tcsetpgrp,
-    .tcgetattr = serial_tcgetattr,
-    .tcsetattr = serial_tcsetattr,
 };
