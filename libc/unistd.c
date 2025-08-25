@@ -383,7 +383,11 @@ int setgid(gid_t gid)
 }
 
 MK_SYSCALL2(int, setpgid, OS_SETPGID, pid_t, pid_t)
-MK_SYSCALL0(pid_t, setpgrp, OS_SETPGRP)
+
+int setpgrp(void)
+{
+    return setpgid(0, 0);
+}
 
 pid_t setsid()
 {

@@ -84,7 +84,7 @@ ssize_t readlink(const char *, char *, size_t);
 int rmdir(const char *);
 int setgid(gid_t);
 int setpgid(pid_t, pid_t);
-pid_t setpgrp(void);
+int setpgrp(void);
 pid_t setsid(void);
 int setuid(uid_t);
 unsigned sleep(unsigned seconds);
