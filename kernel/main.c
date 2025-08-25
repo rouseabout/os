@@ -769,7 +769,6 @@ static int sys_getitimer(int which, struct itimerval * value);
 static int sys_setitimer(int which, const struct itimerval * value, struct itimerval * ovalue);
 static int sys_select(registers * reg, int nfds, fd_set * readfds, fd_set * writefds, fd_set * errorfds, struct timeval * timeout);
 static int sys_pipe(int * fildes);
-static int sys_isatty(int fildes);
 static int sys_syslog(int priority, const char * message);
 static int sys_utime(const char * path, const struct utimbuf * times);
 static int sys_rename(const char * old, const char * new);
@@ -2862,14 +2861,6 @@ static int sys_pipe(int * fildes)
     kprintf("sys_pipe allocated readfd %d, writefd %d\n", fildes[0], fildes[1]);
 
     return vfs_pipe(&current_task->proc->fd[fildes[0]], &current_task->proc->fd[fildes[1]]);
-}
-
-static int sys_isatty(int fildes)
-{
-    if (fildes < 0 || fildes >= OPEN_MAX || !current_task->proc->fd[fildes])
-        return -EBADF;
-
-    return vfs_isatty(current_task->proc->fd[fildes]);
 }
 
 static int sys_syslog(int priority, const char * message)

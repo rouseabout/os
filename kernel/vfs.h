@@ -107,7 +107,6 @@ int vfs_fstat(FileDescriptor * fd, struct stat * st);
 int vfs_read_available(const FileDescriptor * fd);
 int vfs_write_available(const FileDescriptor * fd);
 int vfs_pipe(FileDescriptor ** rfd_ptr, FileDescriptor ** wfd_ptr);
-int vfs_isatty(const FileDescriptor * fd);
 int vfs_direct(const FileDescriptor * fd);
 int vfs_utime(const char * path, const struct utimbuf * times);
 int vfs_chmod(const char * path, mode_t mode);

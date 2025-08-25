@@ -422,11 +422,6 @@ int vfs_pipe(FileDescriptor ** rfd_ptr, FileDescriptor ** wfd_ptr)
     return 0;
 }
 
-int vfs_isatty(const FileDescriptor * fd)
-{
-    return fd->isatty;
-}
-
 int vfs_direct(const FileDescriptor * fd)
 {
     return fd->isatty || fd->ops == &pipe_reader_dio;

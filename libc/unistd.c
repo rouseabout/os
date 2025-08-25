@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <syslog.h>
 #include <sys/resource.h>
+#include <termios.h>
 
 char * optarg __attribute__((weak));
 int opterr __attribute__((weak)), optind __attribute__((weak)) = 1, optopt __attribute__((weak));
@@ -328,13 +329,13 @@ uid_t getuid()
     return 1; //FIXME:
 }
 
-static MK_SYSCALL1(int, sys_isatty, OS_ISATTY, int)
 int isatty(int fildes)
 {
-    int ret = sys_isatty(fildes);
-    if (ret == 0)
-        errno = ENOTTY;
-    return ret;
+    struct termios term;
+    if (!tcgetattr(fildes, &term))
+        return 1;
+    errno = ENOTTY;
+    return 0;
 }
 
 MK_SYSCALL2(int, link, OS_LINK, const char *, const char *)
