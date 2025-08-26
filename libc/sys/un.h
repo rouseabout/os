@@ -5,7 +5,7 @@
 
 struct sockaddr_un {
     sa_family_t sun_family;
-    char sun_path[256];
+    char sun_path[108];
 };
 
 #endif /* SYS_UN_H */

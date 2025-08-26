@@ -783,6 +783,7 @@ int sys_socket(int domain, int type, int protocol);
 int sys_bind(int socket, const struct sockaddr * address, socklen_t address_len);
 int sys_accept(registers * reg, int socket, struct sockaddr * address, socklen_t * address_len);
 int sys_connect(int socket, const struct sockaddr * address, socklen_t address_len);
+int sys_listen(int socket, int backlog);
 static int sys_chmod(const char * path, mode_t mode);
 
 #define TICKS_PER_SECOND 100
@@ -2975,6 +2976,12 @@ int sys_connect(int socket, const struct sockaddr * address, socklen_t address_l
     const struct sockaddr_un * sun = (const struct sockaddr_un *)address;
     kprintf("connect[%d] socket=%d, path='%s'\n", current_task->id, socket, sun->sun_path);
     return vfs_connect(current_task->proc->fd[socket], sun->sun_path);
+}
+
+int sys_listen(int socket, int backlog)
+{
+    kprintf("listen[%d] socket=%d\n", current_task->id, socket);
+    return 0;
 }
 
 static int sys_chmod(const char * path, mode_t mode)

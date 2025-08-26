@@ -11,12 +11,12 @@ extern "C" {
 
 #define AF_UNSPEC 0
 #define PF_UNSPEC AF_UNSPEC
-#define AF_INET 1
-#define PF_INET AF_INET
-#define AF_INET6 2
-#define PF_INET6 AF_INET6
-#define AF_UNIX 3
+#define AF_UNIX 1
 #define PF_UNIX AF_UNIX
+#define AF_INET 2
+#define PF_INET AF_INET
+#define AF_INET6 10
+#define PF_INET6 AF_INET6
 
 #define MSG_PEEK 1
 
@@ -37,10 +37,10 @@ extern "C" {
 
 #define SOMAXCONN 4096
 
-#define SOCK_DGRAM 1
-#define SOCK_RAW 2
-#define SOCK_SEQPACKET 3
-#define SOCK_STREAM 4
+#define SOCK_STREAM 1
+#define SOCK_DGRAM 2
+#define SOCK_RAW 3
+#define SOCK_SEQPACKET 5
 
 #define SCM_RIGHTS 1
 
@@ -48,7 +48,7 @@ extern "C" {
 #define SHUT_WR 2
 #define SHUT_RDWR 3
 
-typedef unsigned int sa_family_t;
+typedef unsigned short sa_family_t;
 typedef unsigned int socklen_t;
 
 struct sockaddr {

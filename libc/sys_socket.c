@@ -3,7 +3,16 @@
 #include <errno.h>
 #include <syslog.h>
 
+#if defined(ARCH_i686)
+static MK_SYSCALL4(int, accept4, OS_ACCEPT, int, struct sockaddr *, socklen_t *, int)
+int accept(int socket, struct sockaddr * address, socklen_t * address_len)
+{
+    return accept4(socket, address, address_len, 0);
+}
+#else
 MK_SYSCALL3(int, accept, OS_ACCEPT, int, struct sockaddr *, socklen_t *)
+#endif
+
 MK_SYSCALL3(int, bind, OS_BIND, int, const struct sockaddr *, socklen_t)
 MK_SYSCALL3(int, connect, OS_CONNECT, int, const struct sockaddr *, socklen_t)
 
@@ -25,11 +34,7 @@ int getsockopt(int socket, int level, int option_name, void * option_value, sock
     return 0;
 }
 
-int listen(int socket, int backlog)
-{
-    syslog(LOG_DEBUG, "libc: listen");
-    return 0;
-}
+MK_SYSCALL2(int, listen, OS_LISTEN, int, int)
 
 ssize_t recv(int socket, void *buffer, size_t length, int flags)
 {
