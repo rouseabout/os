@@ -26,6 +26,7 @@ size_t wcslen(const wchar_t *);
 int wcsncmp(const wchar_t *, const wchar_t *, size_t n);
 wchar_t * wcsncpy(wchar_t *, const wchar_t *, size_t);
 wchar_t * wcsrchr(const wchar_t *, wchar_t);
+size_t wcsrtombs(char *, const wchar_t **, size_t, mbstate_t *);
 wchar_t * wcstok(wchar_t *, const wchar_t *, wchar_t **);
 long wcstol(const wchar_t *, wchar_t **, int base);
 int wcwidth(wchar_t);

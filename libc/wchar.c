@@ -101,6 +101,12 @@ wchar_t * wcsrchr(const wchar_t * ws, wchar_t wc)
     return p >= ws ? (wchar_t *)p : NULL;
 }
 
+size_t wcsrtombs(char * dst, const wchar_t ** src, size_t len, mbstate_t * ps)
+{
+    syslog(LOG_DEBUG, "libc: wcsrtombs");
+    return 0;
+}
+
 wchar_t * wcstok(wchar_t * ws1, const wchar_t * ws2, wchar_t ** ptr)
 {
     syslog(LOG_DEBUG, "libc: wcstok");
