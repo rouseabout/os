@@ -761,7 +761,7 @@ static int sys_mmap(struct os_mmap_request * req);
 static int sys_fcntl(int fd, int cmd, int value);
 static int sys_pthread_create(pthread_t * thread, const pthread_attr_t * attr, void * start_routine, void * arg);
 static int sys_pthread_join(registers * reg, pthread_t thread, void ** value_ptr);
-static int sys_sigaction(int sig, const struct sigaction * act, struct sigaction * oact);
+static int sys_rt_sigaction(int sig, const struct sigaction * act, struct sigaction * oact, size_t sigsetsize);
 static int sys_getitimer(int which, struct itimerval * value);
 static int sys_setitimer(int which, const struct itimerval * value, struct itimerval * ovalue);
 static int sys_select(registers * reg, int nfds, fd_set * readfds, fd_set * writefds, fd_set * errorfds, struct timeval * timeout);
@@ -2748,10 +2748,10 @@ static int sys_pthread_join(registers * reg, pthread_t thread, void ** value_ptr
     return 0;
 }
 
-static int sys_sigaction(int sig, const struct sigaction * act, struct sigaction * oact)
+static int sys_rt_sigaction(int sig, const struct sigaction * act, struct sigaction * oact, size_t sigsetsize)
 {
     kprintf("sys_sigaction %d\n", sig);
-    if (sig <= 0 || sig >= NSIG)
+    if (sig <= 0 || sig >= NSIG || sigsetsize != sizeof(sigset_t))
         return -EINVAL;
     if (oact)
         *oact = current_task->proc->act[sig];

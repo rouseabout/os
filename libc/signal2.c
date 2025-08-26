@@ -16,7 +16,12 @@ int pthread_sigmask(int how, const sigset_t * set, sigset_t * oset)
     return 0; //FIXME:
 }
 
-MK_SYSCALL3(int, sigaction, OS_SIGACTION, int, const struct sigaction *, struct sigaction *)
+static MK_SYSCALL4(int, rt_sigaction, OS_RT_SIGACTION, int, const struct sigaction *, struct sigaction *, size_t)
+
+int sigaction(int sig, const struct sigaction * act, struct sigaction * oact)
+{
+    return rt_sigaction(sig, act, oact, sizeof(sigset_t));
+}
 
 int siginterrupt(int sig, int flag)
 {
