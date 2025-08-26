@@ -10,18 +10,37 @@ extern "C" {
 
 struct stat {
     dev_t st_dev;
+#if !defined(ARCH_x86_64)
+    unsigned short int __pad1;
+#endif
     ino_t st_ino;
+#if defined(ARCH_x86_64)
+    nlink_t st_nlink;
+    mode_t st_mode;
+#else
     mode_t st_mode;
     nlink_t st_nlink;
+#endif
     uid_t st_uid;
     gid_t st_gid;
+#if defined(ARCH_x86_64)
+    int __pad0;
+#endif
     dev_t st_rdev;
+#if !defined(ARCH_x86_64)
+    unsigned short int __pad2;
+#endif
     off_t st_size;
+    blksize_t st_blksize;
+    blkcnt_t st_blocks;
     struct timespec st_atim;
     struct timespec st_mtim;
     struct timespec st_ctim;
-    blksize_t st_blksize;
-    blkcnt_t st_blocks;
+#if defined(ARCH_x86_64)
+    unsigned long __reserved[3];
+#else
+    unsigned long __reserved[2];
+#endif
 };
 
 #define st_atime st_atim.tv_sec

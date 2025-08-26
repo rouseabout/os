@@ -4,16 +4,16 @@
 #include <stddef.h>
 
 typedef int blkcnt_t;
-typedef int blksize_t;
+typedef long blksize_t;
 typedef int clock_t;
 typedef int clockid_t;
-typedef int dev_t;
+typedef long long dev_t;
 typedef long  ino_t;
 typedef unsigned long fsblkcnt_t;
 typedef unsigned long fsfilcnt_t;
 typedef int gid_t;
 typedef int mode_t;
-typedef int nlink_t;
+typedef long nlink_t;
 typedef long off_t;
 typedef int pid_t;
 typedef int pthread_attr_t;
