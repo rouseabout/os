@@ -3,8 +3,8 @@ set -e
 
 . ../common.sh
 
-VERSION=9.0
-prep https://ftp.nluug.nl/pub/vim/unix/vim-${VERSION}.tar.bz2 vim-${VERSION}.tar.bz2 vim90
+VERSION=9.1.1686
+prep https://github.com/vim/vim/archive/refs/tags/v${VERSION}.tar.gz v${VERSION}.tar.gz vim-${VERSION}
 
 export vim_cv_toupper_broken=no
 export vim_cv_terminfo=yes
