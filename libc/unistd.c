@@ -12,6 +12,7 @@
 #include <syslog.h>
 #include <sys/resource.h>
 #include <sys/ioctl.h>
+#include <sys/utsname.h>
 #include <termios.h>
 
 char * optarg __attribute__((weak));
@@ -236,7 +237,11 @@ int getgroups(int gidsetsize, gid_t grouplist[])
 
 int gethostname(char * name, size_t namelen)
 {
-    strlcpy(name, "localhost", namelen);
+    struct utsname uts;
+    if (uname(&uts) == -1)
+        return -1;
+
+    strlcpy(name, uts.nodename, namelen);
     return 0;
 }
 
