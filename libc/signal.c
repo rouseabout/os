@@ -2,13 +2,13 @@
 
 int sigaddset(sigset_t *set, int signo)
 {
-    *set |= 1 << signo;
+    *set |= 1 << (signo - 1);
     return 0;
 }
 
 int sigdelset(sigset_t * set, int signo)
 {
-    *set &= ~(1 << signo);
+    *set &= ~(1 << (signo - 1));
     return 0;
 }
 
@@ -26,5 +26,5 @@ int sigfillset(sigset_t * set)
 
 int sigismember(const sigset_t *set, int signo)
 {
-    return !!(*set & (1 << signo));
+    return !!(*set & (1 << (signo - 1)));
 }

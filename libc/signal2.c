@@ -30,16 +30,27 @@ int siginterrupt(int sig, int flag)
     return -1;
 }
 
+#if defined(ARCH_x86_64)
+static MK_SYSCALL1(int, rt_sigreturn, OS_RT_SIGRETURN, unsigned long);
+static void restorer()
+{
+    rt_sigreturn(0);
+}
+#endif
+
 sighandler_t signal(int signum, sighandler_t handler)
 {
     struct sigaction act, oldact;
     memset(&act, 0, sizeof(act));
     act.sa_handler = handler;
-    sigaction(signum, &act, &oldact);
-#if 0
-    if ((oldact.sa_flags & SA_SIGINFO) && oldact.sa_handler != SIG_DFL && oldact.sa_handler != SIG_IGN)
-        return SIG_DFL;
+    sigaddset(&act.sa_mask, signum);
+    act.sa_flags = SA_RESTART;
+#if defined(ARCH_x86_64)
+    act.sa_flags |= SA_RESTORER;
+    act.sa_restorer = restorer;
 #endif
+    if (sigaction(signum, &act, &oldact) < 0)
+       return SIG_ERR;
     return oldact.sa_handler;
 }
 

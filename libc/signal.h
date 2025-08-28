@@ -42,11 +42,12 @@ extern "C" {
 #define SIG_UNBLOCK 2
 
 #define SA_NOCLDSTOP 0x1
-#define SA_RESETHAND 0x2
-#define SA_RESTART 0x4
-#define SA_SIGINFO 0x8
-#define SA_ONSTACK 0x10
-#define SA_NODEFER 0x20
+#define SA_SIGINFO 0x04
+#define SA_RESTORER 0x4000000 /* not posix */
+#define SA_ONSTACK 0x8000000
+#define SA_RESETHAND 0x80000000
+#define SA_RESTART 0x10000000
+#define SA_NODEFER 0x40000000
 
 #define FPE_INTDIV 1
 #define FPE_FLTDIV 2
@@ -81,8 +82,9 @@ typedef struct {
 
 struct sigaction {
     sighandler_t sa_handler;
+    unsigned long sa_flags;
+    void (*sa_restorer)(void);
     sigset_t sa_mask;
-    int sa_flags;
     void (*sa_sigaction)(int, siginfo_t *, void *);
 };
 

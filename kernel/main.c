@@ -761,6 +761,7 @@ static int sys_mmap(struct os_mmap_request * req);
 static int sys_fcntl(int fd, int cmd, int value);
 static int sys_pthread_create(pthread_t * thread, const pthread_attr_t * attr, void * start_routine, void * arg);
 static int sys_pthread_join(registers * reg, pthread_t thread, void ** value_ptr);
+static int sys_rt_sysreturn(unsigned long unused);
 static int sys_rt_sigaction(int sig, const struct sigaction * act, struct sigaction * oact, size_t sigsetsize);
 static int sys_getitimer(int which, struct itimerval * value);
 static int sys_setitimer(int which, const struct itimerval * value, struct itimerval * ovalue);
@@ -1737,8 +1738,8 @@ static int process_signal(Task * t)
     current_task = t;
     load_user_pages(kernel_directory, t->proc->page_directory);
     int i;
-    for (i = 0; i < 64 && !sigismember(&current_task->proc->signal, i); i++) ;
-    if (i == 64)
+    for (i = 1; i < NSIG && !sigismember(&current_task->proc->signal, i); i++) ;
+    if (i == NSIG)
         return 0; /* should never happen */
     kprintf("process_signal: GOT SIGNAL %d: %s\n", i, strsignal(i));
     sighandler_t handler = current_task->proc->act[i].sa_handler;
@@ -2745,6 +2746,12 @@ static int sys_pthread_join(registers * reg, pthread_t thread, void ** value_ptr
     current_task->u.pthread_join.thread = thread;
     current_task->u.pthread_join.value_ptr = value_ptr;
     move_current_task_to_wait_queue(reg);
+    return 0;
+}
+
+static int sys_rt_sysreturn(unsigned long unused)
+{
+    kprintf("sys_sigreturn\n");
     return 0;
 }
 
