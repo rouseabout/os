@@ -595,7 +595,6 @@ enum {
     STATE_NANOSLEEP,
     STATE_READ,
     STATE_WRITE,
-    STATE_PTHREAD_JOIN,
     STATE_SELECT,
     STATE_PAUSE,
     STATE_ACCEPT,
@@ -611,18 +610,10 @@ static const char * state_names[NB_STATES] = {
     [STATE_NANOSLEEP] = "nanosleep",
     [STATE_READ] = "read",
     [STATE_WRITE] = "write",
-    [STATE_PTHREAD_JOIN] = "pthread_join",
     [STATE_SELECT] = "select",
     [STATE_PAUSE] = "pause",
     [STATE_ACCEPT] = "accept",
     [STATE_TRAP] = "trap",
-};
-
-typedef struct Join Join;
-struct Join {
-    pthread_t thread;
-    void * value;
-    Join * next;
 };
 
 typedef struct {
@@ -639,10 +630,6 @@ typedef struct {
 
     sigset_t signal;
     struct sigaction act[NSIG];
-    int thread_signal;
-
-    Join * joins; /* list of terminated threads */
-
 } Process;
 
 typedef struct Task Task;
@@ -665,10 +652,6 @@ struct Task {
         struct {
             struct timespec expire;
         } nanosleep;
-        struct {
-            pthread_t thread;
-            void ** value_ptr; //userspace pointer
-        } pthread_join;
         struct {
             FileDescriptor * fd;
             uint8_t * buf; //userspace pointer
@@ -694,6 +677,8 @@ struct Task {
     } u;
 
     Process * proc;
+
+    int thread_signal;
 
     Task * thread_parent;
     Task * next;
@@ -729,7 +714,6 @@ static void switch_task(registers * reg);
 static int sys_fork(const registers * reg);
 static int sys_getpid(void);
 static int sys_getppid(void);
-static int exit2(int status, int thread_termination);
 static int sys_exit(int status);
 static int sys_write(registers * reg, int fd, const void * buf, size_t size);
 static int sys_read(registers * reg, int fd, void * buf, size_t size);
@@ -759,8 +743,12 @@ static int sys_uname(struct utsname * name);
 static int sys_ioctl(int fd, int request, void * data);
 static int sys_mmap(struct os_mmap_request * req);
 static int sys_fcntl(int fd, int cmd, int value);
-static int sys_pthread_create(pthread_t * thread, const pthread_attr_t * attr, void * start_routine, void * arg);
-static int sys_pthread_join(registers * reg, pthread_t thread, void ** value_ptr);
+#if defined(ARCH_i686)
+static int sys_clone(registers * reg, unsigned long clone_flags, unsigned long newsp, int *parent_tidptr, unsigned long tls, int *child_tidptr);
+#elif defined(ARCH_x86_64)
+static int sys_clone(registers * reg, unsigned long clone_flags, unsigned long newsp, int *parent_tidptr, int *child_tidptr, unsigned long tls);
+#endif
+static int pthread_create(pthread_t * thread, const pthread_attr_t * attr, void * start_routine, void * arg, int thread_signal);
 static int sys_rt_sysreturn(unsigned long unused);
 static int sys_rt_sigaction(int sig, const struct sigaction * act, struct sigaction * oact, size_t sigsetsize);
 static int sys_getitimer(int which, struct itimerval * value);
@@ -909,27 +897,8 @@ void interrupt_handler(registers * regs)
 
         } else if (regs->number == 14) {
             void * cr2 = get_cr2();
-            if (cr2 == (void *)(uintptr_t)sys_pthread_join && current_task && current_task->thread_parent) {
-                if (current_task->proc->thread_signal) {
-                    Task * parent = current_task->thread_parent;
-                    exit2(1, 1);
-
-                    current_task = parent; /* okay */
-                    do_signal_action(current_task->proc->thread_signal);
-
-                    current_task = NULL;
-
-                    switch_task(regs);
-                    return;
-                }
-
-                Join * j = kmalloc(sizeof(Join), "join");
-                j->thread = current_task->id;
-                j->value = (void *)regs->eax;
-                j->next = current_task->proc->joins;
-                current_task->proc->joins = j;
-
-                exit2(1, 1);
+            if (cr2 == (void *)(uintptr_t)pthread_create && current_task && current_task->thread_parent) {
+                sys_exit(1);
                 switch_task(regs);
                 return;
             }
@@ -1476,7 +1445,6 @@ static void init_tasking(const char * console_dev)
     current_task->proc->pgrp  = current_task->id;
     current_task->proc->page_directory = directory;
     current_task->proc->stack_next = USER_STACK_TOP - USER_STACK_SIZE;
-    current_task->proc->joins = NULL;
 
     strlcpy(current_task->proc->cwd, "/", sizeof(current_task->proc->cwd));
 
@@ -1639,18 +1607,6 @@ static int task_ready(Task * t)
         }
     }
 
-    if (t->state == STATE_PTHREAD_JOIN) {
-        for (Join * j = t->proc->joins; j; j = j->next) {
-            if (j->thread == t->u.pthread_join.thread) {
-                if (t->u.pthread_join.value_ptr) {
-                    load_user_pages(kernel_directory, t->proc->page_directory);
-                    *t->u.pthread_join.value_ptr = j->value;
-                }
-                return 1;
-            }
-        }
-    }
-
     if (t->state == STATE_SELECT) {
         fd_set r_response, w_response;
 
@@ -1721,11 +1677,16 @@ static int do_signal_action(int i)
         return 1;
     }
 
-    if (i == SIGTRAP) {
+    if (i == SIGCONT) {
         current_task->state = STATE_RUNNING;
         sigdelset(&current_task->proc->signal, i);
         move_current_task_to_queue(&ready_queue);
         current_task = NULL;
+        return 1;
+    }
+
+    if (i == SIGCHLD) {
+        sigdelset(&current_task->proc->signal, i);
         return 1;
     }
 
@@ -1743,12 +1704,11 @@ static int process_signal(Task * t)
         return 0; /* should never happen */
     kprintf("process_signal: GOT SIGNAL %d: %s\n", i, strsignal(i));
     sighandler_t handler = current_task->proc->act[i].sa_handler;
-    if (handler != SIG_DFL && handler != SIG_IGN && i != SIGKILL && i != SIGSTOP) {
+    if (handler != SIG_DFL && handler != SIG_IGN && i != SIGKILL && i != SIGSTOP && i != SIGCONT) {
         //  create thread with handler
         pthread_t thread;
         kprintf("invoking handler\n");
-        sys_pthread_create(&thread, NULL, (void *)(uintptr_t)handler, (void *)(uintptr_t)i);
-        current_task->proc->thread_signal = i;
+        pthread_create(&thread, NULL, (void *)(uintptr_t)handler, (void *)(uintptr_t)i, i == SIGTRAP ? SIGCONT : 0 /* thread_signal */); //FIXME: convert to clone
         sigdelset(&current_task->proc->signal, i);
         current_task = NULL;
         return 0;
@@ -1866,7 +1826,6 @@ static int sys_fork(const registers * reg)
     new_task->proc->page_directory = directory;
     strlcpy(new_task->proc->cwd, current_task->proc->cwd, sizeof(new_task->proc->cwd));
     vfs_dup_fds(new_task->proc->fd, current_task->proc->fd, OPEN_MAX);
-    new_task->proc->joins = NULL;
     memcpy(new_task->proc->act, current_task->proc->act, sizeof(new_task->proc->act));
     sigemptyset(&new_task->proc->signal);
     init_itimer(&new_task->proc->timer);
@@ -1944,7 +1903,7 @@ static void free_stack(uintptr_t stack_top, uintptr_t size)
         free_frame(get_page_entry(i, 0, current_task->proc->page_directory, NULL, 0));
 }
 
-static int exit2(int status, int thread_termination)
+static int sys_exit(int status)
 {
     kprintf("sys_exit pid=%d, status=%d\n", current_task->id, status);
 
@@ -1956,9 +1915,8 @@ static int exit2(int status, int thread_termination)
         *pp = current_task->next;
     }
 
-    free_stack(ct->stack_top, USER_STACK_SIZE);
-
     if (!current_task->thread_parent) {
+        free_stack(ct->stack_top, USER_STACK_SIZE);
 
         /* free child zombies */
         Task ** pp;
@@ -1986,18 +1944,13 @@ static int exit2(int status, int thread_termination)
         zombie_queue = ct;
 
     } else { // is a thread
-        if (!thread_termination)
-            deliver_signal_pid(current_task->thread_parent->id, SIGKILL);
+        if (ct->thread_signal)
+            deliver_signal_pid(current_task->thread_parent->id, ct->thread_signal);
         kfree(ct);
     }
 
     current_task = NULL; /* rely on switch_task() after syscall */
     return 0;
-}
-
-static int sys_exit(int status)
-{
-    return exit2(status, 0);
 }
 
 static void move_current_task_to_wait_queue(const registers * reg)
@@ -2212,7 +2165,6 @@ static Task * create_task_kernel(void (*eip)(int), unsigned int stack_size, uint
     new_task->proc->page_directory = kernel_directory;
     strlcpy(new_task->proc->cwd, "/", sizeof(new_task->proc->cwd));
     memset(new_task->proc->fd, 0, sizeof(new_task->proc->fd)); // HAS NO FDS
-    new_task->proc->joins = NULL;
     sigemptyset(&new_task->proc->signal);
     init_sigact(new_task);
     init_itimer(&new_task->proc->timer);
@@ -2698,9 +2650,38 @@ static int sys_fcntl(int fd, int cmd, int value)
     return -EINVAL;
 }
 
-static int sys_pthread_create(pthread_t * thread, const pthread_attr_t * attr, void * start_routine, void * arg)
+#if defined(ARCH_i686)
+static int sys_clone(registers * reg, unsigned long clone_flags, unsigned long newsp, int *parent_tidptr, unsigned long tls, int *child_tidptr)
+#elif defined(ARCH_x86_64)
+static int sys_clone(registers * reg, unsigned long clone_flags, unsigned long newsp, int *parent_tidptr, int *child_tidptr, unsigned long tls)
+#endif
 {
-    kprintf("sys_pthread_create: %p, %p, %p, %p\n", thread, attr, start_routine, arg);
+    kprintf("sys_clone 0x%lx 0x%lx\n", clone_flags, newsp);
+
+    Task * new_task = kmalloc(sizeof(Task), "task-thread");
+    memset(new_task, 0, sizeof(Task));
+    snprintf(new_task->name, sizeof(new_task->name), "%s:thread", current_task->name);
+    new_task->id = next_pid++;
+    new_task->ppid = current_task->id;
+    new_task->state = STATE_RUNNING;
+    new_task->stack_top = current_task->stack_top;
+    new_task->reg = *reg;
+    new_task->reg.esp = newsp;
+    new_task->reg.eax = 0;
+    new_task->thread_parent = current_task;
+    new_task->proc = current_task->proc;
+    new_task->thread_signal = clone_flags & 0xFF;
+
+    // insert into ready queue
+    new_task->next = (Task *)ready_queue;
+    ready_queue = new_task;
+
+    return new_task->id;
+}
+
+static int pthread_create(pthread_t * thread, const pthread_attr_t * attr, void * start_routine, void * arg, int thread_signal)
+{
+    kprintf("pthread_create: %p, %p, %p, %p\n", thread, attr, start_routine, arg);
 
     Task * new_task = kmalloc(sizeof(Task), "task-thread");
     memset(new_task, 0, sizeof(Task));
@@ -2723,13 +2704,13 @@ static int sys_pthread_create(pthread_t * thread, const pthread_attr_t * attr, v
     new_task->thread_parent = current_task;
 
     new_task->proc = current_task->proc;
-    current_task->proc->thread_signal = 0; /* when thread exits, don't do_signal_action */
+    new_task->thread_signal = thread_signal;
 
     void ** stack_values = (void **)new_task->reg.esp;
 #if defined(ARCH_i686)
     stack_values[1] = arg;
 #endif
-    stack_values[0] = (void *)(uintptr_t)sys_pthread_join; /* thread termination indicator, will deliberatey trigger page fault */
+    stack_values[0] = (void *)(uintptr_t)pthread_create; /* thread termination indicator, will deliberatey trigger page fault */
 #if defined(ARCH_x86_64)
     new_task->reg.edi = (uintptr_t)arg;
 #endif
@@ -2737,15 +2718,6 @@ static int sys_pthread_create(pthread_t * thread, const pthread_attr_t * attr, v
     // insert into ready queue
     new_task->next = (Task *)ready_queue;
     ready_queue = new_task;
-    return 0;
-}
-
-static int sys_pthread_join(registers * reg, pthread_t thread, void ** value_ptr)
-{
-    current_task->state = STATE_PTHREAD_JOIN;
-    current_task->u.pthread_join.thread = thread;
-    current_task->u.pthread_join.value_ptr = value_ptr;
-    move_current_task_to_wait_queue(reg);
     return 0;
 }
 
