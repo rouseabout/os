@@ -131,7 +131,7 @@ qemu-linux-serial: kernel.linux initrd
 LIBC_COMMON_OBJS=$(addprefix libc/,bsd_string.o ctype.o heap.o langinfo.o libgen.o signal.o stdio.o stdlib.o string.o strings.o time.o) $(addprefix libm/,math.o)
 
 #libc modules only used by libc.a
-LIBC_ONLY_OBJS=$(addprefix libc/,arpa_inet.o dirent.o errno.o fcntl.o fnmatch.o getopt.o grp.o inttypes.o locale.o mntent.o netdb.o net_if.o netinet_in.o poll.o pthread.o pwd.o regex.o sched.o semaphore.o $(ARCH)/setjmp.o signal2.o stdio2.o stdlib2.o string2.o sys_ioctl.o sys_mman.o sys_resource.o sys_select.o sys_socket.o sys_stat.o sys_statvfs.o sys_time.o sys_times.o sys_uio.o sys_utsname.o sys_wait.o syslog.o termios.o time2.o unistd.o utime.o wchar.o wctype.o crt0.o)
+LIBC_ONLY_OBJS=$(addprefix libc/,arpa_inet.o dirent.o errno.o fcntl.o fnmatch.o getopt.o grp.o inttypes.o locale.o mntent.o netdb.o net_if.o netinet_in.o poll.o pthread.o pwd.o regex.o sched.o semaphore.o $(ARCH)/clone.o $(ARCH)/setjmp.o signal2.o stdio2.o stdlib2.o string2.o sys_ioctl.o sys_mman.o sys_resource.o sys_select.o sys_socket.o sys_stat.o sys_statvfs.o sys_time.o sys_times.o sys_uio.o sys_utsname.o sys_wait.o syslog.o termios.o time2.o unistd.o utime.o wchar.o wctype.o crt0.o)
 
 kernel/paging_std.o: kernel/paging_template.c kernel/paging_template.h
 kernel/paging_pae.o: kernel/paging_template.c kernel/paging_template.h

@@ -1,6 +1,9 @@
 #include <pthread.h>
+#include <signal.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <syslog.h>
+#include <sys/wait.h>
 #include <os/syscall.h>
 
 int pthread_attr_init(pthread_attr_t * attr)
@@ -43,10 +46,41 @@ int pthread_cond_wait(pthread_cond_t * cond, pthread_mutex_t * mutex)
     return 0; //FIXME:
 }
 
-static MK_SYSCALL4(int, sys_pthread_create, OS_PTHREAD_CREATE, pthread_t *, const pthread_attr_t *, void *, void *)
+struct pthread {
+    char * stack;
+    int parent_tid;
+    int child_tid;
+    void * value;
+};
+
+int do_clone(int clone_flags, void * stack, void * (*start_routine)(void*), void * arg, void ** value_ptr);
+
 int pthread_create(pthread_t * thread, const pthread_attr_t * attr, void *(*start_routine)(void*), void * arg)
 {
-    return sys_pthread_create(thread, attr, (void *)(intptr_t)start_routine, arg);
+    struct pthread * pd = malloc(sizeof(struct pthread));
+    if (!pd) {
+        errno = EAGAIN;
+        return -1;
+    }
+
+    int stack_size = 0x1000;
+
+    pd->stack = malloc(stack_size);
+    if (!pd->stack) {
+        free(pd);
+        errno = EAGAIN;
+        return -1;
+    }
+
+    int pid = do_clone(CLONE_VM | CLONE_FILES | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | /*CLONE_THREAD | CLONE_SETTLS |*/ SIGCHLD, pd->stack + stack_size, start_routine, arg, &pd->value);
+    if (pid < 0) {
+        errno = pid;
+        return -1;
+    }
+
+    pd->child_tid = pid;
+    *thread = (unsigned long)pd;
+    return 0;
 }
 
 int pthread_detach(pthread_t thread)
@@ -70,7 +104,15 @@ void * pthread_getspecific(pthread_key_t key)
     return NULL; //FIXME:
 }
 
-MK_SYSCALL2(int, pthread_join, OS_PTHREAD_JOIN, pthread_t, void **)
+int pthread_join(pthread_t thread, void ** value_ptr)
+{
+    struct pthread * pd = (struct pthread *)thread;
+    waitpid(pd->child_tid, NULL, 0);
+    *value_ptr = pd->value;
+    free(pd->stack);
+    free(pd);
+    return 0;
+}
 
 int pthread_key_create(pthread_key_t * key, void (*destructor)(void*))
 {

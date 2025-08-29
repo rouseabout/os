@@ -55,6 +55,7 @@ enum {
     OS_SYSCALL_NR(STAT, 106, 4),
     OS_SYSCALL_NR(LSTAT, 107, 6),
     OS_SYSCALL_NR(FSTAT, 108, 5),
+    OS_SYSCALL_NR(CLONE, 120, 56),
     OS_SYSCALL_NR(UNAME, 122, 63),
     OS_SYSCALL_NR(GETPGID, 132, 121),
     OS_SYSCALL_NR(FCHDIR, 133, 81),
@@ -189,5 +190,12 @@ struct os_mmap_request {
     int fildes;
     off_t off;
 };
+
+#define CLONE_VM 0x100
+#define CLONE_FS 0x200
+#define CLONE_FILES 0x400
+#define CLONE_SIGHAND 0x800
+#define CLONE_THREAD 0x10000
+#define CLONE_SETTLS 0x80000
 
 #endif /* OS_SYSCALL_H */

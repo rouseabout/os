@@ -23,7 +23,7 @@ typedef int pthread_key_t;
 typedef int pthread_once_t;
 typedef int pthread_mutex_t;
 typedef int pthread_mutexattr_t;
-typedef int pthread_t;
+typedef unsigned long pthread_t;
 typedef int ssize_t;
 typedef int suseconds_t;
 typedef long time_t;
