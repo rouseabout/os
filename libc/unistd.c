@@ -168,7 +168,11 @@ int execvp(const char * pathname, char * const argv[])
 
 void _exit(int status)
 {
+#if defined(ARCH_i686)
     asm volatile ("int $0x80" : : "a"(OS_EXIT), "b"(status));
+#elif defined(ARCH_x86_64)
+    asm volatile ("syscall" : : "a"(OS_EXIT), "D"(status));
+#endif
 }
 
 MK_SYSCALL1(int, dup, OS_DUP, int)
