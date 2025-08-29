@@ -402,10 +402,13 @@ int main(int argc, char **argv, char ** envp)
 
 {
     pthread_t t;
-    pthread_create(&t, NULL, thread_func, (void *)0xc0de);
-    void *ret;
-    pthread_join(t, &ret);
-    TESTCASE(ret == (void *)0xc0de);
+    if (pthread_create(&t, NULL, thread_func, (void *)0xc0de) < 0) {
+        TESTCASE(0);
+    } else {
+        void *ret;
+        pthread_join(t, &ret);
+        TESTCASE(ret == (void *)0xc0de);
+    }
 }
 
     signal(SIGALRM, alarm_handler);
