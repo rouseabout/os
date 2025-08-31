@@ -1,29 +1,38 @@
 #ifndef LINUX_FB_H
 #define LINUX_FB_H
 
-#define FBIOGET_FSCREENINFO 1
-#define FBIOGET_VSCREENINFO 2
+#include <stdint.h>
+
+#define FBIOGET_VSCREENINFO 0x4600
+#define FBIOGET_FSCREENINFO 0x4602
 
 struct fb_fix_screeninfo {
     char id[16];
-    int line_length;
-    int smem_len;
+    uintptr_t smem_start;
+    uint32_t smem_len;
+    uint32_t type;
+    uint32_t type_aux;
+    uint32_t visual;
+    uint16_t xpanstep;
+    uint16_t ypanstep;
+    uint16_t ywrapstep;
+    uint32_t line_length;
 };
 
 struct fb_bitfield {
-    int offset;
-    int length;
+    uint32_t offset;
+    uint32_t length;
 };
 
 struct fb_var_screeninfo {
-    int xres;
-    int yres;
-    int xres_virtual;
-    int yres_virtual;
-    int xoffset;
-    int yoffset;
-    int bits_per_pixel;
-    int grayscale;
+    uint32_t xres;
+    uint32_t yres;
+    uint32_t xres_virtual;
+    uint32_t yres_virtual;
+    uint32_t xoffset;
+    uint32_t yoffset;
+    uint32_t bits_per_pixel;
+    uint32_t grayscale;
     struct fb_bitfield red, green, blue, transp;
 };
 
