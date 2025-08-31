@@ -18,6 +18,7 @@
 #include "vfs.h"
 #include "paging.h"
 
+#include <sys/mman.h>
 #include <sys/select.h>
 #include <sys/time.h>
 #include <sys/types.h>
