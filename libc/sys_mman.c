@@ -4,7 +4,6 @@
 #include <syslog.h>
 
 #include <unistd.h>
-static MK_SYSCALL1(int, sys_mmap, OS_MMAP, struct os_mmap_request *)
 void * mmap(void * addr, size_t len, int prot, int flags, int fildes, off_t off)
 {
     if (fildes < 0) {
@@ -14,20 +13,26 @@ void * mmap(void * addr, size_t len, int prot, int flags, int fildes, off_t off)
         return ptr;
     }
 
+    void * ret;
+#if defined(ARCH_i686)
     struct os_mmap_request req = {addr, len, prot, flags, fildes, off};
-    int ret = sys_mmap(&req);
+    os_syscall1(ret, OS_MMAP, &req);
+#else
+    os_syscall6(ret, OS_MMAP, addr, len, prot, flags, fildes, off);
+#endif
 
     /* user space mmap */
-    if (ret < 0) {
+    if (ret == MAP_FAILED) {
         off_t pos = lseek(fildes, 0, SEEK_CUR);
         lseek(fildes, off, SEEK_SET);
-        req.addr = malloc(len);
-        if (!req.addr)
+        ret = malloc(len);
+        if (!ret)
             return MAP_FAILED;
-        read(fildes, req.addr, len);
+        read(fildes, ret, len);
         lseek(fildes, pos, SEEK_SET);
     }
-    return req.addr;
+
+    return ret;
 }
 
 int mprotect(void * addr, size_t len, int prot)

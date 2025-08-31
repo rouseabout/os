@@ -741,7 +741,11 @@ static pid_t sys_getpgrp(void);
 static int sys_kill(pid_t pid, int sig);
 static int sys_uname(struct utsname * name);
 static int sys_ioctl(int fd, int request, void * data);
-static int sys_mmap(struct os_mmap_request * req);
+#if defined(ARCH_i686)
+static uintptr_t sys_mmap(struct os_mmap_request * req);
+#elif defined(ARCH_x86_64)
+static uintptr_t sys_mmap(unsigned long addr, unsigned long len, unsigned long prot, unsigned long flags, int fd, unsigned long off);
+#endif
 static int sys_fcntl(int fd, int cmd, int value);
 #if defined(ARCH_i686)
 static int sys_clone(registers * reg, unsigned long clone_flags, unsigned long newsp, int *parent_tidptr, unsigned long tls, int *child_tidptr);
@@ -981,6 +985,8 @@ void interrupt_handler(registers * regs)
     case syscall: regs->eax = name((type1)regs->ebx, (type2)regs->ecx, (type3)regs->edx, (type4)regs->esi); break;
 #define SYSCALL5R(syscall, name, type1, type2, type3, type4, type5) \
     case syscall: regs->eax = name(regs, (type1)regs->ebx, (type2)regs->ecx, (type3)regs->edx, (type4)regs->esi, (type5)regs->edi); break;
+#define SYSCALL6(syscall, name, type1, type2, type3, type4, type5, type6) \
+    case syscall: regs->eax = name((type1)regs->ebx, (type2)regs->ecx, (type3)regs->edx, (type4)regs->esi, (type5)regs->edi, (type6)regs->ebp); break;
 #include "syscalls.h"
 #undef SYSCALL0
 #undef SYSCALL0R
@@ -992,6 +998,7 @@ void interrupt_handler(registers * regs)
 #undef SYSCALL3R
 #undef SYSCALL4
 #undef SYSCALL5R
+#undef SYSCALL6
         default:
             kprintf("unknown syscall: %d\n", regs->eax);
             regs->eax = -ENOSYS;
@@ -1084,6 +1091,8 @@ void syscall_handler2(registers * regs)
     case syscall: regs->eax = name((type1)regs->edi, (type2)regs->esi, (type3)regs->edx, (type4)regs->r10); break;
 #define SYSCALL5R(syscall, name, type1, type2, type3, type4, type5) \
     case syscall: regs->eax = name(regs, (type1)regs->edi, (type2)regs->esi, (type3)regs->edx, (type4)regs->r10, (type5)regs->r8); break;
+#define SYSCALL6(syscall, name, type1, type2, type3, type4, type5, type6) \
+    case syscall: regs->eax = name((type1)regs->edi, (type2)regs->esi, (type3)regs->edx, (type4)regs->r10, (type5)regs->r8, (type6)regs->r9); break;
 #include "syscalls.h"
 #undef SYSCALL0
 #undef SYSCALL0R
@@ -1095,6 +1104,7 @@ void syscall_handler2(registers * regs)
 #undef SYSCALL3R
 #undef SYSCALL4
 #undef SYSCALL5R
+#undef SYSCALL6
     default:
         kprintf("unknown syscall: %d\n", regs->eax);
         regs->eax = -ENOSYS;
@@ -2603,7 +2613,8 @@ static int sys_ioctl(int fd, int request, void * data)
     return ret;
 }
 
-static int sys_mmap(struct os_mmap_request * req)
+#if defined(ARCH_i686)
+static uintptr_t sys_mmap(struct os_mmap_request * req)
 {
     int fd = req->fildes;
     kprintf("sys_mmap fd=%d, addr=%p, len=0x%x\n", fd, req->addr, req->len);
@@ -2611,8 +2622,20 @@ static int sys_mmap(struct os_mmap_request * req)
         return -ENOSYS;
     if (fd < 0 || fd >= OPEN_MAX || !current_task->proc->fd[fd])
         return -EBADF;
-    return vfs_mmap(current_task->proc->fd[fd], req);
+    return vfs_mmap(current_task->proc->fd[fd], req) < 0 ? (uintptr_t)MAP_FAILED : (uintptr_t)req->addr;
 }
+#elif defined(ARCH_x86_64)
+static uintptr_t sys_mmap(unsigned long addr, unsigned long len, unsigned long prot, unsigned long flags, int fd, unsigned long off)
+{
+    kprintf("sys_mmap fd=%d, addr=%p, len=0x%x\n", fd, addr, len);
+    if (fd < 0)
+        return -ENOSYS;
+    if (fd < 0 || fd >= OPEN_MAX || !current_task->proc->fd[fd])
+        return -EBADF;
+    struct os_mmap_request req = {(void *)addr, len, prot, flags, fd, off};
+    return vfs_mmap(current_task->proc->fd[fd], &req) < 0 ? (uintptr_t)MAP_FAILED : (uintptr_t)req.addr;
+}
+#endif
 
 static int sys_fcntl(int fd, int cmd, int value)
 {

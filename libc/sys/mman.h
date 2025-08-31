@@ -16,7 +16,7 @@ extern "C" {
 #define MAP_PRIVATE 2
 #define MAP_ANONYMOUS 4
 
-#define MAP_FAILED 0
+#define MAP_FAILED (void *)-1
 
 #define MS_SYNC 1
 

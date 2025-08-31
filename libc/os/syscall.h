@@ -113,6 +113,13 @@ do { \
     register long r8 __asm__("r8") = (long)a5; \
     asm volatile ("syscall" : "=a"(result) : "a"(syscall), "D"(a1), "S"(a2), "d"(a3), "r"(r10), "r"(r8) : "rcx", "r11", "memory"); \
 } while(0)
+#define os_syscall6(result, syscall, a1, a2, a3, a4, a5, a6) \
+do { \
+    register long r10 __asm__("r10") = (long)a4; \
+    register long r8 __asm__("r8") = (long)a5; \
+    register long r9 __asm__("r9") = (long)a6; \
+    asm volatile ("syscall" : "=a"(result) : "a"(syscall), "D"(a1), "S"(a2), "d"(a3), "r"(r10), "r"(r8), "r"(r9) : "rcx", "r11", "memory"); \
+} while(0)
 #endif
 
 #define RET_ERRNO(ret_type) \
