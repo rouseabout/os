@@ -679,6 +679,7 @@ struct Task {
 
     Process * proc;
 
+    int is_signal;
     int thread_signal;
 
     Task * thread_parent;
@@ -1450,6 +1451,8 @@ static void init_tasking(const char * console_dev)
     current_task->thread_parent = NULL;
     current_task->stack_top = USER_STACK_TOP;
     alloc_stack(directory, (void*)USER_STACK_TOP, USER_STACK_SIZE, 0xf0);
+    current_task->is_signal  = 0;
+    current_task->thread_signal = 0;
 
     /* process specific */
     current_task->proc = (Process *)(current_task + 1);
@@ -1947,17 +1950,17 @@ static int sys_exit(int status)
 
         /* kill any threads belonging to this process */
         kill_threads(current_task);
+    } else {
+        if (ct->thread_signal)
+            deliver_signal_pid(current_task->thread_parent->id, ct->thread_signal);
+    }
 
-        ct->proc->errorlevel = status;
+    ct->proc->errorlevel = status;
 
+    if (!ct->is_signal) {
         ct->state = STATE_ZOMBIE;
         ct->next = zombie_queue;
         zombie_queue = ct;
-
-    } else { // is a thread
-        if (ct->thread_signal)
-            deliver_signal_pid(current_task->thread_parent->id, ct->thread_signal);
-        kfree(ct);
     }
 
     current_task = NULL; /* rely on switch_task() after syscall */
@@ -2694,6 +2697,7 @@ static int sys_clone(registers * reg, unsigned long clone_flags, unsigned long n
     new_task->reg.eax = 0;
     new_task->thread_parent = current_task;
     new_task->proc = current_task->proc;
+    new_task->is_signal = 0;
     new_task->thread_signal = clone_flags & 0xFF;
 
     // insert into ready queue
@@ -2728,6 +2732,7 @@ static int pthread_create(pthread_t * thread, const pthread_attr_t * attr, void 
     new_task->thread_parent = current_task;
 
     new_task->proc = current_task->proc;
+    new_task->is_signal = 1;
     new_task->thread_signal = thread_signal;
 
     void ** stack_values = (void **)new_task->reg.esp;
