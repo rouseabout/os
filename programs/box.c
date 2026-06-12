@@ -134,6 +134,10 @@ int main(int argc, char ** argv, char ** envp)
     for (int i = 0 ; i < sizeof(programs)/sizeof(programs[0]); i++)
         if (!strcmp(programs[i].name, name))
             return programs[i].main(argc, argv, envp);
+    if (argc > 1)
+        for (int i = 0 ; i < sizeof(programs)/sizeof(programs[0]); i++)
+            if (!strcmp(programs[i].name, argv[1]))
+                return programs[i].main(argc - 1, argv + 1, envp);
     fprintf(stderr, "known commands:");
     for (int i = 0 ; i < sizeof(programs)/sizeof(programs[0]); i++)
         fprintf(stderr, " %s", programs[i].name);
