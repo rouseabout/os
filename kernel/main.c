@@ -1156,7 +1156,6 @@ uintptr_t allocate_virtual_address(uintptr_t size, int align)
     return tmp;
 }
 
-//FIXME: phys should be uint64_t
 static uintptr_t kmalloc_core(uintptr_t size, int align, uint64_t * phys, int use_reserve, const char * tag)
 {
     if (use_halloc) {
