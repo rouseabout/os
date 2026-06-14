@@ -53,6 +53,8 @@ start:
     mov [0x7c00 + 0x218], ebx
     mov ebx, INITRD_SECTORS * 512
     mov [0x7c00 + 0x21c], ebx
+    mov ebx, cmdline
+    mov [0x7c00 + 0x228], ebx
 
 %if 0 ; mode 0x13 framebuffer
     mov ax, 0x13
@@ -197,6 +199,8 @@ zkernel: db 0xd, 0xa, "kernel...", 0
 zinitrd: db 0xd, 0xa, "initrd...", 0
 znewline: db 0xd, 0xa, 0
 zerror: db " error", 0xd, 0xa, 0
+
+cmdline: db "", 0
 
 align 4
 dap:
