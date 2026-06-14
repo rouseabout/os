@@ -159,15 +159,6 @@ size_t mbstowcs(wchar_t * pwcs, const char * s, size_t n)
     return (size_t)-1;
 }
 
-#include <fcntl.h>
-#include <sys/stat.h>
-char * mkdtemp(char * template)
-{
-    syslog(LOG_DEBUG, "libc: mkdtemp");
-    mkdir(template, 0666); //FIXME:
-    return template;
-}
-
 #include <time.h>
 static int template_counter = 0;
 static int fill_template(char * template)
@@ -183,6 +174,16 @@ static int fill_template(char * template)
         id /= 26;
     }
     return 0;
+}
+
+#include <fcntl.h>
+#include <sys/stat.h>
+char * mkdtemp(char * template)
+{
+    if (fill_template(template) == -1)
+        return NULL;
+    mkdir(template, 0700);
+    return template;
 }
 
 int mkstemp(char * template)
