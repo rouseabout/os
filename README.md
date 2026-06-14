@@ -248,6 +248,16 @@ This is possible, because *os* syscalls are similar to those used by the Linux k
 There is no `cp` program; use `cat source > dest` instead.
 The `sh` program supports running programs, pipes, redirection and background processes, but little else.
 
+### Writing programs
+
+An editor, assembler and linker are provided for writing new programs. The assembler interprets a subset of the NASM syntax. Example usage:
+
+```
+vi hello.asm
+asm hello.asm
+ld hello.o
+./a.out
+```
 
 ## History
 
