@@ -937,7 +937,7 @@ void interrupt_handler(registers * regs)
 
         if (number == 32 + 0) {  /* system timer */
             tnow.tv_nsec += 1000000000 / TICKS_PER_SECOND;
-            if (tnow.tv_nsec > 1000000000) {
+            if (tnow.tv_nsec >= 1000000000) {
                 tnow.tv_sec++;
                 tnow.tv_nsec = 0;
             }
@@ -1484,7 +1484,7 @@ static int timespec_is_nonzero(const struct timespec a)
 
 static int timespec_is_lte(const struct timespec a, const struct timespec b)
 {
-    if (a.tv_sec <= b.tv_sec)
+    if (a.tv_sec < b.tv_sec)
         return 1;
     if (a.tv_sec == b.tv_sec && a.tv_nsec <= b.tv_nsec)
         return 1;
