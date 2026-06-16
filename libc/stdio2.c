@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <syslog.h>
+#include <bsd/string.h>
 #include <os/syscall.h>
 
 enum {
@@ -42,7 +43,10 @@ void clearerr(FILE * stream)
 
 char * ctermid(char * s)
 {
-    return "/dev/tty";
+    if (!s)
+        return "/dev/tty";
+    strlcpy(s, "/dev/tty", L_ctermid);
+    return s;
 }
 
 int fclose(FILE * stream)
