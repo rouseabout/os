@@ -79,7 +79,7 @@ static int proc_getdents(FileDescriptor * fd, struct dirent * dent, size_t count
         for (int j = 0; j < OPEN_MAX; j++) {
             if (!fds[j])
                 continue;
-            if (i - 2 == fd->pos) {
+            if (j + 2 == fd->pos) {
                 dent[0].d_ino = PROC_INODE_FD_BASE + j;
                 snprintf(dent[0].d_name, sizeof(dent[0].d_name), "%d", j);
                 fd->pos++;
