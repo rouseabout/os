@@ -39,9 +39,12 @@ static void ls(const char * dir_name, int a, int sep, int l)
     }
 
     struct dirent * de;
+    int i = 0;
     while ((de = readdir(dir))) {
         if (!a && de->d_name[0] == '.')
             continue;
+        if (i)
+            printf("%c", sep);
         if (l)
             printf("%6d ", de->d_ino);
         struct stat st = {0};
@@ -66,11 +69,10 @@ static void ls(const char * dir_name, int a, int sep, int l)
                 printf(" -> %s", symlink);
             }
         }
-        printf("%c", sep);
+        i = 1;
     }
 
-    if (sep == '\t')
-        printf("\n");
+    printf("\n");
 
     closedir(dir);
 }
