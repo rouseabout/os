@@ -102,7 +102,9 @@ start2:
     shr eax, 8
     mov [gdt.tss_entry + 7], al
 
-    mov al, 0xE9 ; v86 emulator reboot corrupts tss access field
+    ; on reboot, the v86 emulator does not reload kernel image and we are provided with a "Busy TSS" (0xEB) access field from previous boot
+    ; we must restore this to "Available TSS" (0xE9) otherwise v86 emulator will panic
+    mov al, 0xE9
     mov [gdt.tss_entry + 5], al
 
     lgdt [gdt_ptr]
