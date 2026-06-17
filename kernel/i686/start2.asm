@@ -102,6 +102,9 @@ start2:
     shr eax, 8
     mov [gdt.tss_entry + 7], al
 
+    mov al, 0xE9 ; v86 emulator reboot corrupts tss access field
+    mov [gdt.tss_entry + 5], al
+
     lgdt [gdt_ptr]
 
     mov ax, 0x2b ; tss segment in gdt + rpl 3
