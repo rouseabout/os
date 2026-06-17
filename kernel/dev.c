@@ -13,6 +13,7 @@ struct DeviceFile {
     int isatty;
     int (*getsize)(void * priv_data);
     const char * symlink;
+    int tty_symlink;
     void * priv_data;
     DeviceFile * next;
 };
@@ -20,7 +21,7 @@ struct DeviceFile {
 static int dev_inode_next = DEV_INODE_MIN + 1;
 static DeviceFile * dev_inodes = NULL;
 
-static void add_dev_inode(int inode, const char * name, const DeviceOperations * ops, int isatty, int (*getsize)(void * priv_data), void * priv_data, const char * symlink)
+static void add_dev_inode(int inode, const char * name, const DeviceOperations * ops, int isatty, int (*getsize)(void * priv_data), void * priv_data, const char * symlink, int tty_symlink)
 {
     DeviceFile * d = kmalloc(sizeof(DeviceFile), "device-inode");
     d->inode = inode;
@@ -30,6 +31,7 @@ static void add_dev_inode(int inode, const char * name, const DeviceOperations *
     d->isatty = isatty;
     d->getsize = getsize;
     d->symlink = symlink;
+    d->tty_symlink = tty_symlink;
     d->next = NULL;
 
     DeviceFile ** dp;
@@ -39,18 +41,20 @@ static void add_dev_inode(int inode, const char * name, const DeviceOperations *
 
 void dev_init()
 {
-    add_dev_inode(DEV_INODE_MIN, ".", &null_dio, 0, NULL, NULL, NULL);
-    add_dev_inode(2, "..", NULL, 0, NULL, NULL, NULL);
+    add_dev_inode(DEV_INODE_MIN, ".", &null_dio, 0, NULL, NULL, NULL, 0);
+    add_dev_inode(2, "..", NULL, 0, NULL, NULL, NULL, 0);
+
+    add_dev_inode(dev_inode_next++, "tty", NULL, 1, NULL, NULL, NULL, 1);
 }
 
 void dev_register_device(const char * name, const DeviceOperations * ops, int isatty, int (*getsize)(void * priv_data), void * priv_data)
 {
-    add_dev_inode(dev_inode_next++, name, ops, isatty, getsize, priv_data, NULL);
+    add_dev_inode(dev_inode_next++, name, ops, isatty, getsize, priv_data, NULL, 0);
 }
 
 void dev_register_symlink(const char * name, const char * symlink)
 {
-    add_dev_inode(dev_inode_next++, name, NULL, 0, NULL, NULL, symlink);
+    add_dev_inode(dev_inode_next++, name, NULL, 0, NULL, NULL, symlink, 0);
 }
 
 static int dev_getdents(FileDescriptor * fd, struct dirent * dent, size_t count)
@@ -88,11 +92,17 @@ static int dev_inode_resolve(void * priv_data, int dinode, const char * target)
     return -ENOENT;
 }
 
+const char * get_current_task_terminal(void);
+
 static int dev_inode_symlink(void * priv_data, int inode, char * buf, size_t size)
 {
     for (DeviceFile * d = dev_inodes; d; d = d->next)
-        if (d->inode == inode && d->symlink)
-            return strlcpy(buf, d->symlink, size);
+        if (d->inode == inode) {
+            if (d->symlink)
+                return strlcpy(buf, d->symlink, size);
+            if (d->tty_symlink)
+                return strlcpy(buf, get_current_task_terminal(), size);
+        }
     return -ENOENT;
 }
 
@@ -110,7 +120,7 @@ static int dev_inode_stat(void * priv_data, int inode, struct stat * st)
 
     for (DeviceFile * d = dev_inodes; d; d = d->next) {
         if (d->inode == inode) {
-            if (d->symlink) {
+            if (d->symlink || d->tty_symlink) {
                 st->st_mode = S_IFLNK | 0666;
                 return 0;
             }

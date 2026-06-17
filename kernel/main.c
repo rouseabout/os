@@ -26,6 +26,7 @@
 #include <sys/un.h>
 #include <sys/statvfs.h>
 #include <sys/wait.h>
+#include <sys/ioctl.h>
 #include <sys/utsname.h>
 #include <bsd/string.h>
 #include <time.h>
@@ -621,6 +622,7 @@ typedef struct {
     int pgrp; /* process group number */
     page_directory * page_directory;
     FileDescriptor * fd[OPEN_MAX];
+    char terminal[PATH_MAX];
     uintptr_t brk;
     char cwd[255];
     uintptr_t stack_next;
@@ -707,6 +709,12 @@ FileDescriptor ** get_current_task_fds(void);
 FileDescriptor ** get_current_task_fds()
 {
     return current_task->proc->fd;
+}
+
+const char * get_current_task_terminal(void);
+const char * get_current_task_terminal()
+{
+    return current_task->proc->terminal;
 }
 
 #include <os/syscall.h>
@@ -1466,6 +1474,7 @@ static void init_tasking(const char * console_dev)
     current_task->proc->fd[STDIN_FILENO] = vfs_open(console_dev, O_RDONLY, 0);
     current_task->proc->fd[STDOUT_FILENO] = vfs_open(console_dev, O_WRONLY, 0);
     current_task->proc->fd[STDERR_FILENO] = vfs_open(console_dev, O_WRONLY, 0);
+    strlcpy(current_task->proc->terminal, console_dev, PATH_MAX);
     if (!current_task->proc->fd[STDIN_FILENO] || !current_task->proc->fd[STDOUT_FILENO] || !current_task->proc->fd[STDERR_FILENO]) {
         panic("vfs_open console failed");
     }
@@ -1839,6 +1848,7 @@ static int sys_fork(const registers * reg)
     new_task->proc->page_directory = directory;
     strlcpy(new_task->proc->cwd, current_task->proc->cwd, sizeof(new_task->proc->cwd));
     vfs_dup_fds(new_task->proc->fd, current_task->proc->fd, OPEN_MAX);
+    strlcpy(new_task->proc->terminal, current_task->proc->terminal, PATH_MAX);
     memcpy(new_task->proc->act, current_task->proc->act, sizeof(new_task->proc->act));
     sigemptyset(&new_task->proc->signal);
     init_itimer(&new_task->proc->timer);
@@ -2178,6 +2188,7 @@ static Task * create_task_kernel(void (*eip)(int), unsigned int stack_size, uint
     new_task->proc->page_directory = kernel_directory;
     strlcpy(new_task->proc->cwd, "/", sizeof(new_task->proc->cwd));
     memset(new_task->proc->fd, 0, sizeof(new_task->proc->fd)); // HAS NO FDS
+    strlcpy(new_task->proc->terminal, "/dev/null", PATH_MAX);
     sigemptyset(&new_task->proc->signal);
     init_sigact(new_task);
     init_itimer(&new_task->proc->timer);
@@ -2610,6 +2621,15 @@ static int sys_ioctl(int fd, int request, void * data)
 {
     if (fd < 0 || fd >= OPEN_MAX || !current_task->proc->fd[fd])
         return -EBADF;
+
+    if (request == TIOCSCTTY) {
+        strlcpy(current_task->proc->terminal, current_task->proc->fd[fd]->path, PATH_MAX);
+        return 0;
+    } else if (request == TIOCNOTTY) {
+        strlcpy(current_task->proc->terminal, "/dev/null", PATH_MAX);
+        return 0;
+    }
+
     int ret = vfs_ioctl(current_task->proc->fd[fd], request, data);
     if (ret < 0)
         kprintf("sys_ioctl: fd=%d, request=%d, data=%p\n", fd, request, data);
@@ -3265,9 +3285,8 @@ void start3(int magic, const void * info)
 
     static char tty_dev[128];
     get_cmdline_token("console=", "/dev/console0", tty_dev, sizeof(tty_dev));
-    dev_register_symlink("tty", tty_dev);
 
-    init_tasking("/dev/tty"); /* must come after paging */
+    init_tasking(tty_dev); /* must come after paging */
 
     idle_task = create_task_kernel(idle, 0x1000, 0xbeef);
 
