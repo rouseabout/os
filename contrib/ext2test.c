@@ -63,6 +63,11 @@ void get_absolute_path(char * abspath, int size, const char * path)
     strlcpy(abspath, path, size);
 }
 
+const char * get_current_task_terminal()
+{
+    return "/dev/console";
+}
+
 typedef struct {
     int fd;
 } FileContext;
