@@ -33,6 +33,8 @@
 #include <limits.h>
 #include <stdio.h>
 #include <signal.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 #define SPRAY_MEMORY 0
 
@@ -923,7 +925,10 @@ void interrupt_handler(registers * regs)
             if (regs->error_code & 8)  kprintf(" Reserved-Write");
             if (regs->error_code & 16)  kprintf(" Instruction-Fetch");
             kprintf("\n");
-            tty_puts("Segmentation fault\n");
+            if (current_task && current_task->proc && current_task->proc->fd[STDERR_FILENO]) {
+                static const char *segfault = "Segmentation fault\n";
+                current_task->proc->fd[STDERR_FILENO]->ops->write(current_task->proc->fd[STDERR_FILENO], segfault, strlen(segfault));
+            }
         } else {
             kprintf("OTHER EXCEPTION (%d)\n", regs->number);
         }
@@ -1439,9 +1444,6 @@ static struct timespec timespec_zero()
 {
     return (struct timespec){0, 0};
 }
-
-#include <unistd.h>
-#include <fcntl.h>
 
 Task * idle_task;
 
