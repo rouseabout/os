@@ -89,9 +89,6 @@ void serial_init()
 
     outb(PORT + 1, 0x01);
     irq_handler[4] = serial_irq;
-
-    serial_putc('\r');
-    serial_putc('\n');
 }
 
 static int serial_write(FileDescriptor * fd, const void * buf, int size)
