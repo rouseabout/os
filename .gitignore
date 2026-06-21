@@ -34,6 +34,7 @@ hostname
 init
 ld
 sh
+sine
 testcases
 tolower
 truncate

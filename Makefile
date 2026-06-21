@@ -21,6 +21,7 @@ LD=$(CC)
 LDFLAGS=-ffreestanding -nostdlib -g -Lsysroot/usr/lib
 QEMU=qemu-system-$(QEMUARCH)
 QEMUFLAGS+=-s -m 128m -no-reboot
+#QEMUFLAGS+=-device ac97
 #QEMUFLAGS+=-netdev socket,id=net0,mcast=230.0.0.1:1234 -device ne2k_pci,netdev=net0,mac=00:11:22:33:44:55
 QEMUFLAGS+=-debugcon stdio
 #QEMUFLAGS+=-S  #(wait for debugger connection)
@@ -136,7 +137,7 @@ LIBC_ONLY_OBJS=$(addprefix libc/,arpa_inet.o dirent.o errno.o fcntl.o fnmatch.o 
 kernel/paging_std.o: kernel/paging_template.c kernel/paging_template.h
 kernel/paging_pae.o: kernel/paging_template.c kernel/paging_template.h
 
-KERNEL_OBJS=$(addprefix kernel/,$(ARCH)/start2.o $(ARCH)/common.o acpi.o ata.o dev.o ext2.o fb.o kb.o loop.o main.o mem.o ne2k.o paging.o paging_std.o pci.o pipe.o power.o proc.o serial.o textmode.o tty.o vfs.o) $(LIBC_COMMON_OBJS)
+KERNEL_OBJS=$(addprefix kernel/,$(ARCH)/start2.o $(ARCH)/common.o ac97.o acpi.o ata.o dev.o ext2.o fb.o kb.o loop.o main.o mem.o ne2k.o paging.o paging_std.o pci.o pipe.o power.o proc.o serial.o textmode.o tty.o vfs.o) $(LIBC_COMMON_OBJS)
 ifeq ($(ARCH),i686)
 KERNEL_OBJS+=$(addprefix kernel/,paging_pae.o)
 endif

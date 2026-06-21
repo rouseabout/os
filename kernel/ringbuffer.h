@@ -15,11 +15,16 @@ typedef struct {
     unsigned int mask2;
 } RingBuffer;
 
+static inline void ringbuffer_reset(RingBuffer * rb)
+{
+    rb->position[RB_READ] = rb->position[RB_WRITE] = 0;
+}
+
 static inline void ringbuffer_init(RingBuffer * rb, char * buffer, unsigned int size)
 {
     rb->buffer = buffer;
     rb->size = size;
-    rb->position[RB_READ] = rb->position[RB_WRITE] = 0;
+    ringbuffer_reset(rb);
     rb->mask = size - 1;
     rb->mask2 = size * 2 - 1;
 }

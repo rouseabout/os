@@ -3,6 +3,7 @@
 #include <stddef.h> //offsetof
 #include <string.h>
 
+#include "ac97.h"
 #include "acpi.h"
 #include  "dev.h"
 #include "tty.h"
@@ -888,6 +889,7 @@ static void update_itimers()
 static int do_signal_action(int i);
 void * irq_context[16] = {0};
 IrqCb * irq_handler[16] = {0};
+void * ac97_cntx = NULL;
 
 void interrupt_handler(registers * regs);
 void interrupt_handler(registers * regs)
@@ -954,6 +956,8 @@ void interrupt_handler(registers * regs)
                 tnow.tv_sec++;
                 tnow.tv_nsec = 0;
             }
+            if (ac97_cntx)
+                ac97_poll(ac97_cntx);
             update_itimers();
             switch_task(regs);
         } else {
@@ -3166,10 +3170,11 @@ done:
 #if 0
 static int pci_enum(void * cntx, int bus, int slot, int func)
 {
-    kprintf("PCI %02x:%02x.%x, vendor=0x%04x, device=0x%04x, class=0x%x\n", bus, slot, func,
+    kprintf("PCI %02x:%02x.%x, vendor=0x%04x, device=0x%04x, class=0x%x, subclass=0x%x\n", bus, slot, func,
         pci_read(bus, slot, func, PCI_VENDOR_ID, 2),
         pci_read(bus, slot, func, PCI_DEVICE_ID, 2),
-        pci_read(bus, slot, func, PCI_CLASS, 2) >> 8);
+        pci_read(bus, slot, func, PCI_CLASS, 2) >> 8,
+        pci_read(bus, slot, func, PCI_CLASS, 2) & 0xF);
     return 0;
 }
 #endif
@@ -3267,6 +3272,10 @@ void start3(int magic, const void * info)
 
     serial_init();
     dev_register_device("serial0", &serial_dio, 1, NULL, NULL);
+
+    ac97_cntx = ac97_init();
+    if (ac97_cntx)
+        dev_register_device("dsp", &ac97_dio, 1, NULL, ac97_cntx);
 
     void * ne2k = ne2k_init();
     if (ne2k)

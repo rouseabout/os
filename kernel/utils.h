@@ -79,8 +79,13 @@ extern struct timespec tnow;
 #define PCI_COMMAND_ID 4
 #define PCI_CLASS 0xA
 #define PCI_BAR0 0x10
+#define PCI_BAR1 0x14
 #define PCI_BAR4 0x20
 #define PCI_INTERRUPT_LINE 0x3C
+
+#define PCI_COMMAND_IO_SPACE 0x1
+#define PCI_COMMAND_BUS_MASTER 0x4
+#define PCI_COMMAND_INTERRUPT_DISABLE 0x400
 
 uint16_t pci_read(int bus, int slot, int func, int offset, int size);
 void pci_write(int bus, int slot, int func, int offset, int value, int size);

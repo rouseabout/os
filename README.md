@@ -174,6 +174,14 @@ Binaries built for *os* can run under Linux without modification.
 This is possible, because *os* syscalls are similar to those used by the Linux kernel.
 
 
+### AC'97 driver
+
+An experimental AC'97 audio driver is included.
+To enable emulation, append the `-device ac97` option to QEMUFLAGS in the Makefile.
+Use the `sine` program to generate a sine waveform.
+To play a signed 16-bit PCM little endian file, use `cat file.raw > /dev/dsp`.
+
+
 ## Included programs
 
 *os* includes the following programs. They are installed under `/bin`.
@@ -226,6 +234,7 @@ This is possible, because *os* syscalls are similar to those used by the Linux k
 |rmdir |remove directory |
 |sh |shell interpreter |
 |shutdown |shutdown computer |
+|sine |sine waveform generator |
 |sleep |sleep for duration |
 |sort |sort lines of text |
 |strings |print string sequences |

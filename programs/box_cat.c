@@ -5,7 +5,7 @@
 
 static void cat2(int fd)
 {
-    char block[1024];
+    char block[4096];
     int size;
     while ((size = read(fd, block, sizeof(block))) > 0)
         write(STDOUT_FILENO, block, size);
